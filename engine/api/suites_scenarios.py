@@ -9,7 +9,7 @@ References:
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from engine.auth import check_permission, enforce_governed_contract_define
+from engine.auth import check_permission, enforce_governed_contract_define, governed_values, serialized_configuration
 from engine.models.principal import Principal
 from engine.models.scenario import Scenario
 from engine.models.suite import Suite
@@ -120,6 +120,7 @@ def get_suites_scenarios_router(storage: Storage, get_principal_dep) -> APIRoute
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
     @router.put("/{suite}/scenarios/{scenario}", response_model=Scenario)
+    @serialized_configuration(storage)
     def update_scenario(
         project: str,
         suite: str,
@@ -134,7 +135,9 @@ def get_suites_scenarios_router(storage: Storage, get_principal_dep) -> APIRoute
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Scenario name in body must match path")
 
         current = storage.get_scenario(project, suite, scenario)
-        if updated.contract is not None or (current is not None and current.contract is not None):
+        if current is None:
+            raise HTTPException(404, f"Scenario '{scenario}' not found")
+        if governed_values(updated) != governed_values(current):
             enforce_governed_contract_define(
                 principal=current_user,
                 project_name=project,

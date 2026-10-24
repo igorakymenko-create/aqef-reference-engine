@@ -9,7 +9,7 @@ References:
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from engine.auth import check_permission, enforce_governed_contract_define
+from engine.auth import check_permission, enforce_governed_contract_define, governed_values, serialized_configuration
 from engine.models.principal import Principal
 from engine.models.project import Project
 from engine.storage import Storage, StorageConflictError, StorageNotFoundError
@@ -18,9 +18,7 @@ from engine.audit import bind_project
 
 
 def has_governed_definitions(project):
-    return bool(project.contracts or project.quality_gates or any(
-        suite.contracts or suite.quality_gates or any(sc.contract is not None for sc in suite.scenarios)
-        for suite in project.suites))
+    return bool(governed_values(project))
 
 
 def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
@@ -78,6 +76,7 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
         return proj
 
     @router.put("/{project}", response_model=Project)
+    @serialized_configuration(storage)
     def update_project(
         project: str,
         updated: Project,
@@ -102,7 +101,7 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
             raise HTTPException(status_code=422, detail=str(e))
 
         # Appendix C §C.5: contract_define governance
-        if has_governed_definitions(updated) or has_governed_definitions(current):
+        if governed_values(updated) != governed_values(current):
             enforce_governed_contract_define(
                 principal=current_user,
                 project_name=project,

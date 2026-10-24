@@ -1,5 +1,19 @@
 # Implementation Notes
 
+## Slice 6.1 — D-7
+
+- Confirmed Appendix B B.3 Governed configuration change: presence of a Contract is
+  not a change. Compare normalized governed values by attachment path after Pydantic
+  defaults/dimensions/enums resolve, under the configuration lock. Variable/prompt-only
+  edits and echoed Contracts need only the operation's edit Permission; no new Approval.
+- Compare all nested project/suite/scenario contracts and Gates on Project PUT, including
+  removals. Creation paths still govern newly attached definitions. Dedicated Contract/
+  Gate endpoints retain their own C.3 contract_define operation Permission.
+- Tests cover Person/Service unchanged-normalized/Variable edits, every nested attachment
+  level and added/removed/different values, denied changes leaving configuration intact.
+- Whole suite: **349 passed**, one existing Starlette/httpx deprecation warning. No new
+  ambiguous reading: B.3 explicitly says creating or changing. D-6 is its separate commit.
+
 ## Slice 6.1 — D-6
 
 - Confirmed XII Principals/Audit and C.8 require comprehensive action provenance.

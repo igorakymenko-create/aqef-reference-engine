@@ -4,8 +4,8 @@ from copy import deepcopy
 import pytest
 
 from test_execution import harness, configure, project, run, HEADERS, BASE
-from test_assessment import results
-from test_decision import post
+from test_assessment import results, constraint
+from test_decision import post, gate
 from test_scoped import frame, scenario, control, human, provider, reviewer
 from engine.models.principal import Principal, PrincipalKind, Role
 
@@ -89,3 +89,75 @@ def test_d6_xii_human_review_confirmation_invalidation_and_subresource_deletion_
         assert audit(client,action)[0]["details"]["target"].startswith("/projects/p/executions/")
     assert client.delete("/projects/p/suites/s/scenarios/spare",headers=HEADERS).status_code==204
     assert audit(client,"scenario_delete")[0]["details"]["deletion_kind"]=="configuration_only_history_retained"
+
+
+def governed_project():
+    payload=project()
+    payload["quality_gates"]=[gate()]
+    payload["suites"][0]["contracts"]=[{"constraints":[constraint(id="suite-shape")]}]
+    payload["suites"][0]["quality_gates"]=[gate("suite-gate")]
+    payload["suites"][0]["scenarios"][0]["contract"]={"constraints":[constraint(id="scenario-shape")]}
+    return payload
+
+
+@pytest.mark.parametrize("route",["/projects/p","/projects/p/suites/s/scenarios/a"])
+@pytest.mark.parametrize("kind",[PrincipalKind.PERSON,PrincipalKind.SERVICE_ACCOUNT])
+@pytest.mark.parametrize("change",["variables","normalized_defaults"])
+def test_d7_b3_unchanged_normalized_governed_values_need_only_edit_permission(harness,route,kind,change):
+    app,client,_=configure(harness,governed_project())
+    headers=actor(app,["project_edit","scenario_edit"],kind=kind)
+    before=client.get(route,headers=HEADERS).json()
+    body=deepcopy(before)
+    sc=body["suites"][0]["scenarios"][0] if route=="/projects/p" else body
+    if change=="variables":sc["variables"]["who"]="updated"
+    else:
+        # Defaulted false/None/[] fields are semantically unchanged after normalization.
+        clause=sc["contract"]["constraints"][0]
+        clause.pop("veto",None)
+        clause.pop("defect_classes",None)
+        clause.pop("dimension",None)
+    approvals=len(app.state.storage.list_approvals("p"))
+    reply=client.put(route,json=body,headers=headers)
+    assert reply.status_code==200,reply.text
+    assert len(app.state.storage.list_approvals("p"))==approvals
+    assert not any(e.principal_id=="actor" for e in app.state.storage.list_audit_logs("p",action="contract_define"))
+    assert any(e.principal_id=="actor" for e in app.state.storage.list_audit_logs("p",action="project_edit" if route=="/projects/p" else "scenario_edit"))
+
+
+@pytest.mark.parametrize("level",["project_contracts","project_gates","suite_contracts","suite_gates","scenario_contract"])
+@pytest.mark.parametrize("change",["add","remove","different"])
+def test_d7_b3_project_nested_governed_values_added_removed_or_changed_require_governance(harness,level,change):
+    app,client,_=configure(harness,governed_project())
+    headers=actor(app,["project_edit"])
+    before=client.get("/projects/p",headers=HEADERS).json()
+    body=deepcopy(before)
+    owner=body if level.startswith("project") else body["suites"][0]
+    key="contracts" if level.endswith("contracts") else "quality_gates"
+    if level=="scenario_contract":
+        owner=owner["scenarios"][0];key="contract"
+        if change=="remove":owner[key]=None
+        else:owner[key]["constraints"].append(constraint(id="new-clause"))
+    elif change=="remove":owner[key]=[]
+    elif change=="add":owner[key].append(gate("new-gate") if key=="quality_gates" else {"constraints":[constraint(id="new-clause")]})
+    elif key=="quality_gates":owner[key][0]["threshold"]=.5
+    else:owner[key][0]["constraints"][0]["expected"]={"type":"string","minLength":1}
+    reply=client.put("/projects/p",json=body,headers=headers)
+    assert reply.status_code==403,reply.text
+    assert "contract_define" in reply.text
+    assert client.get("/projects/p",headers=HEADERS).json()==before
+
+
+@pytest.mark.parametrize("change",["add","remove","different"])
+def test_d7_b3_scenario_contract_add_remove_change_requires_governance(harness,change):
+    payload=governed_project()
+    if change=="add":payload["suites"][0]["scenarios"][0].pop("contract")
+    app,client,_=configure(harness,payload)
+    headers=actor(app,["scenario_edit"])
+    path="/projects/p/suites/s/scenarios/a"
+    before=client.get(path,headers=HEADERS).json()
+    body=deepcopy(before)
+    if change=="remove":body["contract"]=None
+    elif change=="add":body["contract"]={"constraints":[constraint(id="new-clause")]}
+    else:body["contract"]["constraints"][0]["expected"]={"type":"string","minLength":1}
+    assert client.put(path,json=body,headers=headers).status_code==403
+    assert client.get(path,headers=HEADERS).json()==before

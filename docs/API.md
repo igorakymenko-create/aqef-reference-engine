@@ -635,6 +635,14 @@ uvicorn engine.main:app --host 127.0.0.1 --port 8000
 
 ## Authentication & Authorization
 
+For a Project or Scenario PUT, the additional `contract_define` check applies only
+when a normalized `contract`, `contracts` or `quality_gates` value is added, removed
+or differs at any attachment level. Defaults, derived dimensions and enum values are
+normalized before comparison; an echoed unchanged Contract is not a change. Editing
+only Variables/Prompt needs project_edit/scenario_edit, including for Service Accounts
+without external review headers. Actual definition changes still use Approval Workflow.
+Dedicated Contract/Gate endpoints keep their own C.3 operation Permission.
+
 ### Audit and retained history (D-6, XII Principals/Audit; C.8)
 
 Every successful permission-checked HTTP action, including reads, records the actor's

@@ -7,6 +7,7 @@ References:
 """
 
 import uuid
+from functools import wraps
 from typing import Callable, List, Optional, Set
 from fastapi import Depends, Header, HTTPException, status
 from engine.models.principal import (
@@ -18,6 +19,32 @@ from engine.models.principal import (
 )
 from engine.storage import Storage
 from engine.audit import checked_permission
+
+
+def governed_values(resource):
+    """B.3: only normalized governed values, keyed by their attachment locations."""
+    if resource is None:
+        return {}
+    values = {}
+    def collect(data, path):
+        for key in ("contract", "contracts", "quality_gates"):
+            if data.get(key) not in (None, []):
+                values[path + (key,)] = data[key]
+        for key in ("suites", "scenarios"):
+            for child in data.get(key, []):
+                collect(child, path + (key, child["name"]))
+    collect(resource.model_dump(mode="json"), ())
+    return values
+
+
+def serialized_configuration(storage):
+    def decorate(function):
+        @wraps(function)
+        def locked(*args, **kwargs):
+            with storage.config_lock:
+                return function(*args, **kwargs)
+        return locked
+    return decorate
 
 
 def get_current_principal_dependency(storage_getter: Callable[[], Storage]):
