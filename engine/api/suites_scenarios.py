@@ -49,7 +49,7 @@ def get_suites_scenarios_router(storage: Storage, get_principal_dep) -> APIRoute
                     detail=f"Gate '{g.name}' in Suite collides with a Project Quality Gate",
                 )
 
-        if suite.contracts or suite.quality_gates:
+        if suite.contracts or suite.quality_gates or any(sc.contract is not None for sc in suite.scenarios):
             enforce_governed_contract_define(
                 principal=current_user,
                 project_name=project,
@@ -133,7 +133,8 @@ def get_suites_scenarios_router(storage: Storage, get_principal_dep) -> APIRoute
         if updated.name != scenario:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Scenario name in body must match path")
 
-        if updated.contract is not None:
+        current = storage.get_scenario(project, suite, scenario)
+        if updated.contract is not None or (current is not None and current.contract is not None):
             enforce_governed_contract_define(
                 principal=current_user,
                 project_name=project,

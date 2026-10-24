@@ -164,10 +164,10 @@ def test_unavailable_judge_preserves_evidence(harness, monkeypatch, failure):
 
 
 @pytest.mark.parametrize("name,target,expected,passed", [
-    ("schema", '{"a":1}', {"type":"object","required":["a"],"properties":{"a":{"type":"integer"}}}, True),
-    ("schema", '{"a":"wrong"}', {"type":"object","properties":{"a":{"type":"integer"}}}, False),
+    ("schema", {"a":1}, {"type":"object","required":["a"],"properties":{"a":{"type":"integer"}}}, True),
+    ("schema", {"a":"wrong"}, {"type":"object","properties":{"a":{"type":"integer"}}}, False),
     ("schema", "not-json", "json", False),
-    ("schema", '{"a":2}', {"$defs":{"n":{"type":"integer"}},"properties":{"a":{"$ref":"#/$defs/n"}}}, True),
+    ("schema", {"a":2}, {"$defs":{"n":{"type":"integer"}},"properties":{"a":{"$ref":"#/$defs/n"}}}, True),
     ("forbidden-content", "Unsafe word", {"patterns":[{"regex":"(?i)unsafe"}]}, False),
     ("forbidden-content", "safe", {"patterns":["unsafe"]}, True),
     ("structural", {"turns":[{"prompt":"start","response":"finish"}]}, {"required_steps":["start","finish"]}, True),

@@ -473,12 +473,24 @@ class Storage:
             row = conn.execute("SELECT data_json FROM projects WHERE name = ?", (name,)).fetchone()
             if not row:
                 return None
-            return Project.model_validate_json(row["data_json"])
+            project = Project.model_validate_json(row["data_json"])
+            # C.3: aggregate reads must reflect accepted sub-resource edits, too.
+            project.environments = [Environment.model_validate_json(r[0]) for r in conn.execute(
+                "SELECT data_json FROM environments WHERE project_name = ? ORDER BY rowid", (name,))]
+            project.suites = [Suite.model_validate_json(r[0]) for r in conn.execute(
+                "SELECT data_json FROM suites WHERE project_name = ? ORDER BY rowid", (name,))]
+            for index, contract in enumerate(project.contracts):
+                if isinstance(contract, Contract) and contract.name:
+                    current = conn.execute("SELECT data_json FROM contracts WHERE project_name = ? AND name = ?",
+                                           (name, contract.name)).fetchone()
+                    if current:
+                        project.contracts[index] = Contract.model_validate_json(current[0])
+            return project
 
     def list_projects(self) -> List[Project]:
         with self._get_connection() as conn:
-            cursor = conn.execute("SELECT data_json FROM projects ORDER BY name")
-            return [Project.model_validate_json(row["data_json"]) for row in cursor]
+            names = [row[0] for row in conn.execute("SELECT name FROM projects ORDER BY name")]
+        return [self.get_project(name) for name in names]
 
     def update_project(self, project: Project) -> Project:
         with self._get_connection() as conn:
@@ -488,6 +500,35 @@ class Storage:
             )
             if cur.rowcount == 0:
                 raise StorageNotFoundError(f"Project '{project.name}' not found")
+            # Replace the live definition tree atomically. Runtime Evidence/Results
+            # live in independent tables and must never be rewritten by this PUT.
+            conn.execute("DELETE FROM suites WHERE project_name = ?", (project.name,))
+            conn.execute("DELETE FROM environments WHERE project_name = ?", (project.name,))
+            conn.executemany("INSERT INTO environments VALUES (?, ?, ?)",
+                             [(project.name, env.name, env.model_dump_json()) for env in project.environments])
+            for suite in project.suites:
+                conn.execute("INSERT INTO suites VALUES (?, ?, ?)", (project.name, suite.name, suite.model_dump_json()))
+                conn.executemany("INSERT INTO scenarios VALUES (?, ?, ?, ?)",
+                                 [(project.name, suite.name, sc.name, sc.model_dump_json()) for sc in suite.scenarios])
+            for contract in project.contracts:
+                if isinstance(contract, Contract) and contract.name:
+                    conn.execute("""INSERT INTO contracts VALUES (?, ?, ?)
+                        ON CONFLICT(project_name, name) DO UPDATE SET data_json = excluded.data_json""",
+                                 (project.name, contract.name, contract.model_dump_json()))
+            conn.execute("DELETE FROM quality_gates WHERE project_name = ?", (project.name,))
+            conn.executemany("INSERT INTO quality_gates VALUES (?, ?, ?)",
+                             [(project.name, gate.name, gate.model_dump_json()) for gate in project.quality_gates])
+            # Dataset versions are immutable registry entries, including versions no
+            # longer included in the replacement's declarations (Appendix B B.3).
+            for dataset in project.datasets:
+                previous = conn.execute("SELECT data_json FROM datasets WHERE project_name = ? AND name = ? AND version = ?",
+                                        (project.name, dataset.name, dataset.version)).fetchone()
+                if previous and Dataset.model_validate_json(previous[0]) != dataset:
+                    raise StorageConflictError(f"Dataset '{dataset.name}@{dataset.version}' is immutable")
+                if not previous:
+                    conn.execute("INSERT INTO datasets VALUES (?, ?, ?, ?, ?)",
+                                 (project.name, dataset.name, dataset.version, dataset.model_dump_json(),
+                                  datetime.now(timezone.utc).isoformat()))
         return project
 
     def delete_project(self, project_name: str, retain_history: bool = False) -> None:

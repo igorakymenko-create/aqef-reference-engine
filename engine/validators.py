@@ -46,7 +46,7 @@ def schema_check(target, expected):
         local_only(expected)
         cls = validators.validator_for(expected)
         cls.check_schema(expected)
-    if isinstance(target, str):
+    if expected == "json" and isinstance(target, str):
         try:
             target = json.loads(target, parse_constant=reject_json_constant)
         except ValueError:

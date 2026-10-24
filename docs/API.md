@@ -51,7 +51,7 @@ Built-in expected formats:
 
 | validator | target example | expected example / meaning |
 |---|---|---|
-| schema | response | JSON Schema object/Boolean, or `"json"` for any valid JSON; last response text is decoded as JSON |
+| schema | response | JSON Schema object/Boolean applies to the target value as held in Evidence (Response is a string); `"json"` explicitly checks JSON syntax |
 | forbidden-content | response | `{"patterns":["literal",{"regex":"(?i)unsafe"}]}`; pass iff none match |
 | structural | conversation | `{"required_steps":["retrieve","answer"]}` or the list directly; substrings must occur in order in prompt/response transcript text |
 | latency | duration_ms | `"500ms"` or numeric milliseconds; recorded duration <= maximum |
@@ -59,7 +59,11 @@ Built-in expected formats:
 
 Schema uses jsonschema 4.23.0, the schema's declared draft or the library default
 (2020-12), with built-in format checks; only local fragment references are allowed.
-No remote schema/resource retrieval occurs. Malformed JSON data is a completed fail;
+No remote schema/resource retrieval occurs. JSON syntax is checked only by `expected:
+"json"` or decoded during traversal into a JSON-bearing text target (`response.some_key`).
+For example `{type: string, minLength: 1}` accepts a nonempty plain-text Response; an
+object schema does not implicitly decode that Response. Malformed JSON with `expected:
+"json"` is a completed fail; a malformed/missing path is unavailable;
 invalid schemas are unavailable. Patterns use Python regex syntax; strings are literal,
 case-sensitive substrings. Nontext forbidden-content targets use canonical JSON text.
 Structural matching is literal and case-sensitive, across newline-joined prompt/response

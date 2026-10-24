@@ -7,11 +7,27 @@
 - **Choice:** publish formats in API.md. Response is the last turn's response; conversation
   is the full object; artifacts.* is the complete list; artifacts.NAME selects matching
   data (one value or a list), with dotted paths/indexes supported. Missing evidence is
-  unavailable. Schema accepts a JSON Schema object or `json` (any valid JSON); structural
+  unavailable. Schema applies a JSON Schema object/Boolean to the Evidence value as
+  held, or `json` explicitly checks JSON syntax (**O-1, project-owner decision below,
+  replaces the earlier implicit JSON decoding choice**); structural
   accepts a required_steps list (or `{required_steps:[...]}`), matched in order; latency
   accepts a duration or numeric milliseconds; cost a numeric maximum or metric/max map;
   forbidden-content accepts `{patterns:[string or {regex:string}]}`. Unsupported rules
   are unavailable rather than guessed passes. Schemas are local-only; remote refs rejected.
+
+## 18. O-1 — Schema target instance (decided by the project owner)
+- **Section:** Volume V, Built-in Validators — Schema Validator.
+- **Quotation:** “checks a Response ... against an expected format or schema”.
+- **Earlier choice (superseded):** implicitly decode every string target as JSON before
+  applying a JSON Schema. This made an ordinary text Response impossible to validate
+  against a nonempty string schema.
+- **Owner's decision:** the instance is the target value exactly as Evidence holds it.
+  A Response is a string: `{type: string, minLength: 1}` passes nonempty plain text and
+  fails empty text. A JSON-looking Response remains a string under an object schema.
+  `expected: "json"` explicitly checks JSON syntax, while a target path such as
+  `response.some_key` explicitly decodes JSON during target selection and then applies
+  the schema to that selected value. This replaces the earlier choice in entry 12;
+  it applies equally to built-in and Custom schema rules.
 
 ## 13. Composition and short-circuit granularity
 - **Section:** Volume V Execution Order, Composition, Validator SDK; Appendix A §A.5.

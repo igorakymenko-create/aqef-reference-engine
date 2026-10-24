@@ -16,6 +16,12 @@ from engine.storage import Storage, StorageConflictError, StorageNotFoundError
 from engine.validation import ConfigurationValidationError, validate_project_configuration
 
 
+def has_governed_definitions(project):
+    return bool(project.contracts or project.quality_gates or any(
+        suite.contracts or suite.quality_gates or any(sc.contract is not None for sc in suite.scenarios)
+        for suite in project.suites))
+
+
 def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
     router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -45,7 +51,7 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
 
         # Appendix C §C.5: Governed configuration change
         # If project contains contracts or quality_gates, governance contract_define applies
-        if project.contracts or project.quality_gates:
+        if has_governed_definitions(project):
             enforce_governed_contract_define(
                 principal=current_user,
                 project_name=project.name,
@@ -80,6 +86,9 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
         check_permission(current_user, "project_edit", storage)
         if updated.name != project:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project name in body must match path")
+        current = storage.get_project(project)
+        if current is None:
+            raise HTTPException(404, f"Project '{project}' not found")
 
         try:
             validate_project_configuration(
@@ -91,7 +100,7 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
             raise HTTPException(status_code=422, detail=str(e))
 
         # Appendix C §C.5: contract_define governance
-        if updated.contracts or updated.quality_gates:
+        if has_governed_definitions(updated) or has_governed_definitions(current):
             enforce_governed_contract_define(
                 principal=current_user,
                 project_name=project,
@@ -106,6 +115,8 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
             return storage.update_project(updated)
         except StorageNotFoundError as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        except StorageConflictError as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
 
     @router.delete("/{project}", status_code=status.HTTP_204_NO_CONTENT)
     def delete_project(

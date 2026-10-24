@@ -1,5 +1,49 @@
 # Implementation Notes
 
+## Slice 3.1 — External review corrections
+
+### D-3 — accepted configuration replacement takes effect (fixed)
+- Read Appendix C §C.3 (Project/Environment/Suite/Scenario/Contract operations) and
+  Volume I Chapter 6 (configuration consistency and staleness). The review is required
+  by “Replace Project configuration”: acknowledging a new tree while executing the old
+  child records was a storage defect, not an alternative interpretation.
+- Project PUT now replaces its live Environment/Suite/Scenario records in the same
+  SQLite transaction as the parent JSON and updates declared named Contracts/Gates.
+  Dataset versions are inserted or reused unchanged; changing a version is a 409 and
+  rolls back the entire configuration transaction. Previously registered dataset
+  versions and reusable Contracts remain addressable in their independent registries;
+  removing a declaration does not silently delete such versioned/reference resources.
+- Project GET/list now project current Environment/Suite child records and current
+  named project Contract definitions. Individual Scenario/Environment/Contract edits,
+  new Suites and Scenario additions/deletions therefore survive a GET/PUT round trip.
+  Suites have creation/read routes in C.3, no Suite PUT route was added.
+- Configuration changes affect later Executions; frozen earlier Executions/Results are
+  retained exactly. No staleness/Gate implementation from slice 4 was added.
+- Related code touched: Project and Suite governance now detects nested Scenario
+  Contracts; removal of an existing Scenario Contract also requires contract_define.
+  This preserves C.5 governance when accepted nested changes become executable.
+  Project PUT reports storage conflicts as 409 and checks missing Project as 404.
+
+### O-1 — schema instance is the held target value (owner decision implemented)
+- JSON Schema objects/Booleans now validate the target as held in Evidence. A Response
+  stays a string; plain nonempty text passes a nonempty string schema, empty text fails.
+- JSON syntax checking remains explicit via expected: "json". Dotted paths into a text
+  Response still decode JSON during target selection before checking the selected value.
+- Updated AMBIGUITIES entry 12 and added entry 18, explicitly marking the previous
+  implicit-decoding choice superseded by the project owner's decision. API.md describes
+  the resulting behavior. Custom schema rules share the corrected implementation.
+
+### Validation
+- `python -m pytest -q`: **187 passed** (168 existing + 19 new regression cases).
+- `tests/test_review_slice_3_1.py` names C.3 / I Chapter 6 for D-3 and Volume V Built-in
+  Validators for O-1; covers full replacement, sub-resource edits, Suite/Scenario
+  additions/removal, named/referenced Contracts, Environment replacement, new Dataset
+  version resolution, atomic rollback, retained history, nested governance, plain-text
+  and empty Responses, JSON syntax, JSON paths and Boolean schemas.
+- Three earlier pure schema test inputs now use actual object values rather than
+  JSON-encoded text, retaining their object-schema intent under O-1.
+- `git diff --check` passes. The existing Starlette/httpx deprecation warning remains.
+
 ## Slice 3 — plan
 
 ### Entities and operations
