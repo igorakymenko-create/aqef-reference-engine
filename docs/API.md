@@ -101,9 +101,11 @@ Names/versions use letters, numbers, underscore, dot or hyphen. A Constraint use
 {"validator":"domain-status@1","target":"response.status","expected":null,"dimension":"functional"}
 ```
 
-Custom Constraints require explicit dimension. Their expected is null because the
-immutable registered rule defines the expectation; a non-null value is unavailable
-rather than silently ignored. Bare name binds only when exactly one version exists.
+Custom Constraints require explicit dimension. Their expected accepts **null or {}**
+for these parameterless checks, because the immutable registered rule defines the
+expectation. All other structures are rejected at configuration load (422), naming the
+clause by id or by validator/target if unnamed (owner decision O-2, intended A.5 0.41.2).
+Bare name binds only when exactly one version exists.
 Missing/ambiguous registration is unavailable. Definitions are frozen before execution.
 The evaluator receives only selected Evidence and its frozen rule, with no clock,
 randomness, network, filesystem, imports or user code. This declarative registration

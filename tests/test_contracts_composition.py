@@ -85,14 +85,14 @@ def test_custom_validator_requires_dimension():
     # Appendix B §B.3:
     # "A Constraint bound to a Custom Validator MUST declare dimension."
     with pytest.raises(ValidationError) as exc:
-        Constraint(validator="my_custom_checker", target="response", expected={"foo": "bar"})
+        Constraint(validator="my_custom_checker", target="response", expected={})
     assert "MUST declare 'dimension' explicitly" in str(exc.value)
 
     # Specifying dimension succeeds
     c = Constraint(
         validator="my_custom_checker",
         target="response",
-        expected={"foo": "bar"},
+        expected={},
         dimension=QualityDimension.OPERATIONAL,
     )
     assert c.dimension == QualityDimension.OPERATIONAL
@@ -154,3 +154,4 @@ def test_effective_contract_must_contain_at_least_one_clause():
             scenario_contract=None,
         )
     assert "An effective Contract with no clauses is invalid" in str(exc.value)
+

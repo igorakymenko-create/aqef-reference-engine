@@ -1,5 +1,15 @@
 # Implementation Notes
 
+## Slice 3.2 — O-2 owner decision
+- Parameterless Custom Validator Constraints accept expected null or {}. All other
+  structures fail model validation at configuration load, naming the clause id (or
+  validator/target for an unnamed clause). The shared Constraint model covers Project,
+  Suite, Scenario and reusable Contract routes. Defensive runtime checks accept both.
+- AMBIGUITIES entry 19 replaces the earlier choice; API.md documents both forms.
+- Whole suite: **193 passed**. Seven owner-decision cases replace the previous runtime
+  rejection test; the earlier dimension-only test now uses a valid parameterless form.
+- This correction is committed/tagged separately as slice-3.2 before slice 4 work.
+
 ## Slice 3.1 — External review corrections
 
 ### D-3 — accepted configuration replacement takes effect (fixed)

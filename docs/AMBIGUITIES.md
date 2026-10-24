@@ -51,8 +51,20 @@
   Constraints bind `name@version` (bare name only if exactly one version exists). Built-in
   names cannot be shadowed. Registration is configuration, not a plugin or language SDK.
   A Custom Result's Oracle identity includes the rule; no silent version replacement.
-  A Custom Constraint's required expected field must be null, since its registered
-  rule already defines the expectation; non-null expected is unavailable, never ignored.
+  **Superseded by owner decision O-2 (entry 19):** Custom expected accepts null or {},
+  and any other structure is rejected at load naming the clause.
+
+## 19. O-2 — Custom Validator expected (decided by the project owner)
+- **Section:** Appendix A §A.5, clarification announced for 0.41.2 by the project owner.
+- **Owner decision:** “a structure it does not accept MUST be rejected when the
+  configuration is loaded, naming the clause”; “accept expected: {} ... alongside null”.
+- **Earlier choice (superseded):** only null, with unsupported values discovered during
+  execution as oracle_unavailable.
+- **Replacement:** the registered declarative rules have no per-Constraint parameters;
+  null and an empty object are both documented valid forms. All other expected values
+  fail Constraint schema validation at load on every configuration route, naming id
+  or the validator/target pair for an unnamed clause. Execution keeps a defensive check
+  for pre-existing frozen records, accepting both documented forms. No spec file edited.
 
 ## 15. Oracle and clause identity, assertions and agreement Confidence
 - **Section:** VI Single Judge, Confidence, Admission; C.7; A.6.

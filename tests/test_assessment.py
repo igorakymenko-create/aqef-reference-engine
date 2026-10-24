@@ -426,14 +426,24 @@ def test_custom_binding_frozen_before_subject_and_no_silent_expected(harness, mo
     assert row["verdict"] == "pass"
 
 
-def test_custom_nonnull_expected_is_not_silently_ignored(harness, monkeypatch):
+@pytest.mark.parametrize("expected", ["different", {"parameter":1}, [], 0, False])
+def test_owner_o2_invalid_custom_expected_rejected_at_load_naming_clause(harness, expected):
+    app, client, calls = harness
+    p = assessment_project([constraint("exact@v1", "response", expected, dimension="functional", id="custom-status")])
+    response = client.post("/projects", json=p, headers=HEADERS)
+    assert response.status_code == 422
+    assert "custom-status" in response.text
+    assert not calls
+    assert app.state.storage.get_project("p") is None
+
+
+@pytest.mark.parametrize("expected", [None, {}])
+def test_owner_o2_parameterless_custom_expected_forms(harness, monkeypatch, expected):
     app, client, _ = configure(harness, assessment_project([
-        constraint("exact@v1", "response", "different", dimension="functional")]))
+        constraint("exact@v1", "response", expected, dimension="functional", id="custom-status")]))
     assert client.post("/projects/p/validators", json=custom_definition(), headers=HEADERS).status_code == 201
     install_provider(app, monkeypatch, subject="approved")
-    row = results(client, run(client)["executions"][0])[0]
-    assert row["disposition"] == "oracle_unavailable"
-    assert "expected must be null" in row["supporting_evidence"]["error"]
+    assert results(client, run(client)["executions"][0])[0]["verdict"] == "pass"
 
 
 @pytest.mark.parametrize("status,body", [(429, b'{}'), (302, b'{}'), (200, b'not json')])

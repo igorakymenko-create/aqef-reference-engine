@@ -43,6 +43,9 @@ class Constraint(AQEFBaseModel):
 
     @model_validator(mode="after")
     def resolve_dimension(self) -> "Constraint":
+        if self.validator not in BUILTIN_VALIDATOR_DIMENSIONS and self.expected is not None and self.expected != {}:
+            label = self.id or f"{self.validator} target={self.target}"
+            raise ValueError(f"Clause '{label}': Custom Validator expected must be null or an empty object {{}}")
         # Appendix A §A.5, Appendix B §B.3:
         # Default by Validator type: functional for schema, tool-call, structural;
         # operational for latency, cost; safety for forbidden-content, boundary.

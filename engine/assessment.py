@@ -60,8 +60,8 @@ class AssessmentEngine:
             if name in BUILTINS:
                 passed, details = check_builtin(name, target, clause["expected"])
             elif custom is not None:
-                if clause["expected"] is not None:
-                    raise ValueError("Custom Validator expected must be null; the registered rule defines its expectation")
+                if clause["expected"] is not None and clause["expected"] != {}:
+                    raise ValueError("Custom Validator expected must be null or {}; the registered rule defines its expectation")
                 # The registered pure function receives only target and its frozen rule.
                 passed, details = custom_check(target, deepcopy(custom["rule"]))
             else:
