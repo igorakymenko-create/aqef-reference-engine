@@ -24,10 +24,13 @@ point the specification left unclear went back to the specification, as a new re
 - the [normative review](docs/CONFORMANCE-REVIEW.md): rule by rule, where each MUST is
   met, and the verification work that remains.
 
-The external run of the AQEF Conformance Tests, Working Draft 9, found no failure: 171
-passed, 32 were not applicable to the claimed capabilities, and 9 await manual review.
-The tests are published with the specification, in its `conformance-tests/` folder and
-as a PDF on each release.
+The external run of the AQEF Conformance Tests, Working Draft 9, found no failure: 178
+passed, 33 were not applicable to the claimed capabilities or offered features, and one
+cannot be driven on this engine (a crashing Validator). The eight Inspection and
+Declaration tests were decided by a named external reviewer. The tests are published
+with the specification, in its `conformance-tests/` folder and as a PDF on each
+release. The harness that ran them, the final run with its evidence, and the review
+records are in [aqef-cts-harness](https://github.com/igorakymenko-create/aqef-cts-harness).
 
 OpenAPI ([docs/OPENAPI.json](docs/OPENAPI.json)) is published as API documentation,
 not as an AQEF JSON Schema artifact.
