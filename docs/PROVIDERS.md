@@ -1,10 +1,10 @@
-# HTTP provider interface — slices 2–7, AQEF WD 0.41.3
+# HTTP provider interface — slices 2–8, AQEF WD 0.41.3
 
 The wire protocol is unchanged by 0.41.3. Volume III's recommended pre-invocation
 reachability check is deliberately not implemented: no availability-only request exists
 in this protocol, and a synthetic Evidence POST would create an actual Judge verdict.
-No health handshake, new request field or proceed flag is implied. The pre-run SHOULD
-deviations are declared in CONFORMANCE-STATEMENT.md and IMPLEMENTATION_NOTES.md.
+No health handshake, new request field or proceed flag is implied. The Judge-reachability SHOULD
+deviation are declared in CONFORMANCE-STATEMENT.md and IMPLEMENTATION_NOTES.md.
 
 ## Startup mapping
 
@@ -105,7 +105,7 @@ Each HTTP call is bounded by the remaining time; expiration prevents further cal
 Stopping the local wait cannot undo work already received by a remote provider.
 Positive ISO day/time durations are also accepted. This is the subject collection
 deadline; each Judge call gets a fresh configured timeout, and synchronous Validators
-have no preemptive bound. An end-to-end Execution budget is not claimed (review G8).
+have no preemptive bound. Volume III Execution ends when conversation collection completes; Validation and Evaluation follow under Volumes V/VI. The fresh per-Judge budget (default 30s, from execution.timeout) is an implementation-defined choice, not a gap in the Execution deadline.
 
 ## Trigger and Evidence resources
 
@@ -115,7 +115,7 @@ POST `/projects/demo/executions`, bearer authentication, JSON:
 {"suite":"smoke","environment":"staging"}
 ```
 
-Returns 201 after completion: `{execution_batch_id: string, executions: [Execution]}`.
+Returns 201 after completion: `{execution_batch_id: string, executions: [Execution], warnings: [{gate: string, reason: string}]}`.
 Each Scenario expands to one Execution per pinned static Dataset row; fixed Variables
 or fixed Evidence produce one. Empty datasets produce zero. Ordering follows Scenario
 then row declaration order, also in parallel output. Defaults: sequential, one worker,

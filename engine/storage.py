@@ -46,13 +46,13 @@ def synchronized(method):
     @wraps(method)
     def locked(self, *args, **kwargs):
         with self.config_lock:
-            self._validate_gate_coverage_change(method.__name__, signature(method).bind(self, *args, **kwargs).arguments)
+            self._validate_configuration_change(method.__name__, signature(method).bind(self, *args, **kwargs).arguments)
             return method(self, *args, **kwargs)
     return locked
 
 
 class Storage:
-    def _validate_gate_coverage_change(self, operation, parameters):
+    def _validate_configuration_change(self, operation, parameters):
         """Validate staged live definitions before any SQL mutation can take effect."""
         changes = {"create_project", "update_project", "create_suite", "create_scenario",
             "update_scenario", "delete_scenario", "create_contract", "update_contract",
@@ -74,6 +74,13 @@ class Storage:
             candidate.contracts = [contract if isinstance(c, Contract) and c.name == contract.name else c for c in candidate.contracts]
         elif operation == "create_suite":
             candidate.suites.append(parameters["suite"])
+        elif operation == "create_environment":
+            candidate.environments.append(parameters["environment"])
+        elif operation == "update_environment":
+            replacement = parameters["environment"]
+            candidate.environments = [replacement if env.name == replacement.name else env for env in candidate.environments]
+        elif operation == "delete_environment":
+            candidate.environments = [env for env in candidate.environments if env.name != parameters["env_name"]]
         elif operation in ("create_scenario", "update_scenario", "delete_scenario"):
             suite = next((s for s in candidate.suites if s.name == parameters["suite_name"]), None)
             if suite is None:
@@ -94,7 +101,12 @@ class Storage:
             candidate.quality_gates = [gate if g.name == gate.name else g for g in candidate.quality_gates]
             for suite in candidate.suites:
                 suite.quality_gates = [gate if g.name == gate.name else g for g in suite.quality_gates]
-        from engine.validation import validate_gate_coverage
+        from engine.validation import validate_dataset_references, validate_gate_coverage, validate_oracle_identity
+        datasets = list(candidate.datasets)
+        if operation == "create_dataset":
+            datasets.append(parameters["dataset"])
+        validate_dataset_references(datasets, lambda name, version:self.get_dataset(project_name, name, version))
+        validate_oracle_identity(candidate, registry.get)
         validate_gate_coverage(candidate, registry.get)
 
     def __init__(self, db_path: str = ":memory:"):

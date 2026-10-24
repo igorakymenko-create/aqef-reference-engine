@@ -20,6 +20,48 @@ class ConfigurationValidationError(ValueError):
     pass
 
 
+def validate_dataset_references(datasets, lookup_dataset=None) -> None:
+    """B.3 Dataset reference: resolve base_dataset in declarations or same-Project registry."""
+    known = {f"{dataset.name}@{dataset.version}":dataset for dataset in datasets}
+    for dataset in datasets:
+        reference = dataset.base_dataset
+        if reference is None:
+            continue
+        name, separator, version = reference.partition("@")
+        if not separator or not name or not version:
+            raise ConfigurationValidationError(f"Dataset '{dataset.name}@{dataset.version}' base_dataset must name a version (name@version)")
+        resolved = known.get(reference)
+        if resolved is None and lookup_dataset is not None:
+            resolved = lookup_dataset(name, version)
+        if resolved is None:
+            raise ConfigurationValidationError(f"Dataset '{dataset.name}@{dataset.version}' base_dataset '{reference}' cannot be resolved in this Project (B.3 Dataset reference)")
+
+
+def validate_contract_identity(contract, environments) -> None:
+    """B.3 Independent Oracle — identity, including every member/sample configuration."""
+    for expectation in contract.expectations:
+        judges = [expectation.judge] if expectation.judge else (
+            expectation.multi_judge.judges or [expectation.multi_judge.judge]
+        ) if expectation.multi_judge else []
+        for judge in judges:
+            for environment in environments:
+                if judge.model.strip().lower() == environment.model_version.strip().lower():
+                    raise ConfigurationValidationError(
+                        f"Independent Oracle violation: Judge model '{judge.model}' MUST NOT be identical "
+                        f"to Environment '{environment.name}' model_version '{environment.model_version}'")
+
+
+def validate_oracle_identity(project, lookup_contract=None) -> None:
+    for suite in project.suites:
+        for scenario in suite.scenarios:
+            try:
+                contract = compose_scenario_effective_contract(project.contracts, suite.contracts,
+                    scenario.contract, lookup_contract)
+            except (ValueError, RecursionError) as exc:
+                raise ConfigurationValidationError(f"Independent Oracle identity: cannot resolve Contract for '{suite.name}/{scenario.name}': {exc}") from exc
+            validate_contract_identity(contract, project.environments)
+
+
 def validate_gate_coverage(project: Project, lookup_contract=None) -> None:
     """WD 0.41.3 A.10/B.3: dimension Gates need a non-control clause in scope."""
     dimensions = {"functional", "semantic", "operational", "safety"}
@@ -60,6 +102,8 @@ def validate_project_configuration(
     for ds in project.datasets:
         key = f"{ds.name}@{ds.version}"
         datasets_map[key] = ds
+
+    validate_dataset_references(project.datasets, lookup_dataset)
 
     def _get_dataset(ref: str) -> Optional[Dataset]:
         if ref in datasets_map:
@@ -106,23 +150,7 @@ def validate_project_configuration(
 
             # Independent Oracle — identity (Volume I, Ch. 3; Appendix B §B.3):
             # A JudgeConfig's model MUST NOT be identical to the Environment's model_version
-            for exp in effective_contract.expectations:
-                judge_models: List[str] = []
-                if exp.judge:
-                    judge_models.append(exp.judge.model)
-                if exp.multi_judge:
-                    if exp.multi_judge.judges:
-                        judge_models.extend(j.model for j in exp.multi_judge.judges)
-                    if exp.multi_judge.judge:
-                        judge_models.append(exp.multi_judge.judge.model)
-
-                for j_model in judge_models:
-                    for env in project.environments:
-                        if j_model.strip().lower() == env.model_version.strip().lower():
-                            raise ConfigurationValidationError(
-                                f"Independent Oracle violation: Judge model '{j_model}' MUST NOT be identical "
-                                f"to Environment '{env.name}' model_version '{env.model_version}'"
-                            )
+            validate_contract_identity(effective_contract, project.environments)
 
             if scenario.seeded_control:
                 control=scenario.seeded_control

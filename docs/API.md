@@ -27,15 +27,49 @@ usable Results stay visible in Basis; no absent Result is invented.
 The 0.41.2 Schema target-value and Custom expected clarifications are already implemented
 as documented below (Volume V Built-in Validators; A.5). No Judge request/response change.
 
-**Deliberately skipped SHOULD, Volume III Execution Pipeline:** there is no pre-run
-requester report for a Project's blocking Gate that a particular Suite cannot feed, nor
-a Judge reachability probe/prompt to proceed. The endpoint is synchronous and has no
-separate pre-run interaction phase; the HTTP provider has no availability-only operation.
-A synthetic Evidence request would assess invented Evidence and obtain a real verdict,
-not reliably prove future reachability. No proceed flag is accepted or advertised.
-Global dimension coverage at load is enforced; a Project Gate may legitimately be fed
-by another Suite, and an unreachable Judge still creates oracle_unavailable after
-subject collection. Those are existing safeguards, not fulfillment of the skipped checks.
+**Volume III pre-run warnings:** the trigger always returns `warnings`, an array of
+`{gate, reason}` objects. Before any subject call, the engine computes and stores every
+applicable blocking dimension Gate for which the requested Suite has no non-control
+clause of that dimension. Project and that Suite's Gates count; advisory Gates, other
+Suites' Gates, overall/regression and Seeded Control clauses do not. Composed inherited,
+reusable and default dimensions count even if a Dataset has zero rows. Warnings do not
+block execution and are independent of the optional requested Gate evaluation list.
+The synchronous response returns them with the completed batch; no provider call is
+needed for this check. Example trigger request:
+
+```json
+{"suite":"smoke","environment":"staging"}
+```
+
+Response 201 includes this field (fragment):
+
+```json
+{"warnings":[{"gate":"semantic","reason":"Suite 'smoke' has no non-Seeded-Control clause in dimension 'semantic'"}]}
+```
+
+**Skipped SHOULD, Judge reachability only:** no availability-only provider operation
+exists. A synthetic Evidence request obtains a real verdict and cannot guarantee later
+reachability. No probe or proceed flag is offered; an unavailable Judge produces
+oracle_unavailable during assessment.
+
+### Dataset base references (B.3)
+
+`base_dataset`, when present, must be a versioned `name@version` resolving within the
+same Project's declared datasets (including forward declarations) or API registry.
+All configuration loaders and changes validate it before writes; HTTP 422 names
+`base_dataset` for malformed or unresolved references. Previously registered immutable
+versions remain available after Project replacement. This does not implement Dataset
+mechanisms or automatic row inheritance. For example, after registering `base@1`, POST
+`/projects/p/datasets` accepts:
+
+```json
+{"name":"derived","version":"1","source":"static","base_dataset":"base@1","rows":[{"variables":{"name":"Ada"}}]}
+```
+
+Response 201 is the stored Dataset (including model defaults). An unresolved reference
+returns the usual `{"detail": "...base_dataset..."}` error, not an execution-time error.
+Judge/subject identifier identity is likewise checked on proposed subresource changes,
+not only full Project loads (B.3 Independent Oracle — identity).
 
 ## Slice 5 — Human Review, panels and Seeded Controls
 
@@ -677,14 +711,15 @@ Dedicated Contract/Gate endpoints keep their own C.3 operation Permission.
 
 ### Audit and retained history (D-6, XII Principals/Audit; C.8)
 
-Every successful permission-checked HTTP action, including reads, records the actor's
-`principal_id`, `principal_kind`, atomic permission as `action`, timestamp and
-`details.target`/`details.method`. Existing governed-action records retain their Approval
-link and specific target; the same permission is not logged twice for that request.
-Failed requests do not produce a successful-action record. Human Review/confirmation/
-invalidation are included. Audit reads are recorded after constructing their response,
-so the current read appears on the next query. Global operations use audit project
-`__global__`, readable through `/projects/__global__/audit` with `audit_read`.
+Every successful state-changing HTTP action records the actor's `principal_id`,
+`principal_kind`, atomic permission as `action`, timestamp and details.target/method.
+This includes configuration CRUD, Executions, reviews, control confirmation/invalidation,
+Requalifications, Admission records, Release Policies and the four governed actions.
+Existing governed records retain their Approval link and specific target without a
+duplicate for the same permission. Failed requests need no successful-action record.
+Reads (GET/HEAD/OPTIONS), including audit pagination, add no records. Historical read
+entries are preserved. Global mutations use audit Project `__global__`, readable at
+`/projects/__global__/audit` with audit_read.
 
 Each new Execution additionally stores top-level `principal_id` and `principal_kind`
 for its trigger; scheduling.requested_by is preserved. These fields do not retroactively
@@ -777,7 +812,7 @@ field families used by responses whose OpenAPI output schema is unconstrained:
 
 | Response | Fields and conditions |
 |---|---|
-| Execution batch (POST) | `execution_batch_id` string, `executions` array of Execution metadata; optional `gate_evaluation` when `gates` was supplied. |
+| Execution batch (POST; also includes warnings: array of {gate, reason}) | `execution_batch_id` string, `executions` array of Execution metadata; optional `gate_evaluation` when `gates` was supplied. |
 | Execution metadata | `id`, `execution_batch_id`, `project`, `suite`, `scenario`, `environment`, `principal_id`, `principal_kind`; nullable `dataset`/`row_id`; `variables` map; `configuration` with environment/scenario/effective contract/validators/defect_classes/execution settings; `scheduling` with strategy/order/reason/requested_by/requested_at; `status`; created_at/started_at/completed_at (latter two nullable); attempts array; retry_count; conversation nullable; partial_turns array; artifacts array; error nullable; opening_prompt nullable. `duration_ms` exists after worker collection. Fixed Evidence adds nullable source_execution. A batch containing controls adds seeded_control_results to each metadata response. |
 | Attempt | number, started_at, completed_at after completion, nullable error. Artifacts are name/data/turn; measured latency also has attempt. Failed/partial subject text stays in partial_turns. |
 | Result | id/execution/clause/oracle_type/oracle, verdict (pass/fail or null), confidence (finite number or not_applicable), disposition, supporting_evidence map, recorded_at. Optional resolves, panel, assertions are omitted when absent, never emitted as null. Derived invalidated_by appears only when applicable; review_route appears for pending Human Results and contains role, state, required_roles, captures_confidence and timeout duration. Policy and escalate_to remain in supporting_evidence.review. |

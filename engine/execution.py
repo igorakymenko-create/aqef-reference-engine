@@ -78,17 +78,21 @@ class ExecutionEngine:
         env = store.get_environment(project_name, request.environment)
         if project is None or suite is None or env is None:
             raise HTTPException(404, "Project, Suite or Environment not found")
-        applicable={g.name for g in project.quality_gates+suite.quality_gates}
+        gate_definitions = project.quality_gates + suite.quality_gates
+        applicable={g.name for g in gate_definitions}
         if request.gates and not set(request.gates)<=applicable:
             raise HTTPException(422,"Requested Gates must apply to this Suite/Environment scope")
         batch = str(uuid.uuid4())
         records = []
+        covered_dimensions = set()
         try:
             config = settings(project, suite)
             for scenario in suite.scenarios:
                 effective = compose_scenario_effective_contract(
                     project.contracts, suite.contracts, scenario.contract,
                     lambda name: store.get_contract(project_name, name))
+                if scenario.seeded_control is None:
+                    covered_dimensions.update(clause.dimension.value for clause in [*effective.constraints, *effective.expectations])
                 if effective.policies and effective.policies.validator_composition not in ("AND", "OR", "hard-veto"):
                     raise ValueError("Unsupported validator_composition")
                 for expectation in effective.expectations:
@@ -152,9 +156,13 @@ class ExecutionEngine:
         except (ValueError, TypeError) as exc:
             raise HTTPException(422, str(exc)) from exc
         # All batch inputs are validated before recording or invoking any subject.
+        warnings = [{"gate":gate.name, "reason":f"Suite '{suite.name}' has no non-Seeded-Control clause in dimension '{gate.aggregate}'"}
+                    for gate in gate_definitions if gate.on_failure == "block_release"
+                    and gate.aggregate in {"functional", "semantic", "operational", "safety"}
+                    and gate.aggregate not in covered_dimensions]
         store.save_executions(records, {"id":batch, "project":project_name, "suite":suite.name,
-                                       "environment":env.name, "created_at":now()})
-        return batch, records
+                                       "environment":env.name, "created_at":now(), "warnings":warnings})
+        return batch, records, warnings
 
     async def execute(self, record):
         config = record["configuration"]["execution"]
@@ -225,7 +233,7 @@ class ExecutionEngine:
         self.storage.update_execution(record)
 
     async def run(self, project, request, principal):
-        batch, records = self.prepare(project, request, principal)
+        batch, records, warnings = self.prepare(project, request, principal)
         if records:
             config = records[0]["configuration"]["execution"]
             pool = asyncio.Semaphore(config["parallelization"] if config["scheduling"] == "parallel" else 1)
@@ -254,7 +262,7 @@ class ExecutionEngine:
             manager.ensure_unrun(records)
         from engine.scoped import decorate_execution
         records=[decorate_execution(self.storage,r) for r in records]
-        response={"execution_batch_id":batch,"executions":records}
+        response={"execution_batch_id":batch,"executions":records,"warnings":warnings}
         if request.gates:
             from engine.decision import DecisionEngine
             with self.storage.config_lock:response["gate_evaluation"]=DecisionEngine(self.storage).evaluate(project,batch)

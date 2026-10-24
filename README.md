@@ -7,6 +7,10 @@ The [Conformance Statement](docs/CONFORMANCE-STATEMENT.md) declares its offered 
 and the [normative review](docs/CONFORMANCE-REVIEW.md) records known gaps. Full AQEF
 Conformance is not asserted while mandatory gaps remain.
 
+Slice 8 corrects mutation-only audit history, resolves base Dataset references, and
+returns pre-run Suite/Gate warnings. The review closes G4/G8 under the explicit
+identifier and Execution-stage rules; remaining gaps are declared in the statement.
+
 ## Completed Slices
 
 - [x] **Slice 1: Foundation and Definition**

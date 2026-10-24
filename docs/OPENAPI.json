@@ -6199,7 +6199,8 @@
           "base_dataset": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "pattern": "^.+@.+$"
               },
               {
                 "type": "null"

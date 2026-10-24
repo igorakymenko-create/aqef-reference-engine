@@ -60,10 +60,10 @@ def test_d6_c8_retained_project_deletion_is_audited_and_history_readable(harness
     assert client.get(BASE+"/"+record["id"]+"/results",headers=HEADERS).status_code==200
 
 
-def test_d6_xii_every_checked_action_including_reads_and_global_actions_is_logged(harness):
+def test_d8_xii_reads_are_not_audited_and_global_mutations_are_logged(harness):
     app,client,_=configure(harness)
     assert client.get("/projects/p",headers=HEADERS).status_code==200
-    assert any(e["details"]["target"]=="/projects/p" for e in audit(client,"read"))
+    assert audit(client,"read")==[]  # D-8 corrects D-6's overly broad read-audit request.
     assert client.post("/teams",json={"id":"new","name":"New"},headers=HEADERS).status_code==201
     entries=audit(client,"team_admin","__global__")
     assert entries[0]["details"]["target"]=="/teams"

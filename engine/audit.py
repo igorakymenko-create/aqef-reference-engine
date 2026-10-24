@@ -1,4 +1,4 @@
-"""XII Principals/Audit: request-local audit of successful permission-checked actions."""
+"""XII Principals/Audit: successful state-changing permission-checked actions."""
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 import uuid
@@ -40,6 +40,9 @@ def buffer_entry(storage, entry):
 
 def commit_audit(session):
     request = session.request
+    # D-8: reading a collection (especially this log) cannot append to that collection.
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
     project = session.project or request.path_params.get("project") or "__global__"
     target = request.url.path
     details = {"target": target, "method": request.method}

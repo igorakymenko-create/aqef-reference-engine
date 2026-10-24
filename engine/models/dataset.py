@@ -45,7 +45,7 @@ class Dataset(AQEFBaseModel):
     version: str = Field(..., min_length=1)
     source: DatasetSource = Field(...)
     rows: Optional[List[Row]] = None
-    base_dataset: Optional[str] = None
+    base_dataset: Optional[str] = Field(None, pattern=r"^.+@.+$")
     mechanisms: Optional[List[MechanismConfig]] = None
 
     @model_validator(mode="after")

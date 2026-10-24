@@ -25,11 +25,13 @@ decisions; adopted clarifications and remaining interpretations are identified e
   acted”; “MUST be able to distinguish which one a request is actually asking for”.
 - **Readings:** audit only Approval-Workflow mutations, or all successful permission-
   checked actions including read operations; global actions have no named Project.
-- **Choice:** audit every successful checked permission, including reads, retaining
-  existing more specific governed records without duplicating the same permission.
-  Global actions use __global__ in the existing audit namespace; reads are logged after
-  their returned snapshot. A failed request is not a successful-action record. Deletion
-  records explicitly name retention/deletion intent. No history-purge feature added.
+- **Choice, corrected by project owner D-8 (slice 8):** audit successful state-changing
+  actions only, including ordinary mutations as well as the four governed actions.
+  Reads (GET/HEAD/OPTIONS) produce no entries, so pagination does not extend its own
+  history. Existing historical read entries remain readable. Global mutations retain
+  the __global__ namespace; actor kind, targets, approvals and deletion intent remain.
+  This replaces the earlier D-6 interpretation that included reads. Failed requests
+  need no successful-action entry.
 
 ## 30. Scope declaration while mandatory gaps remain
 - **Section:** Front Matter §10 Conformance Statement / non-negotiable core; BRIEF §3.
@@ -40,7 +42,7 @@ decisions; adopted clarifications and remaining interpretations are identified e
 - **Choice:** the statement initially targeted 0.41.1; slice 7 moves that target to
   0.41.3 with the same scope and qualifications. It lists human_review/multi_judge/
   seeded_controls, never core as a capability identifier. It explicitly withholds an
-  unqualified conformance assertion while review G1–G8/U1 remain. Topology cannot waive
+  unqualified conformance assertion while review G1/G3/G5/G6 mechanisms/G7/U1 remain. Topology cannot waive
   them. Related happy-path tests do not prove all required-field/type rejection cases;
   untested units remain individual findings rather than fabricated coverage.
 
@@ -63,16 +65,17 @@ decisions; adopted clarifications and remaining interpretations are identified e
   policy replacement remains visible, but is not asserted conformant. A complete
   policy merge/ordering design and migration is larger than a small slice 6 fix.
 
-## 33. Execution timeout boundary includes assessment
-- **Section:** Volume III Timeouts; Volume VI Human Review (Oracle call attempts).
-- **Quotation:** “a runtime bound ... to abort a turn or an entire Execution”;
-  “within the Execution's timeout”.
-- **Readings:** timeout resets per assessment after collection, or bounds the whole
-  collected/assessed Execution (excluding pending human response routing).
-- **Choice:** the conservative review records separate per-Judge budgets/no preemptive
-  Validator bound as G8. Entries 7/11 describe the subject deadline and entry 16 the
-  separate assessment budget; they do not establish the stronger end-to-end bound.
-  No cancellation/scheduler redesign is silently introduced in the documentation slice.
+## 33. Execution timeout boundary — closed in slice 8
+- **Section:** Volume III Execution Pipeline / Timeouts; Volume VI Oracle call attempts.
+- **Quotation:** “An Execution is complete once the Conversation Engine has no further
+  turns to produce”; “what happens after that point — Validation, Evaluation — belongs
+  to Volume V and Volume VI”; timeouts bound “a turn or an entire Execution”.
+- **Earlier reading:** a single collection-plus-assessment deadline was recorded as G8.
+- **Resolution:** the explicit stage boundary excludes assessment from that deadline.
+  G8 is closed; no scheduler change is required. Each Judge call has its own fresh
+  execution.timeout budget, default 30s, an implementation-defined choice (PROVIDERS).
+  Entries 7/11/16 describe these existing separate bounds. Tests cover completion
+  before assessment and both successful and timed-out Judge calls.
 
 ## 25. Panel Confidence and unavailable members
 - **Section:** VI Consensus/Voting/Confidence; A.7; C.7.

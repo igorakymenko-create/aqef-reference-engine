@@ -1,5 +1,59 @@
 # Implementation Notes
 
+## Slice 8 — completed work
+
+- D-8 (XII/C.6): successful mutations retain actor/kind, target and deletion intent;
+  reads no longer append audit entries. Historical entries are preserved. Regression
+  pagination terminates at limit=1, and the mutation workflow covers Execution,
+  Human Review, confirmation/invalidation, Requalification, Admission, policies,
+  governed decisions, configuration changes and deletion. Whole suite: 388 passed.
+- B.3: base_dataset syntax and same-Project resolution are checked before configuration
+  persistence, including full replacement, Dataset registration and new versions.
+  Forward declarations and immutable API registry versions resolve. Invalid requests
+  name base_dataset without provider calls or partial writes. Whole suite: 410 passed.
+- III SHOULD: trigger warnings are computed/stored before subject invocation from
+  composed non-control clauses and applicable blocking dimension Gates, then returned
+  without blocking the run. Default/inherited/reusable dimensions and zero-row Datasets
+  are covered; optional Gate requests do not filter warnings. Whole suite: 415 passed.
+- G4: B.3's enforceable model-identifier check is met, not a promise to attest hidden
+  weights. Extended the existing identity validation to staged Environment, Scenario,
+  Suite and reusable Contract changes; otherwise those routes could bypass the full
+  Project check. Single/panel and mutation regressions pass. Whole suite: 424 passed.
+- G8: III explicitly ends Execution before V/VI assessment. No timeout code changed.
+  Tests prove completed Evidence survives a separate Judge timeout and a Judge verdict
+  after the collection deadline. Fresh per-Judge execution.timeout (default 30s) is
+  declared as an implementation choice. Final whole suite: 426 passed, one existing
+  Starlette/httpx deprecation warning; all earlier slices included.
+- Entry 34 replaces the earlier D-6 interpretation with the owner's D-8 correction;
+  entry 33/G8 is closed. No new unresolved ambiguity. G4 is restated as met; G6's
+  reference half is closed. Remaining gaps: G1, G3/U1, G5, G6 mechanisms, G7.
+  Judge reachability alone remains a skipped SHOULD. No new capability claim or
+  mechanisms implementation; no external/conformance test material accessed.
+- API/PROVIDERS/README, statement/review and generated OpenAPI describe these changes.
+
+## Slice 8 — plan (WD 0.41.3)
+
+- D-8, XII Audit/Principals and C.6: audit successful state-changing requests, including
+  all existing governed/scoped/configuration actions, not GET/HEAD/OPTIONS. Preserve
+  historical entries and mutation provenance; page reads must terminate without writes.
+  Replace entry 34's earlier broad D-6 reading with the owner's explicit correction.
+- B.3 Dataset reference: base_dataset requires name@version syntax and resolution in
+  the proposed Project datasets or that Project's API registry. Check standalone Dataset
+  creation/version registration and staged configuration writes before persistence;
+  support forward declarations in one Project document. No mechanisms implementation.
+- III Execution Pipeline SHOULD: compute every applicable blocking dimension Gate
+  unfilled by this Suite's non-control composed clauses before provider calls; return
+  an always-present warnings list on trigger without blocking or filtering by requested
+  gates. Include inherited/default dimensions; do not treat empty datasets as absent
+  clause definitions. Reachability probing/proceed interaction remains skipped.
+- G4: B.3's identity MUST is the identifier check. Verify it at configuration and
+  preflight boundaries; family/hidden provenance remain the stated SHOULD limitation.
+- G8: III explicitly completes Execution before V/VI assessment. Document the existing
+  subject-collection deadline and separate bounded Judge calls; close entry 33's broader
+  interpretation without changing timeout behavior.
+- Add named-section regressions for each item, run the complete suite after each,
+  update API/provider/conformance documents and remaining gaps, then commit/push slice-8.
+
 ## Slice 7 — Completed Work (WD 0.41.3)
 
 - Read published revision history for 0.41.2/0.41.3 and changed normative texts through
