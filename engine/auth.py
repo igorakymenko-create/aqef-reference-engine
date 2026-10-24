@@ -21,6 +21,16 @@ from engine.storage import Storage
 from engine.audit import checked_permission
 
 
+# C.4: even administrative authority consists of explicit atomic Permissions.
+BOOTSTRAP_PERMISSIONS = (
+    "read", "project_create", "project_edit", "project_delete",
+    "environment_create", "environment_edit", "environment_delete",
+    "suite_create", "scenario_create", "scenario_edit", "scenario_delete",
+    "dataset_create", "contract_define", "execute", "review", "snapshot_create",
+    "baseline_approve", "gate_override", "release_decide", "seeded_control_invalidate",
+    "team_read", "team_admin", "role_read", "role_admin", "audit_read",
+)
+
 def governed_values(resource):
     """B.3: only normalized governed values, keyed by their attachment locations."""
     if resource is None:
@@ -85,9 +95,6 @@ def get_principal_permissions(principal: Principal, storage: Storage) -> Set[str
     """Resolve all permissions for a principal across their assigned roles."""
     permissions: Set[str] = set()
     for role_name in principal.roles:
-        # "admin" role or permission grants full privileges
-        if role_name == "admin":
-            permissions.add("admin")
         role = storage.get_role(role_name)
         if role:
             permissions.update(role.permissions)
@@ -97,9 +104,6 @@ def get_principal_permissions(principal: Principal, storage: Storage) -> Set[str
 def check_permission(principal: Principal, permission: str, storage: Storage) -> None:
     """Check that the principal holds the required atomic permission."""
     perms = get_principal_permissions(principal, storage)
-    if "admin" in perms:
-        checked_permission(principal, permission, storage)
-        return
     if permission not in perms:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -1,5 +1,72 @@
 # Implementation Notes
 
+## Slice 9 — completed work (WD 0.41.4)
+
+- Added the missing Slice 8 Completed Slices entry, in the README's existing form.
+  Read tag 0.41.4's revision row and exact normative files: §10, XII Teams/Audit,
+  VII Contract Composition, IV introduction, A.5/A.8, B.3 and C.3/C.4. Source paths
+  and blob IDs are in SPECIFICATION-SOURCES.json; only named normative files were
+  retrieved, never an upstream test directory or test material.
+- C.3 now permits this engine's synchronous response. Section-named regression
+  confirms the identifier and already completed Executions; G7 and entry 31 close.
+  XII mutation-only audit already matches the new MUST, confirmed with actor/kind,
+  time/target and no read mutation; the full D-8 workflow remains in the whole suite.
+- XII/§10: explicitly bind no Projects/Suites to Teams, every Principal scope every
+  Project, still subject to Permissions and actor rules. Removed admin Role-name and
+  admin Permission wildcard checks, including governed approval Role selection.
+  Fresh bootstrap Role enumerates all supported atomic Permissions. Existing Roles
+  are not silently expanded; API upgrade notes describe explicit-grant provisioning.
+  G1 closes; Person-only, designated Human Role and Service policy rules remain.
+- VII/A.5/B.3: compose strictest mode, reject lower weakening at load and every
+  staged write; check unattached reusable extends fragments and ancestor edits too.
+  Source clause weights are aligned runtime clause_weights arrays, retained through
+  Execution/Snapshot and read by Gate/Report aggregation. Shared IDs with different
+  effective weights conflict; anonymous clauses retain distinct weights. Source
+  weight edits stale the affected named clause. Legacy uniform frozen Contracts
+  retain their recorded weight/currency; no historical record is rewritten.
+  G5 and entry 32 close; entry 36 records peer/default/repeated-weight readings.
+- IV/A.8/§10: no mechanism capability offered; reject all four nonempty mechanism
+  types at every loader, with mechanisms named. Empty list means no mechanism.
+  The remaining half of G6 closes, not by implementing an unclaimed capability.
+- Re-examined G3: finite strict JSONNumber fields reject strings/booleans, including
+  nested Gate threshold leaves, Policies weights, confidence/consensus and difficulty
+  priors; counts reject string/Boolean coercion. Configuration Boolean flags are
+  strict too. Older tests expecting inert mechanisms or delayed schema rejection
+  were updated to the new load-time requirements, preserving their error assertions.
+- New tests/test_slice_9.py adds 115 section-named cases; final whole suite:
+  **541 passed**, one existing Starlette/httpx deprecation warning, all earlier slices
+  included. API/PROVIDERS JSON examples and generated OpenAPI were checked as well.
+- Remaining gaps are precisely G3/U1: incomplete formal runtime response schemas,
+  optional explicit-null/omission compatibility and full mandatory-property/negative
+  coverage (with the individual ledger findings). Boolean/numeric coercion is no
+  longer a declared remaining defect. This engine still does not claim Conformance;
+  the offered capability set is unchanged. Judge reachability remains the documented
+  skipped SHOULD; no additional capabilities or provider wire fields were introduced.
+
+## Slice 9 — plan (WD 0.41.4)
+
+- Read published 0.41.4 revision row, C.3/C.4, XII Teams/Audit, VII Composition,
+  A.5/A.8, B.3 and §10. G7 closes: retain documented synchronous completion response.
+  Confirm XII mutation-only audit with section-named regressions (slice 8 behavior).
+- XII/§10 Team binding: bind no Projects or Suites to Teams; every Principal's
+  resource scope is every Project, subject to atomic Permissions and actor rules.
+  C.4: remove all admin Role-name and wildcard Permission shortcuts, bootstrap a
+  Role with explicitly enumerated engine Permissions, keep Person-only constraints.
+- VII/A.5/B.3: strictest contributed validator_composition wins within a level;
+  a looser lower contribution conflicts, including extends ancestors. Preserve each
+  source Contract's clause weights through composition, frozen Evidence, Snapshots
+  and aggregation; repeating a shared ID with a different effective weight conflicts.
+  Apply staged validation to reusable fragments even before they are attached.
+- IV/A.8/§10: no Dataset mechanism capability claimed; reject nonempty mechanisms
+  at every load/change naming the field. Empty mechanisms is accepted, no mechanism.
+- Re-examine G3: strict numeric number fields reject strings/booleans and nonfinite
+  values; retain JSON integer numbers where a number is allowed. Document remaining
+  formal runtime schema/coverage/null gaps precisely; do not claim proven Conformance.
+- Add tests naming each section; whole suite after each item. Update version metadata,
+  source provenance, API/provider/statement/review and close entries 31/32. Any new
+  implementation reading goes in AMBIGUITIES before implementation. Commit/push main
+  and tag slice-9 only after the whole suite and documentation checks pass.
+
 ## Slice 8 — completed work
 
 - D-8 (XII/C.6): successful mutations retain actor/kind, target and deletion intent;

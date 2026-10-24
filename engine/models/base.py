@@ -5,7 +5,12 @@ References:
 - Review D-2 ("A configuration key the engine does not recognize should be rejected, naming the key, rather than dropped.")
 """
 
-from pydantic import BaseModel, ConfigDict
+from typing import Annotated
+from pydantic import BaseModel, ConfigDict, Field
+
+
+JSONNumber = Annotated[float, Field(strict=True, allow_inf_nan=False)]
+JSONInteger = Annotated[int, Field(strict=True)]
 
 
 class AQEFBaseModel(BaseModel):

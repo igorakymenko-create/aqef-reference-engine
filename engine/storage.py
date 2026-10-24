@@ -101,11 +101,12 @@ class Storage:
             candidate.quality_gates = [gate if g.name == gate.name else g for g in candidate.quality_gates]
             for suite in candidate.suites:
                 suite.quality_gates = [gate if g.name == gate.name else g for g in suite.quality_gates]
-        from engine.validation import validate_dataset_references, validate_gate_coverage, validate_oracle_identity
+        from engine.validation import validate_dataset_references, validate_gate_coverage, validate_oracle_identity, validate_reusable_composition
         datasets = list(candidate.datasets)
         if operation == "create_dataset":
             datasets.append(parameters["dataset"])
         validate_dataset_references(datasets, lambda name, version:self.get_dataset(project_name, name, version))
+        validate_reusable_composition(registry.values(), registry.get)
         validate_oracle_identity(candidate, registry.get)
         validate_gate_coverage(candidate, registry.get)
 

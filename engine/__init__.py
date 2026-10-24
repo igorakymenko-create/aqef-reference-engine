@@ -1,3 +1,3 @@
 """AQEF Reference Engine — package root."""
 
-__version__ = "0.41.3"
+__version__ = "0.41.4"

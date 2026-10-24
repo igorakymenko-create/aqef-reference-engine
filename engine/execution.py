@@ -10,7 +10,7 @@ import uuid
 from fastapi import HTTPException
 from pydantic import Field
 
-from engine.composition import compose_scenario_effective_contract
+from engine.composition import compose_scenario_effective_contract, effective_contract_data
 from engine.models.base import AQEFBaseModel
 from engine.models.evidence import Conversation, Turn
 from engine.providers import SubjectReply
@@ -141,7 +141,7 @@ class ExecutionEngine:
                         "variables": deepcopy(variables), "configuration": {
                             "environment": env.model_dump(mode="json"),
                             "scenario": scenario.model_dump(mode="json"),
-                            "contract": effective.model_dump(mode="json"),
+                            "contract": effective_contract_data(effective),
                             "validators": deepcopy(frozen_validators),
                             "defect_classes":[c.model_dump(mode="json") for c in project.defect_classes],
                             "execution": deepcopy(config)},

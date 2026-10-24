@@ -471,9 +471,10 @@ def test_judge_http_unavailability(harness, monkeypatch, status, body):
 
 @pytest.mark.parametrize("policy", ["unknown", "and"])
 def test_unknown_composition_rejects_before_subject(harness, policy):
-    _, client, calls = configure(harness, assessment_project(policy=policy))
-    response = client.post(BASE, json={"suite":"s", "environment":"test"}, headers=HEADERS)
+    _, client, calls = harness
+    response = client.post("/projects", json=assessment_project(policy=policy), headers=HEADERS)
     assert response.status_code == 422
+    assert "validator_composition" in response.text
     assert not calls
 
 

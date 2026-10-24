@@ -1,9 +1,64 @@
-# AQEF Engine API Documentation — Working Draft 0.41.3
+# AQEF Engine API Documentation — Working Draft 0.41.4
 
 This documents the implemented API, including known differences from the specification.
 See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level
-[review](CONFORMANCE-REVIEW.md). Team scoping, schema coverage and the
-synchronous trigger are known gaps; this document does not imply full Conformance.
+[review](CONFORMANCE-REVIEW.md). Formal schema/coverage gaps remain; this document does not imply full Conformance.
+
+## Working Draft 0.41.4 changes
+
+C.3 permits synchronous triggering. This engine chooses to finish the batch before
+returning 201 with its execution_batch_id, executions and warnings. There is no pending
+job/proceed flag or second response phase. XII Audit records successful mutations,
+not reads, as described under Audit and retained history.
+
+XII Teams/§10: the engine binds no Projects/Suites to Teams, so every Principal's
+resource scope is every Project. Access still requires the operation's atomic
+Permission and actor rules. Role names grant no authority; an `admin` Permission is
+only an ordinary name, never a wildcard. New installations bootstrap a Role named
+admin with this explicit list:
+
+```json
+["read","project_create","project_edit","project_delete","environment_create","environment_edit","environment_delete","suite_create","scenario_create","scenario_edit","scenario_delete","dataset_create","contract_define","execute","review","snapshot_create","baseline_approve","gate_override","release_decide","seeded_control_invalidate","team_read","team_admin","role_read","role_admin","audit_read"]
+```
+
+Existing Roles are not silently granted new powers at startup. Before upgrading an
+older database whose administrative Role has only `["admin"]`, its owner must provision
+the required explicit Permissions in the stored Role using trusted local database
+maintenance. This release neither rewrites existing Roles nor introduces a Role-edit
+API. Bootstrap only creates a missing Role/Principal.
+
+VII/A.5/B.3: the effective validator_composition is the strictest contributed mode
+(hard-veto > AND > OR). A looser contribution below a stricter Project/Suite/extends
+ancestor is HTTP 422 at load/change. Peers at one attachment/depth take the strictest
+mode independent of list order. A supplied Policies object defaults its mode to AND;
+an absent object contributes no mode. Source weights default to 1 and apply only to
+that Contract's own clauses, not inherited ones. Repeating a shared clause ID with a
+different effective weight is a conflict (including an unweighted repeat; ambiguity 36).
+Unattached reusable fragments and edits to their ancestors are checked too.
+
+Frozen runtime `configuration.contract` and `Snapshot.effective_contracts` additionally
+include a derived `clause_weights` object with constraints/expectations arrays aligned
+with those clause lists, for example:
+
+```json
+{"clause_weights":{"constraints":[9,1],"expectations":[2]}}
+```
+
+Authored Contracts do not accept clause_weights. Aggregation uses these weights, not
+the last attached Contract's weight; the effective policies.weight is null when weights
+are mixed. A source-weight edit makes its named clause's old Result stale. Earlier
+frozen records lacking this metadata retain their recorded common weight.
+
+IV/A.8: no dataset_mechanism capability is offered. Any nonempty mechanisms list,
+including data_mutation/fuzzing/edge_cases/adversarial, returns 422 naming mechanisms
+on Project POST/PUT, Dataset POST and version registration. An empty list is accepted.
+
+B.2 numeric fields reject Boolean values, numeric strings and nonfinite values, including
+Gate threshold map leaves, Expectation/Consensus thresholds, weights and difficulty
+priors. JSON numbers (including integer-valued numbers for Float fields) remain valid.
+Count fields reject string/Boolean coercion; configuration Boolean flags accept only
+JSON true/false. Optional explicit-null and formal runtime schema limitations remain
+G3, detailed in the Conformance Statement.
 
 ## Working Draft 0.41.3 changes
 
@@ -63,7 +118,7 @@ mechanisms or automatic row inheritance. For example, after registering `base@1`
 `/projects/p/datasets` accepts:
 
 ```json
-{"name":"derived","version":"1","source":"static","base_dataset":"base@1","rows":[{"variables":{"name":"Ada"}}]}
+{"name":"derived","version":"1","source":"static","base_dataset":"base@1","rows":[{"id":"r1","variables":{"name":"Ada"}}]}
 ```
 
 Response 201 is the stored Dataset (including model defaults). An unresolved reference
@@ -342,7 +397,7 @@ Response 200 (additional trace fields include id, evaluated_at, result_ids and a
 
 The entire batch is used, not a client-selected favorable subset. All Project and its
 Suite Gates are included. Confidence is applied first; effective actionable pass/fail
-Results contribute 1/0 at face value, weighted by positive Contract policies.weight
+Results contribute 1/0 at face value, weighted by each clause’s positive source-Contract policies.weight
 (default 1). Safety Validator failure is a separate hard veto. Seeded Controls are
 excluded. Missing evidence, unresolved Results, staleness and required-but-missing Judge
 Admission cannot silently pass. Every applicable failure reason is reported in reasons;
@@ -490,7 +545,7 @@ Response 201 includes the following fields, plus full frozen result/configuratio
  "execution_id":"execution-1","result_id":"result-1","dataset":"greetings@1",
  "approved_by":"reviewer","approved_at":"2026-10-24T12:04:00+00:00","approval_role":"baseline-reviewer","approval_id":"approval-5",
  "result":{"id":"result-1","execution":"execution-1","clause":"shape","oracle_type":"validator","oracle":"schema-configuration","verdict":"pass","confidence":"not_applicable","disposition":"actionable","supporting_evidence":{},"recorded_at":"2026-10-24T11:59:00+00:00"},
- "configuration":{"environment":{"name":"staging","model_version":"subject-v1","prompt_version":"p1","tool_configuration":null,"action_boundary":null,"infra_target":"local"},"scenario":{"name":"greeting","prompt":{"template":"Hello"},"contract":null,"dataset":"greetings@1","variables":null,"seeded_control":null,"evidence":null},"contract":{"name":"effective_contract","constraints":[{"id":"shape","validator":"schema","target":"response","expected":{"type":"string"},"veto":false,"dimension":"functional","defect_classes":null}],"expectations":[],"policies":null,"extends":[]},"execution":{"timeout":"30s","scheduling":"sequential","parallelization":1,"retry":null},"validators":{}},
+ "configuration":{"environment":{"name":"staging","model_version":"subject-v1","prompt_version":"p1","tool_configuration":null,"action_boundary":null,"infra_target":"local"},"scenario":{"name":"greeting","prompt":{"template":"Hello"},"contract":null,"dataset":"greetings@1","variables":null,"seeded_control":null,"evidence":null},"contract":{"name":"effective_contract","constraints":[{"id":"shape","validator":"schema","target":"response","expected":{"type":"string"},"veto":false,"dimension":"functional","defect_classes":null}],"expectations":[],"policies":null,"extends":[],"clause_weights":{"constraints":[1.0],"expectations":[]}},"execution":{"timeout":"30s","scheduling":"sequential","parallelization":1,"retry":null},"validators":{}},
  "evidence":{"conversation":{"turns":[{"prompt":"Hello","response":"Hello!"}]},"artifacts":[]}}
 ```
 
@@ -757,7 +812,7 @@ Authorization: Bearer <principal-token>
 
 Governance (Volume XII; Appendix C §C.4) requires every request to resolve to a Principal (a `person` or a `service_account`).
 
-- **Bootstrap / Admin Token**: The engine provides a pre-configured or environment-configurable admin token (e.g. `AQEF_ADMIN_TOKEN` or default bootstrap token `admin-token`) associated with an administrative Person principal possessing all permissions (`admin`, `read`, `project_create`, `project_edit`, `project_delete`, `environment_create`, `environment_edit`, `environment_delete`, `suite_create`, `scenario_create`, `scenario_edit`, `scenario_delete`, `contract_define`, `dataset_create`, `team_admin`, `role_admin`, `audit_read`, etc.).
+- **Bootstrap / Admin Token**: AQEF_ADMIN_TOKEN (default admin-token) identifies the bootstrap Person. Its administrative Role lists the atomic Permissions above; no wildcard grant exists.
 - **Creating Teams**:
   - `POST /teams` with payload `{"id": "qa-team", "name": "QA Engineering", "description": "Testing team"}`. Requires `team_admin`.
 - **Creating Roles**:
@@ -768,11 +823,11 @@ Governance (Volume XII; Appendix C §C.4) requires every request to resolve to a
     `roles` (default []), `owner_person_id`, and `token`. A Service Account's owner must
     resolve to an existing Person (422 otherwise); Person cannot have an owner.
     Omitted/empty token falls back to the Principal id. Token is not returned.
-    Role/Team name references are stored as supplied; Team membership does not yet
-    restrict Project access (review G1). Tokens/Principal ids must be unique (409).
+    Role/Team references are stored as supplied; Projects/Suites bind to no Teams,
+    and every Principal scope is every Project (XII/§10, the declared choice). Tokens/Principal ids must be unique (409).
     Principal/Team/Role DTOs currently ignore extra input keys, unlike strict AQEF
-    configuration DTOs. Admin Role name/permission grants wildcard permissions; actor
-    kind, Human Role, policy and currency checks still apply.
+    configuration DTOs. Actor kind, Human Role, policy and currency checks still apply;
+    no Role name or admin Permission bypasses an atomic Permission check.
 
 ## HTTP Status Codes
 
@@ -916,4 +971,4 @@ Create status is listed per operation; all GET/PUT actions below return 200 unle
 | GET | `/projects/{project}/requalifications` | 200 | no body → dynamic JSON |
 | GET | `/healthz` | 200 | no body → dynamic JSON |
 
-Framework `/docs`, `/docs/oauth2-redirect`, `/redoc` and `/openapi.json` also require a bearer token (401 without one). They are not Reference UI. `/healthz` returns `{"status":"ok","specification_version":"0.41.3"}` with authentication. To view browser documentation, the browser must supply the Authorization header; no login/cookie flow is provided.
+Framework `/docs`, `/docs/oauth2-redirect`, `/redoc` and `/openapi.json` also require a bearer token (401 without one). They are not Reference UI. `/healthz` returns `{"status":"ok","specification_version":"0.41.4"}` with authentication. To view browser documentation, the browser must supply the Authorization header; no login/cookie flow is provided.

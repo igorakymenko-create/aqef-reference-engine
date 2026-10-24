@@ -11,7 +11,7 @@ from engine.models.contract import Constraint, Contract, Expectation, Policies
 
 
 class ContractCompositionConflictError(ValueError):
-    """Raised when contributing contracts conflict on a clause with the same ID."""
+    """Raised for conflicting clauses, source weights, or weakening Policies."""
     pass
 
 
@@ -68,6 +68,7 @@ def resolve_contract(
 def compose_contracts(
     contracts: List[Contract],
     allow_empty: bool = False,
+    levels=None,
 ) -> Contract:
     """Compose multiple contracts additively following AQEF Volume VII rules.
 
@@ -85,17 +86,26 @@ def compose_contracts(
     seen_expectation_ids: Dict[str, Expectation] = {}
 
     combined_policy: Optional[Policies] = None
+    levels = levels if levels is not None else [(0, 0)] * len(contracts)
+    contributions = [(level, c.policies.validator_composition) for c, level in zip(contracts, levels) if c.policies]
+    strictness = {"OR": 0, "AND": 1, "hard-veto": 2}
+    for lower_level, lower_value in contributions:
+        if any(higher_level < lower_level and strictness[higher_value] > strictness[lower_value]
+               for higher_level, higher_value in contributions):
+            raise ContractCompositionConflictError(
+                f"Policy composition conflict: lower validator_composition '{lower_value}' weakens a higher contribution")
+    if contributions:
+        combined_policy = Policies(validator_composition=max((v for _, v in contributions), key=strictness.get))
+    weights = {"constraints": [], "expectations": []}
+    seen_weights = {}
 
     for contract in contracts:
-        if contract.policies:
-            if combined_policy is None:
-                combined_policy = contract.policies.model_copy()
-            else:
-                # If both specify policies, preserve higher level or combine
-                if contract.policies.weight is not None:
-                    combined_policy.weight = contract.policies.weight
-                if contract.policies.validator_composition != "AND":
-                    combined_policy.validator_composition = contract.policies.validator_composition
+        weight = contract.policies.weight if contract.policies and contract.policies.weight is not None else 1.0
+        for clause in [*contract.constraints, *contract.expectations]:
+            if clause.id:
+                if clause.id in seen_weights and seen_weights[clause.id] != weight:
+                    raise ContractCompositionConflictError(f"Composition conflict on clause id '{clause.id}': differing weight")
+                seen_weights[clause.id] = weight
 
         # Constraints
         for c in contract.constraints:
@@ -115,9 +125,11 @@ def compose_contracts(
                     )
                 seen_constraint_ids[c.id] = c
                 effective_constraints.append(c)
+                weights["constraints"].append(weight)
             else:
                 # No ID: always added
                 effective_constraints.append(c)
+                weights["constraints"].append(weight)
 
         # Expectations
         for e in contract.expectations:
@@ -137,20 +149,32 @@ def compose_contracts(
                     )
                 seen_expectation_ids[e.id] = e
                 effective_expectations.append(e)
+                weights["expectations"].append(weight)
             else:
                 # No ID: always added
                 effective_expectations.append(e)
+                weights["expectations"].append(weight)
 
     if not allow_empty and not effective_constraints and not effective_expectations:
         raise InvalidEffectiveContractError("Effective composed contract has zero clauses; at least one clause is required")
 
-    return Contract.model_construct(
+    if (combined_policy and any(c.policies and c.policies.weight is not None for c in contracts)
+            and len(set(weights["constraints"] + weights["expectations"])) == 1):
+        combined_policy.weight = (weights["constraints"] + weights["expectations"])[0]
+    result = Contract.model_construct(
         name="effective_contract",
         constraints=effective_constraints,
         expectations=effective_expectations,
         policies=combined_policy,
         extends=[],
     )
+    result._clause_weights = weights
+    return result
+
+
+def effective_contract_data(contract):
+    """Frozen runtime Contract, with aligned source-weight arrays (VII/A.5/B.3)."""
+    return {**contract.model_dump(mode="json"), "clause_weights":contract._clause_weights}
 
 
 def compose_scenario_effective_contract(
@@ -166,31 +190,36 @@ def compose_scenario_effective_contract(
     A lower level adds clauses but cannot remove or weaken a higher level's clause.
     """
     contributing: List[Contract] = []
+    levels = []
 
     # Helper to resolve `extends` within a contract recursively
-    def _resolve_with_extends(c: Contract) -> List[Contract]:
+    def _resolve_with_extends(c: Contract, level, depth=0, visiting=()) -> List[Contract]:
+        identity = c.name or id(c)
+        if identity in visiting:
+            raise ContractCompositionConflictError("Contract extends cycle")
         res: List[Contract] = []
         for ext in c.extends:
             ext_c = resolve_contract(ext, lookup_contract)
-            res.extend(_resolve_with_extends(ext_c))
+            res.extend(_resolve_with_extends(ext_c, level, depth + 1, (*visiting, identity)))
         res.append(c)
+        levels.append((level, -depth))
         return res
 
     for pc in project_contracts:
         resolved = resolve_contract(pc, lookup_contract)
-        contributing.extend(_resolve_with_extends(resolved))
+        contributing.extend(_resolve_with_extends(resolved, 0))
 
     for sc in suite_contracts:
         resolved = resolve_contract(sc, lookup_contract)
-        contributing.extend(_resolve_with_extends(resolved))
+        contributing.extend(_resolve_with_extends(resolved, 1))
 
     if scenario_contract is not None:
         resolved = resolve_contract(scenario_contract, lookup_contract)
-        contributing.extend(_resolve_with_extends(resolved))
+        contributing.extend(_resolve_with_extends(resolved, 2))
 
     if not contributing:
         raise InvalidEffectiveContractError(
             "No contracts supplied at Project, Suite, or Scenario level. An effective Contract with no clauses is invalid."
         )
 
-    return compose_contracts(contributing, allow_empty=False)
+    return compose_contracts(contributing, allow_empty=False, levels=levels)

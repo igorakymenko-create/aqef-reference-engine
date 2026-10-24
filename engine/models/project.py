@@ -8,7 +8,7 @@ References:
 
 from typing import List, Optional, Union
 from pydantic import Field, model_validator
-from engine.models.base import AQEFBaseModel
+from engine.models.base import AQEFBaseModel, JSONNumber, JSONInteger
 from engine.models.contract import Contract, JudgeConfig
 from engine.models.dataset import Dataset
 from engine.models.environment import Environment
@@ -19,8 +19,8 @@ from engine.models.suite import Suite
 
 class DefectClassConfig(AQEFBaseModel):
     name: str = Field(..., min_length=1)
-    difficulty_prior: Optional[Union[float, str]] = None
-    prior_basis: Optional[int] = Field(None, ge=1)
+    difficulty_prior: Optional[Union[JSONNumber, str]] = None
+    prior_basis: Optional[JSONInteger] = Field(None, ge=1)
     prior_source: Optional[str] = None
     reference_oracles: Optional[List[JudgeConfig]] = None
 

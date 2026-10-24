@@ -348,7 +348,7 @@ def test_defect_2_mechanism_config_without_type_rejected(client):
     assert res.status_code == 422
     assert "type" in str(res.json())
 
-    # Valid MechanismConfig with type MUST be accepted and preserved
+    # WD 0.41.4 A.8: typed mechanisms require an offered scoped capability.
     payload_with_type = {
         "name": "proj_d2_valid",
         "environments": [
@@ -371,9 +371,8 @@ def test_defect_2_mechanism_config_without_type_rejected(client):
         ],
     }
     res = client.post("/projects", json=payload_with_type, headers=headers)
-    assert res.status_code == 201
-    created_proj = res.json()
-    assert created_proj["datasets"][0]["mechanisms"][0]["type"] == "data_mutation"
+    assert res.status_code == 422
+    assert "mechanisms" in res.text and "data_mutation" in res.text
 
 
 def test_defect_2_unknown_field_rejected(client):

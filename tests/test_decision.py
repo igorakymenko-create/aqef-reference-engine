@@ -290,6 +290,12 @@ def test_empty_dataset_batch_retains_scope_and_cannot_pass(harness):
 
 @pytest.mark.parametrize("threshold",[{}, {"unknown":1}, {"pass_rate":"invalid"}, {"pass_rate":{"max":1,"extra":2}}])
 def test_unsupported_threshold_maps_rejected(harness,threshold):
+    if threshold == {"pass_rate":"invalid"}:
+        _,client,_=harness
+        payload=project();payload["quality_gates"]=[gate(threshold=threshold)]
+        response=client.post("/projects",json=payload,headers=HEADERS)
+        assert response.status_code==422 and "threshold" in response.text
+        return  # B.2 numbers are now checked at load, before a batch exists.
     _,client,_=setup(harness,[gate(threshold=threshold)])
     post(client,"gates/check",{"execution_batch_id":run(client)["execution_batch_id"]},422)
 

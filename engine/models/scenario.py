@@ -12,7 +12,7 @@ import re
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 from pydantic import Field, model_validator
-from engine.models.base import AQEFBaseModel
+from engine.models.base import AQEFBaseModel, JSONNumber, JSONInteger
 from engine.models.contract import Constraint, Contract, JudgeConfig
 from engine.models.evidence import Conversation
 
@@ -39,12 +39,12 @@ class SeededControlConfirmation(str, Enum):
 class SeededControlConfig(AQEFBaseModel):
     kind: SeededControlKind = SeededControlKind.DEFECT
     defect_class: str = Field(..., min_length=1)
-    difficulty_prior: Optional[Union[float, str]] = None
+    difficulty_prior: Optional[Union[JSONNumber, str]] = None
     planted_defect: Optional[Any] = None
     confirmed_by: SeededControlConfirmation
     confirmation: Optional[Constraint] = None
     generator: Optional[str] = None
-    prior_basis: Optional[int] = Field(None, ge=1)
+    prior_basis: Optional[JSONInteger] = Field(None, ge=1)
     prior_source: Optional[str] = None
     reference_oracles: Optional[list[JudgeConfig]] = None
 

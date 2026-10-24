@@ -8,7 +8,7 @@ from fastapi import HTTPException
 
 from engine.assessment import clause_reference
 from engine.auth import check_permission
-from engine.composition import compose_scenario_effective_contract
+from engine.composition import compose_scenario_effective_contract, effective_contract_data
 from engine.models.contract import Contract
 from engine.models.principal import ApprovalRecord, ApprovalStatus, AuditLogEntry, PrincipalKind
 from engine.validators import canonical, number
@@ -45,12 +45,25 @@ def find_clause(record, reference):
     raise HTTPException(409, "Result clause is absent from frozen Contract")
 
 
+def clause_weight(contract, reference):
+    for kind in ("constraints", "expectations"):
+        for index, clause in enumerate(contract[kind]):
+            if clause_reference(contract, kind, index) == reference:
+                weights = contract.get("clause_weights", {}).get(kind)
+                if weights is not None:
+                    return weights[index]
+                # Earlier frozen Executions used one Contract weight.
+                weight = (contract.get("policies") or {}).get("weight")
+                return 1 if weight is None else weight
+    return None
+
+
 def govern(storage, principal, project, permission, target, details=None, person_only=False):
     check_permission(principal, permission, storage)
     if person_only and principal.kind != PrincipalKind.PERSON:
         raise HTTPException(403, f"{permission} requires a Person")
     roles = [storage.get_role(name) for name in principal.roles]
-    role = next((r.name for r in roles if r and (permission in r.permissions or "admin" in r.permissions)), None)
+    role = next((r.name for r in roles if r and permission in r.permissions), None)
     if role is None:
         raise HTTPException(403, f"No held Role grants {permission}")
     approver = principal.id
@@ -146,7 +159,7 @@ class DecisionEngine:
                                                                   lambda n:self.store.get_contract(project, n))
                 except ValueError as exc:
                     raise HTTPException(409, str(exc)) from exc
-                snapshot["effective_contracts"][f"{name}/{scenario.name}"] = composed.model_dump(mode="json")
+                snapshot["effective_contracts"][f"{name}/{scenario.name}"] = effective_contract_data(composed)
         names = [g["name"] for g in snapshot["quality_gates"]]
         if len(names) != len(set(names)):
             raise HTTPException(409, "Quality Gate names must be unique across Project and Suites")
@@ -180,14 +193,19 @@ class DecisionEngine:
                 from engine.scoped import decorate_result
                 result=decorate_result(self.store,record["project"],result)
                 clause = find_clause(record, result["clause"])
+                frozen = record["configuration"]["contract"]
+                weight = clause_weight(frozen, result["clause"])
                 stale = record["configuration"]["environment"] != snapshot["environments"].get(record["environment"])
                 if clause.get("id"):
                     other = next((c for kind in ("constraints", "expectations") for c in (current or {}).get(kind, [])
                                   if c.get("id") == clause["id"]), None)
-                    stale = stale or other != clause
+                    stale = stale or other != clause or (current is not None and clause_weight(current, result["clause"]) != weight)
                 else:
-                    stale = stale or current != record["configuration"]["contract"]
-                weight = ((current or record["configuration"]["contract"]).get("policies") or {}).get("weight")
+                    comparison = current
+                    if current and "clause_weights" not in frozen:
+                        comparison = {k:v for k,v in current.items() if k != "clause_weights"}
+                        stale = stale or any(w != weight for values in current["clause_weights"].values() for w in values)
+                    stale = stale or comparison != frozen
                 weight = 1 if weight is None else number(weight)
                 if weight <= 0:
                     raise HTTPException(422, "Contract weight must be positive for aggregation")

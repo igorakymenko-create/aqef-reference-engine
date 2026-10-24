@@ -1,6 +1,22 @@
 # Ambiguities Log
 
-Current target: **AQEF WD 0.41.3**. Earlier version numbers below describe historical
+## 36. Policy contribution levels and repeated clause weights (0.41.4)
+- **Section:** VII Contract Composition; A.5 Policies; B.3 composition conflicts.
+- **Quotation:** “strictest one contributed”; “a lower level ... looser value ... is a
+  conflict”; “A weight applies to the clauses of the Contract that declares it”.
+- **Readings:** treat list order as hierarchy, or regard Contracts attached at the
+  same Project/Suite level as peers. Treat an unweighted repeat of a weighted shared
+  ID as inheriting its weight, or as a distinct default-weight contribution.
+- **Choice:** same attachment/depth contributions are peers: take their strictest
+  policy irrespective of list order. Project precedes Suite precedes Scenario;
+  extends ancestors precede the fragment extending them. An absent Policies object
+  contributes no mode; a supplied Policies object defaults its mode to AND (A.5).
+  An absent source weight is 1. Repeating an ID with a different effective source
+  weight is conservatively a conflict, including an unweighted repeat. Anonymous
+  clauses keep separate source weights; extending a Contract never applies the
+  child's weight to inherited clauses. This makes the stricter reading explicit.
+
+Current target: **AQEF WD 0.41.4**. Earlier version numbers below describe historical
 decisions; adopted clarifications and remaining interpretations are identified explicitly.
 
 ## 35. Missing current clauses and a not-computed full aggregate (0.41.3)
@@ -42,28 +58,28 @@ decisions; adopted clarifications and remaining interpretations are identified e
 - **Choice:** the statement initially targeted 0.41.1; slice 7 moves that target to
   0.41.3 with the same scope and qualifications. It lists human_review/multi_judge/
   seeded_controls, never core as a capability identifier. It explicitly withholds an
-  unqualified conformance assertion while review G1/G3/G5/G6 mechanisms/G7/U1 remain. Topology cannot waive
+  unqualified conformance assertion while review G3/U1 remain (G1/G5/G6/G7 closed by slice 9). Topology cannot waive
   them. Related happy-path tests do not prove all required-field/type rejection cases;
   untested units remain individual findings rather than fabricated coverage.
 
-## 31. Asynchronous REST versus synchronous Scheduling
-- **Section:** Appendix C C.3 Triggering; Volume XVII Minimal Engine.
-- **Quotation:** “Executions are asynchronous”; “synchronous Scheduling ... never which
-  rule applies”.
-- **Readings:** minimal topology permits the existing blocking POST, or only permits
-  synchronous workers behind the asynchronous REST operation.
-- **Choice:** conservatively record the blocking POST as G7, not as an exemption from
-  C.3. Entry 8 describes actual behavior but no longer justifies full compliance.
-  Optional gates were added in slice 5; no background-job feature is added in slice 6.
+## 31. Synchronous REST triggering — closed by 0.41.4
+- **Section:** C.3 Triggering.
+- **Quotation:** “An implementation MAY run the batch to completion before it responds”.
+- **Earlier reading:** synchronous POST was recorded as G7 against 0.41.1/0.41.3.
+- **Resolution:** 0.41.4 expressly permits either documented response mode. This engine
+  runs synchronously and returns 201 with the batch identifier, completed Executions
+  and warnings. G7 closes; no scheduling or provider behavior changes.
 
-## 32. Composition includes policies
-- **Section:** Volume VII Contract Composition; Appendix B B.3 Effective Contract.
-- **Quotation:** “Constraints, Expectations, and Policies”; “MUST NOT remove or weaken”.
-- **Readings:** same-ID clause conflict checks suffice, or an inherited policy must
-  also resist weakening by a lower-level OR/weight change.
-- **Choice:** the conservative review treats inherited policy weakening as G5. Existing
-  policy replacement remains visible, but is not asserted conformant. A complete
-  policy merge/ordering design and migration is larger than a small slice 6 fix.
+## 32. Composition includes policies — closed by 0.41.4
+- **Section:** VII Contract Composition; A.5 Policies; B.3 composition conflicts.
+- **Quotation:** “strictest one contributed”; “a looser value contributed below a
+  stricter one is a conflict”; “a lower level MUST NOT change the weight”.
+- **Earlier reading:** lower policy replacement was recorded as G5.
+- **Resolution:** strictness is hard-veto > AND > OR; lower weakening is rejected
+  before configuration persistence, through extends and subresource changes too.
+  Each clause retains its declaring Contract's weight; changed weights on a repeated
+  ID conflict. G5 closes. Entry 36 makes the remaining default/peer interpretation
+  explicit rather than attributing it to the new wording.
 
 ## 33. Execution timeout boundary — closed in slice 8
 - **Section:** Volume III Execution Pipeline / Timeouts; Volume VI Oracle call attempts.
@@ -388,7 +404,7 @@ decisions; adopted clarifications and remaining interpretations are identified e
   accept positive decimal ms/s/m/h; timeout covers the entire Execution including retries
   and all turns, excluding scheduling wait. No new subject invocation after expiration.
 
-This document records points in the AQEF specification (current Working Draft 0.41.3) where the text allows more than one reading, following Rule 3 of the Implementer's Brief:
+This document records points in the AQEF specification (current Working Draft 0.41.4) where the text allows more than one reading, following Rule 3 of the Implementer's Brief:
 - Pick the more conservative reading (rejects more, blocks more, records more).
 - Never decide an ambiguity silently.
 - Record: Section, Quotation, Readings seen, Choice and rationale.

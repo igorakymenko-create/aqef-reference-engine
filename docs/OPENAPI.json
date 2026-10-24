@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AQEF Reference Engine",
-    "description": "Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.3",
-    "version": "0.41.3"
+    "description": "Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.4",
+    "version": "0.41.4"
   },
   "paths": {
     "/teams": {
@@ -6862,13 +6862,15 @@
         "properties": {
           "validator_composition": {
             "type": "string",
+            "pattern": "^(AND|OR|hard-veto)$",
             "title": "Validator Composition",
             "default": "AND"
           },
           "weight": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "exclusiveMinimum": 0.0
               },
               {
                 "type": "null"

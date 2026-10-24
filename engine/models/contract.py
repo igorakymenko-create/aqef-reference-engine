@@ -10,8 +10,8 @@ References:
 
 from enum import Enum
 from typing import Any, List, Optional, Union
-from pydantic import Field, model_validator
-from engine.models.base import AQEFBaseModel
+from pydantic import Field, PrivateAttr, StrictBool, model_validator
+from engine.models.base import AQEFBaseModel, JSONNumber, JSONInteger
 
 
 class QualityDimension(str, Enum):
@@ -36,7 +36,7 @@ class Constraint(AQEFBaseModel):
     validator: str = Field(..., min_length=1)
     target: str = Field(..., min_length=1)
     expected: Any = Field(...)
-    veto: bool = False
+    veto: StrictBool = False
     id: Optional[str] = Field(None, min_length=1)
     dimension: Optional[QualityDimension] = None
     defect_classes: Optional[List[str]] = None
@@ -78,10 +78,10 @@ class DisagreementAction(str, Enum):
 
 class ConsensusConfig(AQEFBaseModel):
     method: str = Field(..., min_length=1)
-    threshold: Optional[Union[str, float]] = None
-    min_agreement: Optional[float] = Field(None, ge=0.0, le=1.0)
+    threshold: Optional[Union[str, JSONNumber]] = None
+    min_agreement: Optional[JSONNumber] = Field(None, ge=0.0, le=1.0)
     on_disagreement: DisagreementAction = DisagreementAction.HUMAN_REVIEW
-    min_qualified: Optional[int] = Field(None, ge=1)
+    min_qualified: Optional[JSONInteger] = Field(None, ge=1)
 
     @model_validator(mode="after")
     def validate_threshold(self) -> "ConsensusConfig":
@@ -112,7 +112,7 @@ class MultiJudgeConfig(AQEFBaseModel):
     purpose: MultiJudgePurpose
     judges: Optional[List[JudgeConfig]] = None
     judge: Optional[JudgeConfig] = None
-    samples: Optional[int] = Field(None, ge=2)
+    samples: Optional[JSONInteger] = Field(None, ge=2)
     consensus: ConsensusConfig
 
     @model_validator(mode="after")
@@ -135,7 +135,7 @@ class MultiJudgeConfig(AQEFBaseModel):
 
 class HumanReviewerConfig(AQEFBaseModel):
     role: str = Field(..., min_length=1)
-    captures_confidence: bool = False
+    captures_confidence: StrictBool = False
 
 
 class TimeoutAction(str, Enum):
@@ -148,7 +148,7 @@ class Expectation(AQEFBaseModel):
     judge: Optional[JudgeConfig] = None
     multi_judge: Optional[MultiJudgeConfig] = None
     human_reviewer: Optional[HumanReviewerConfig] = None
-    confidence_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
+    confidence_threshold: Optional[JSONNumber] = Field(None, ge=0.0, le=1.0)
     review_timeout: Optional[str] = None
     on_timeout: TimeoutAction = TimeoutAction.BLOCK
     escalate_to: Optional[str] = Field(None, min_length=1)
@@ -182,11 +182,13 @@ class Expectation(AQEFBaseModel):
 
 
 class Policies(AQEFBaseModel):
-    validator_composition: str = "AND"
-    weight: Optional[float] = None
+    validator_composition: str = Field("AND", pattern=r"^(AND|OR|hard-veto)$")
+    weight: Optional[JSONNumber] = Field(None, gt=0)
 
 
 class Contract(AQEFBaseModel):
+    # Derived only; authored Contracts cannot supply this runtime provenance.
+    _clause_weights: dict = PrivateAttr(default_factory=dict)
     name: Optional[str] = None
     constraints: List[Constraint] = Field(default_factory=list)
     expectations: List[Expectation] = Field(default_factory=list)

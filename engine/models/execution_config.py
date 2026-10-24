@@ -9,7 +9,7 @@ References:
 from enum import Enum
 from typing import Optional
 from pydantic import Field, field_validator, model_serializer
-from engine.models.base import AQEFBaseModel
+from engine.models.base import AQEFBaseModel, JSONInteger
 
 
 class SeededControlMissPolicy(str, Enum):
@@ -18,7 +18,7 @@ class SeededControlMissPolicy(str, Enum):
 
 
 class RetryConfig(AQEFBaseModel):
-    max_attempts: int = Field(..., ge=1)
+    max_attempts: JSONInteger = Field(..., ge=1)
     on: str = Field(...)
 
     @field_validator("on")
@@ -36,7 +36,7 @@ class ExecutionConfig(AQEFBaseModel):
     timeout: Optional[str] = None
     retry: Optional[RetryConfig] = None
     scheduling: Optional[str] = None
-    parallelization: Optional[int] = Field(None, ge=1)
+    parallelization: Optional[JSONInteger] = Field(None, ge=1)
     on_seeded_control_miss: SeededControlMissPolicy = SeededControlMissPolicy.SKIP_CLASS
 
     @model_serializer(mode="wrap")

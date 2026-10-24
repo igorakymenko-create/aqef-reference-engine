@@ -1,22 +1,27 @@
 # AQEF Conformance Statement — scope and qualifications
 
-Issued 2026-10-24 for **AQEF Reference Engine, slice-8**, Python 3.12 / FastAPI /
+Issued 2026-10-24 for **AQEF Reference Engine, slice-9**, Python 3.12 / FastAPI /
 SQLite, one self-hosted application process. Specification target: the bundled
-**AQEF Working Draft 0.41.3**. Release source ref is `0.41.3` in the upstream AQEF
+**AQEF Working Draft 0.41.4**. Release source ref is `0.41.4` in the upstream AQEF
 repository; the local ignored `spec/` kit has the updated normative texts. Exact
 retrieved paths and source blob IDs are in [SPECIFICATION-SOURCES.json](SPECIFICATION-SOURCES.json).
-Published 0.41.2 adopts owner decisions O-1/O-2 already implemented here; 0.41.3 adds
-uncomputed-aggregate reasons, dimension Gate coverage and pre-run SHOULD checks.
+Published 0.41.2 adopted O-1/O-2; 0.41.3 added Gate reasons/coverage and pre-run SHOULDs.
+0.41.4 settles synchronous triggering, audit, Team binding, policy composition and
+scoped Dataset mechanisms. G1/G5/G6/G7 are now closed; G3/U1 remain below.
 
 ```yaml
 aqef_conformance:
-  specification_version: "0.41.3"
-  implementation: "AQEF Reference Engine slice-8"
+  specification_version: "0.41.4"
+  implementation: "AQEF Reference Engine slice-9"
   capabilities:
     - human_review
     - multi_judge
     - seeded_controls
   not_offered:
+    - dataset_mechanism:data_mutation
+    - dataset_mechanism:fuzzing
+    - dataset_mechanism:edge_cases
+    - dataset_mechanism:adversarial
     - dataset:synthetic
     - dataset:generated
     - dataset:production_replay
@@ -47,23 +52,31 @@ claim that the engine is AQEF-conformant would be false. Publishing this stateme
 and passing local unit tests do not prove Conformance (§10). This statement makes no
 claim about the quality or conformance of an AI subject, person, Team or organization.
 
+**Team binding (XII Teams; §10): this engine binds no Projects or Suites to Teams.**
+Every Principal's resource scope is every Project, regardless of Team membership.
+Atomic Permissions, designated Human Roles, Person-only decisions and standing policy
+rules still apply; scope is not permission. Team objects/memberships remain metadata.
+
+The engine **does not yet claim AQEF Conformance** for the listed capabilities: they
+are its offered surface, qualified by the concrete G3 and mandatory-coverage U1 findings.
+
 ## Implementation-defined choices and locations
 
 | Choice / normative source | Declared behavior | Documentation |
 |---|---|---|
-| Serialization and schema (A introduction, B) | REST JSON; no YAML/TOML file loader. Unknown AQEF configuration keys rejected. Some governance DTOs permit extra fields; primitive coercion/runtime schema gaps remain G3. | [API](API.md), code-derived [OpenAPI](OPENAPI.json), review G3 |
+| Serialization and schema (A introduction, B) | REST JSON; no YAML/TOML file loader. Unknown AQEF configuration keys rejected. Numbers reject numeric strings/booleans/nonfinite values; configuration Boolean flags reject coercion. Explicit-null/formal runtime schema gaps remain G3, as detailed below. | [API](API.md), code-derived [OpenAPI](OPENAPI.json), review G3 |
 | Prompt placeholders (A.4) | `{{name}}` / `{{ name }}`; deterministic one-pass interpolation; nonstrings compact sorted-key JSON. Missing Variables rejected before calls. | [PROVIDERS](PROVIDERS.md#subject-request), ambiguities 9/11 |
-| Runtime scheduling (III, A.9) | Sequential/parallel; declared Scenario/row output order, isolated Context/Variables; suite overrides project field by field. Local process only. REST trigger is synchronous, discrepancy G7. | [API](API.md#slice-2-execution-api), PROVIDERS, ambiguity 8/31 |
+| Runtime scheduling (III, A.9) | Sequential/parallel; declared Scenario/row output order, isolated Context/Variables; suite overrides project field by field. Local process only. C.3 response mode is synchronous completion: 201 includes identifier, Executions and warnings. This is implementation-defined in 0.41.4 (former G7). | [API](API.md#slice-2-execution-api), PROVIDERS, ambiguity 8/31 |
 | Durations and bounds (III, A.9; VI) | Positive decimal ms/s/m/h and positive ISO day/time durations; defaults 30s subject-collection budget, no retries, one worker. Each Judge call gets a fresh execution.timeout budget (default 30s), after conversation collection completes; assessment is outside the Volume III Execution deadline. `max_attempts` counts retries after initial subject call. | PROVIDERS, API, ambiguities 7/11/16/33 |
 | Subject/Judge adapters (BRIEF §4, VI) | One HTTP POST per call; exact model identifier mapped once at startup using `AQEF_PROVIDER_URLS`. No implicit credentials, endpoint suffixes or hidden criteria. Closed Judge verdict/confidence/explanation/assertions response. | [PROVIDERS](PROVIDERS.md), examples of mapping and both wire formats |
 | Validator inputs/expected (V, A.5) | Evidence target paths; documented schema/pattern/sequence/latency/cost forms. Parameterless Custom Validator expected is `null` or `{}`; all other forms rejected at load naming clause. | API built-in formats and registration; ambiguities 12/14/19 (owner O-1/O-2) |
 | Consensus/Confidence (VI, A.7) | Voting majority/unanimous/ceil fraction; weighted Boolean pass mean; mean/min own Confidence as documented, agreement separate; full quorum default. Preserve returned member verdicts on unavailable recovery. | PROVIDERS panel section, API panel section, ambiguity 25 |
 | Human routing (VI, A.5) | Direct Human and unresolved consensus pending; Single inconclusive explicitly reviewable. Default 24h routing timeout; block/escalate without fabricated verdict. Designated Role and captured-Confidence policy enforced. | API Human sections, ambiguity 26 |
 | Controls/prior/requalification (VIII, A.1/A.4/A.9) | One batch/Scenario entry with per-Oracle detail; confirmation precedes inference; unknown prior is not_established; strict fresh-control qualification. Missing Oracle verdict leaves control outcome invalid, interpretation 27. | API control sections; ambiguities 27–29; review includes limits |
-| Authentication/authorization (C.4, XII) | Bearer token to stored Person/Service Account. Bootstrap Person uses AQEF_ADMIN_TOKEN or admin-token. Runtime and system/docs routes authenticate; ordinary actions check atomic permissions. Team/wildcard scope gap G1 remains. | API authentication and operation inventory; review G1 |
+| Authentication/authorization (C.4, XII) | Bearer token to stored Person/Service Account. Bootstrap Person uses AQEF_ADMIN_TOKEN or admin-token. Runtime and system/docs routes authenticate; ordinary actions check atomic permissions. No Project/Suite Team bindings; every Principal scope is every Project. Bootstrap administrative Role enumerates atomic Permissions; neither the Role name nor an admin Permission is a wildcard (former G1). | API authentication and operation inventory; review G1 |
 | Approval realization (XII, §10) | Authorized Person's call records immediate approval/audit; Service contract change needs X-Approved-By Person and X-External-Review-Ref. Baseline/override Person-only. Service release requires in-force Person-approved scoped policy. | API, ambiguity 1, decision examples |
 | Pagination/filtering (C.6) | All collection lists use offset=0, limit=100, range 1–1000, plain JSON arrays. Filters limited to documented query fields. G2 was closed during this review. | API operation schemas/inventory, review G2 correction |
-| Gate formula/thresholds (I Ch.6, A.10/A.12) | Positive Contract weights on actionable Boolean verdicts, dimension means; supported dimension/resource/overall/regression thresholds and min/max maps declared. Empty basis never silently passes. | API Gate examples, ambiguities 20/21 |
+| Gate formula/thresholds (I Ch.6, A.10/A.12) | Positive source-Contract clause weights on actionable Boolean verdicts, dimension means; supported dimension/resource/overall/regression thresholds and min/max maps declared. Empty basis never silently passes. | API Gate examples, ambiguities 20/21 |
 | Identity and historical scope (C.7/C.8; X) | Canonical JSON Oracle identity; SHA256 clause/Contract content references; scope freezes full inline Contracts. Explicit Baseline Result ID. Resolution append-only except pending Human completion retaining recorded_at. | API, ambiguities 15/22/23/28 |
 | Deletion (C.8) | Reject referenced Environment deletion; Project deletion with history requires explicit retain_history=true, keeps frozen Execution/decision/governance records. No history-purge API. | API status/retention notes; ambiguity 4; storage/history tests |
 | Report format (XI, C.10) | Frozen batch Reports, six always-present signal lists, full low_confidence denominators, nested panel member evidence; no dashboard/KPI front end. | API Report examples, ambiguity 20, review U1 |
@@ -83,7 +96,7 @@ choice's completeness is disputed or unproven it appears in the review as a find
 | VIII placement/source/confirmation timing | No guarantee a prompt plant survives into subject Evidence; failed confirmations remain invalid. Fixed Evidence source_execution is optional and not verified for recent/same-Environment derivation. Human confirmation may be late, with derived invalidation and fresh Gate evaluation thereafter. |
 | C.6 filtering | Execution and Result filters exist; audit lacks date/Team filters and Baselines lack scenario/environment filters. Small implementation keeps records available through paginated unfiltered reads. G2 pagination was fixed, not waived as a SHOULD. |
 | A/B/C generated artifacts | OpenAPI is generated from actual FastAPI models/operations and published as documentation; no independent complete schema generation from prose or generated SDK/CLI is supplied. Runtime schema completeness remains G3. |
-| III Execution Pipeline (0.41.3), Judge reachability only | No availability-only provider operation exists; synthetic Evidence would obtain a real verdict and cannot guarantee later reachability. No reachability probe or proceed flag is offered. Suite/Gate warnings are implemented before subject invocation. |
+| III Execution Pipeline (0.41.4), Judge reachability only | No availability-only provider operation exists; synthetic Evidence would obtain a real verdict and cannot guarantee later reachability. No reachability probe or proceed flag is offered. Suite/Gate warnings are implemented before subject invocation. |
 
 Cheapest-first built-in Validation, pure Custom Validator inputs without clock/random/
 network, controls before ordinary assessments, fail-fast affected Oracle suppression,
@@ -92,34 +105,48 @@ implemented. These are not claimed as skipped SHOULDs. SHOULDs conditional on an
 unoffered capability (such as Production Replay privacy, generated-source independence
 or Boundary hard vetoes) do not describe an offered implementation feature.
 
-## Clarified rules met in slice 8
+## Clarified rules met in slices 8–9
 
 | Former finding / source | How the rule is met |
 |---|---|
 | G4 — B.3 Independent Oracle — identity | Judge model identifiers are checked against Environment model_version at configuration load/change and execution preflight, including panel members and reusable Contracts. Identical identifiers are rejected; different identifiers do not attest external weights. The family SHOULD remains a declared deviation. See validation.validate_contract_identity/validate_oracle_identity and test_slice_8.py::test_g4_b3_identity_rejects_subject_model_and_accepts_distinct_identifiers / ::test_g4_b3_identity_is_checked_before_subresource_configuration_changes. |
 | G8 — III Execution Pipeline / Timeouts; VI Judge calls | “An Execution is complete once the Conversation Engine has no further turns to produce”; Validation/Evaluation follow separately. The subject deadline covers turns/retries. Each Judge has its own bounded call as declared above, not the remaining subject budget. test_slice_8.py::test_g8_iii_execution_completes_before_vi_judge_uses_own_timeout checks both a verdict after the subject deadline and a Judge timeout without changing completed Evidence. |
 
+## 0.41.4 rules met
+
+| Former finding / source | How the rule is met |
+|---|---|
+| G7 — C.3 Triggering | Synchronous completion response is the documented choice, tested by test_slice_9.py::test_0414_c3_sync_trigger_returns_completed_executions_and_identifier. |
+| XII Audit | Mutation-only records preserve Principal/kind, target/action/time and deletion intent. test_slice_9.py::test_0414_xii_audit_records_mutations_with_actor_and_not_reads and the complete D-8 mutation workflow confirm existing behavior. Historical pre-D-8 read entries remain legacy records; no new reads are recorded. |
+| G1 — XII Teams/§10; C.4 | Binding-none scope declared above. Atomic authorization removes all admin shortcuts; bootstrap Role lists each Permission. Tests cover unrelated/no Teams, restricted admin Role, admin-only Permission, arbitrary-role governed actions and Service actor restrictions. |
+| G5 — VII/A.5/B.3 | Strictest contributed mode, lower weakening conflicts at load/change including extends. Every source clause weight is frozen in runtime clause_weights and used by Gate/Report aggregation; changed repeated-ID weights conflict. Source-weight changes stale the affected named clause. Entry 36 documents peers/defaults. |
+| G6 — IV/A.8/§10 | No mechanism capability offered. Every nonempty mechanisms list is rejected at load/change naming the field/type. Empty list means none. B.3 base references were already fixed in slice 8. |
+
 ## Known gaps and verification
 
 The complete rule-level table, test/module links and each UNTESTED/PARTIAL coverage
 finding are in [CONFORMANCE-REVIEW.md](CONFORMANCE-REVIEW.md). Open gaps are:
 
-- **G1:** Team access scopes and administrative wildcard authorization.
-- **G3 / U1:** incomplete formal runtime schemas and per-property/negative test coverage;
-  permissive primitive coercion/null acceptance in some configuration models.
-- **G5:** inherited composition policy weakening not rejected/tested.
-- **G6:** accepted Dataset mechanism semantics only; base_dataset version/reference validation is implemented.
-- **G7:** synchronous REST trigger versus C.3 asynchronous execution wording.
+- **G3:** no complete formal response schemas for dynamic Baseline, GateResult, Basis,
+  Snapshot, ReleaseDecision, ReleasePolicy and Report resources; their actual runtime
+  shapes are documented in API.md but not fully modeled in OpenAPI. Optional configuration
+  fields still accept explicit null (e.g. Policies.weight and Expectation.review_timeout),
+  preserving GET/full-PUT compatibility; making omission distinct throughout storage and
+  serialization needs a schema migration. Principal/Team/Role DTOs ignore extra keys.
+  Numeric and configuration-Boolean coercions were fixed in slice 9; the broader formal
+  schema and full property/negative coverage requirements are not established. OpenAPI
+  also does not encode every cross-field/model-validator condition, including unoffered
+  mechanisms rejection, even where the runtime correctly enforces it.
 - **U1:** every individual UNTESTED or PARTIAL/U1 ledger row remains a finding, including
   semantic authoring obligations, KPI traceability coverage and required-field matrices.
 
-Review finding G2 (older-list pagination) was repaired in slice 6 and is not an open gap.
+G2 was closed in slice 6, G4/G8 in slice 8, and G1/G5/G6/G7 in slice 9. No other known gap or capability claim is silently changed.
 
 This statement cannot provide a passing external conformance result, independent
 certification, verifiable external model ancestry, a complete MUST-coverage proof, or
 assurance about undisclosed provider behavior. None is invented. No AQEF conformance
-test material was accessed. The local whole suite passes **426 tests**, with one
+test material was accessed. The local whole suite passes **541 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
-The statement applies to the source published under tag `slice-8`; it does not assert
+The statement applies to the source published under tag `slice-9`; it does not assert
 that arbitrary deployment settings or later changes preserve these properties.

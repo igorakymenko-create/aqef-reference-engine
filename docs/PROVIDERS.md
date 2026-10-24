@@ -1,6 +1,6 @@
-# HTTP provider interface — slices 2–8, AQEF WD 0.41.3
+# HTTP provider interface — slices 2–9, AQEF WD 0.41.4
 
-The wire protocol is unchanged by 0.41.3. Volume III's recommended pre-invocation
+The wire protocol is unchanged by 0.41.4. Volume III's recommended pre-invocation
 reachability check is deliberately not implemented: no availability-only request exists
 in this protocol, and a synthetic Evidence POST would create an actual Judge verdict.
 No health handshake, new request field or proceed flag is implied. The Judge-reachability SHOULD
@@ -115,7 +115,7 @@ POST `/projects/demo/executions`, bearer authentication, JSON:
 {"suite":"smoke","environment":"staging"}
 ```
 
-Returns 201 after completion: `{execution_batch_id: string, executions: [Execution], warnings: [{gate: string, reason: string}]}`.
+C.3 response mode is synchronous (implementation-defined in 0.41.4). Returns 201 after completion: `{execution_batch_id: string, executions: [Execution], warnings: [{gate: string, reason: string}]}`.
 Each Scenario expands to one Execution per pinned static Dataset row; fixed Variables
 or fixed Evidence produce one. Empty datasets produce zero. Ordering follows Scenario
 then row declaration order, also in parallel output. Defaults: sequential, one worker,

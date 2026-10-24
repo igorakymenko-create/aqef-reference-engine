@@ -8,8 +8,8 @@ References:
 
 from enum import Enum
 from typing import Any, Dict, Optional, Union
-from pydantic import Field, model_validator
-from engine.models.base import AQEFBaseModel
+from pydantic import Field, StrictBool, field_validator, model_validator
+from engine.models.base import AQEFBaseModel, JSONNumber, JSONInteger
 
 
 class GateFailureAction(str, Enum):
@@ -18,8 +18,8 @@ class GateFailureAction(str, Enum):
 
 
 class MinBasis(AQEFBaseModel):
-    results: Optional[int] = Field(None, ge=1)
-    scenarios: Optional[int] = Field(None, ge=1)
+    results: Optional[JSONInteger] = Field(None, ge=1)
+    scenarios: Optional[JSONInteger] = Field(None, ge=1)
 
     @model_validator(mode="after")
     def validate_min_basis(self) -> "MinBasis":
@@ -33,9 +33,22 @@ class MinBasis(AQEFBaseModel):
 class QualityGate(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     aggregate: str = Field(..., min_length=1)
-    threshold: Union[float, Dict[str, Any]]
+    threshold: Union[JSONNumber, Dict[str, Any]]
     compare_against: Optional[str] = None
     min_basis: Optional[MinBasis] = None
     on_failure: GateFailureAction
     override_requires: Optional[str] = None
-    require_admitted_judges: bool = False
+    require_admitted_judges: StrictBool = False
+
+    @field_validator("threshold")
+    @classmethod
+    def numeric_threshold_map(cls, value):
+        from engine.validators import number
+        def check(node):
+            if isinstance(node, dict):
+                for child in node.values():
+                    check(child)
+            else:
+                number(node)
+        check(value)
+        return value

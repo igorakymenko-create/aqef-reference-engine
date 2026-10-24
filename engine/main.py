@@ -16,7 +16,7 @@ from engine.api.gates import get_gates_router
 from engine.api.governance import get_governance_router
 from engine.api.projects import get_projects_router
 from engine.api.suites_scenarios import get_suites_scenarios_router
-from engine.auth import get_current_principal_dependency
+from engine.auth import BOOTSTRAP_PERMISSIONS, get_current_principal_dependency
 from engine.models.principal import Principal, PrincipalKind, Role, Team
 from engine.storage import Storage, StorageConflictError
 from engine.providers import HTTPProvider, load_provider_urls
@@ -39,7 +39,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         storage.create_team(admin_team)
 
     if not storage.get_role("admin"):
-        admin_role = Role(name="admin", permissions=["admin"])
+        admin_role = Role(name="admin", permissions=list(BOOTSTRAP_PERMISSIONS))
         storage.create_role(admin_role)
 
     if not storage.get_principal("admin"):
@@ -62,8 +62,8 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     app = FastAPI(
         title="AQEF Reference Engine",
-        version="0.41.3",
-        description="Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.3",
+        version="0.41.4",
+        description="Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.4",
         lifespan=lifespan,
     )
     app.state.storage = storage
@@ -114,7 +114,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     @app.get("/healthz", tags=["System"])
     def health_check():
-        return {"status": "ok", "specification_version": "0.41.3"}
+        return {"status": "ok", "specification_version": "0.41.4"}
 
     return app
 

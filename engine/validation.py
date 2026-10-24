@@ -62,6 +62,16 @@ def validate_oracle_identity(project, lookup_contract=None) -> None:
             validate_contract_identity(contract, project.environments)
 
 
+def validate_reusable_composition(contracts, lookup_contract):
+    """VII/B.3: an unused reusable fragment must not hide an extends conflict."""
+    for contract in contracts:
+        if contract.extends:
+            try:
+                compose_scenario_effective_contract([contract], [], None, lookup_contract)
+            except (ValueError, RecursionError) as exc:
+                raise ConfigurationValidationError(f"Contract '{contract.name}' composition: {exc}") from exc
+
+
 def validate_gate_coverage(project: Project, lookup_contract=None) -> None:
     """WD 0.41.3 A.10/B.3: dimension Gates need a non-control clause in scope."""
     dimensions = {"functional", "semantic", "operational", "safety"}

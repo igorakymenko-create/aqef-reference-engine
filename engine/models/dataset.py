@@ -50,6 +50,9 @@ class Dataset(AQEFBaseModel):
 
     @model_validator(mode="after")
     def validate_dataset(self) -> "Dataset":
+        if self.mechanisms:
+            types = ", ".join(m.type.value for m in self.mechanisms)
+            raise ValueError(f"mechanisms: dataset_mechanism capabilities are not offered ({types})")
         # BRIEF.md §3 Scope:
         # Not in scope: Dataset sources other than Static; reject a configuration that needs it.
         if self.source != DatasetSource.STATIC:

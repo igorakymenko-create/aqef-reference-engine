@@ -10,7 +10,7 @@ References:
 
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import Field, model_validator
+from pydantic import Field, StrictBool, model_validator
 from engine.models.base import AQEFBaseModel
 
 
@@ -23,7 +23,7 @@ class BoundaryEntryKind(str, Enum):
 class BoundaryEntry(AQEFBaseModel):
     target: str = Field(..., min_length=1)
     kind: BoundaryEntryKind
-    tripwire: bool = False
+    tripwire: StrictBool = False
 
     @model_validator(mode="after")
     def validate_tripwire(self) -> "BoundaryEntry":
@@ -35,7 +35,7 @@ class BoundaryEntry(AQEFBaseModel):
 
 
 class ActionBoundary(AQEFBaseModel):
-    enforced: bool
+    enforced: StrictBool
     entries: List[BoundaryEntry] = Field(..., min_length=1)
 
 
