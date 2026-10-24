@@ -45,6 +45,29 @@ def frame(scenarios,policy="skip_class"):
     return p
 
 
+@pytest.mark.parametrize("route", ["project_post", "project_put", "suite_post", "scenario_post", "scenario_put"])
+@pytest.mark.parametrize("conversation", [[{"role":"assistant","content":"unsafe"}], {"turns":[]},
+                                          {"turns":[{"prompt":"p","response":42}]}])
+def test_a4_fixed_evidence_conversation_rejected_at_every_configuration_load(harness, route, conversation):
+    """Appendix A A.4 FixedEvidence: require the stored Execution Conversation form."""
+    app, client, calls = harness
+    valid = frame([control()])
+    bad = deepcopy(valid)
+    bad["suites"][0]["scenarios"][0]["evidence"]["conversation"] = conversation
+    if route != "project_post":
+        configure(harness, valid)
+    if route == "project_post":response=client.post("/projects",json=bad,headers=HEADERS)
+    elif route == "project_put":response=client.put("/projects/p",json=bad,headers=HEADERS)
+    elif route == "suite_post":response=client.post("/projects/p/suites",json=bad["suites"][0],headers=HEADERS)
+    elif route == "scenario_post":response=client.post("/projects/p/suites/s/scenarios",json=bad["suites"][0]["scenarios"][0],headers=HEADERS)
+    else:response=client.put("/projects/p/suites/s/scenarios/defect-1",json=bad["suites"][0]["scenarios"][0],headers=HEADERS)
+    assert response.status_code == 422, response.text
+    assert any("evidence" in e["loc"] and "conversation" in e["loc"] for e in response.json()["detail"])
+    assert calls == []
+    if route != "project_post":
+        assert client.get("/projects/p",headers=HEADERS).json()["suites"][0]["scenarios"][0]["evidence"]["conversation"] == valid["suites"][0]["scenarios"][0]["evidence"]["conversation"]
+
+
 def provider(app,monkeypatch,verdicts=None):
     calls=[]
     app.state.provider.urls.update({name:"http://stub.local/"+name for name in ("judge-a","judge-b","judge-c","judge-fixed")})

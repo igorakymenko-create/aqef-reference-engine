@@ -157,7 +157,7 @@ def test_fixed_evidence_construction_only():
         Scenario(
             name="sc_evidence_invalid",
             prompt=PromptDef(template="Hello"),
-            evidence=FixedEvidence(conversation={"turns": []}),
+            evidence=FixedEvidence(conversation={"turns": [{"prompt":"hi","response":"hello"}]}),
         )
     assert "'evidence' MAY appear only on a Seeded Control whose confirmed_by is 'construction'" in str(exc.value)
 
@@ -171,7 +171,7 @@ def test_fixed_evidence_construction_only():
     sc = Scenario(
         name="sc_evidence_valid",
         seeded_control=control,
-        evidence=FixedEvidence(conversation={"turns": [{"role": "user", "content": "hi"}]}),
+        evidence=FixedEvidence(conversation={"turns": [{"prompt":"hi","response":"hello"}]}),
     )
     assert sc.evidence is not None
 

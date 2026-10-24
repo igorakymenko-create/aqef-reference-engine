@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional, Union
 from pydantic import Field, model_validator
 from engine.models.base import AQEFBaseModel
 from engine.models.contract import Constraint, Contract, JudgeConfig
+from engine.models.evidence import Conversation
 
 
 class PromptDef(AQEFBaseModel):
@@ -90,7 +91,7 @@ class SeededControlConfig(AQEFBaseModel):
 
 
 class FixedEvidence(AQEFBaseModel):
-    conversation: Any = Field(...)
+    conversation: Conversation
     artifacts: Optional[Dict[str, Any]] = None
     source_execution: Optional[str] = Field(None, min_length=1)
 

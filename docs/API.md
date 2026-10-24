@@ -109,6 +109,19 @@ Admission requires every configured member configuration, not an invented panel 
 
 ### Human confirmation of a Seeded Control
 
+Fixed Evidence uses exactly the stored Execution Conversation form, not a chat-message
+array. Example Scenario fragment:
+
+```json
+{"seeded_control":{"kind":"defect","defect_class":"toxicity","planted_defect":"unsafe phrase","confirmed_by":"construction"},
+ "evidence":{"conversation":{"turns":[{"prompt":"Say hello","response":"unsafe phrase"}]},"artifacts":{},"source_execution":"earlier-execution-id"}}
+```
+
+`turns` must be nonempty; each turn requires string `prompt` and `response`, with no
+extra fields. Invalid `evidence.conversation` is rejected at configuration load/change
+with HTTP 422 and the field path in `detail[].loc`, including nested Project and Suite
+loads and Scenario POST/PUT. The same model validates runtime Conversations.
+
 Controls run before normal assessments. Construction uses fixed Evidence without calling
 the subject; Validator confirmation checks actual captured Evidence against confirmation;
 Human confirmation stays invalid until a Person with review records the fact. Example:

@@ -8,20 +8,12 @@ import time
 import uuid
 
 from fastapi import HTTPException
-from pydantic import Field, StrictStr
+from pydantic import Field
 
 from engine.composition import compose_scenario_effective_contract
 from engine.models.base import AQEFBaseModel
+from engine.models.evidence import Conversation, Turn
 from engine.providers import SubjectReply
-
-
-class Turn(AQEFBaseModel):
-    prompt: StrictStr
-    response: StrictStr
-
-
-class Conversation(AQEFBaseModel):
-    turns: list[Turn] = Field(min_length=1)
 
 
 class ExecutionRequest(AQEFBaseModel):

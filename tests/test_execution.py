@@ -248,9 +248,11 @@ def test_fixed_evidence_bypasses_subject_and_validates_shape(harness):
     assert r["source_execution"] == "source"
     assert r["artifacts"][0]["data"] == [1, 2]
     sc = app.state.storage.get_scenario("p", "s", "control")
-    sc.evidence.conversation = {"turns": []}
-    app.state.storage.update_scenario("p", "s", sc)
-    assert client.post(BASE, json={"suite": "s", "environment": "test"}, headers=HEADERS).status_code == 422
+    replacement = sc.model_dump(mode="json",exclude_none=True)
+    replacement["evidence"]["conversation"] = {"turns": []}
+    rejection = client.put("/projects/p/suites/s/scenarios/control",json=replacement,headers=HEADERS)
+    assert rejection.status_code == 422
+    assert "conversation" in rejection.text
 
 
 def test_permissions_pagination_filters_and_errors(harness):

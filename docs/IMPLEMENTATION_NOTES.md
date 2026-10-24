@@ -1,5 +1,20 @@
 # Implementation Notes
 
+## Slice 5.1 — D-5 external review
+
+- A.4 FixedEvidence requires the stored Conversation form. Replaced the unconstrained
+  conversation field with the shared runtime Conversation model (nonempty turns,
+  strict string prompt/response, forbidden extra fields). Every configuration loader
+  now rejects unreadable Evidence before storing it, with the normal 422 field path.
+- Regression test `test_a4_fixed_evidence_conversation_rejected_at_every_configuration_load`
+  exercises Project POST/PUT, Suite POST and Scenario POST/PUT with message arrays,
+  empty turns and nonstring responses, and confirms rejected replacements leave
+  configuration unchanged. Existing construction tests cover accepted execution form.
+- API documents the accepted JSON form. No new ambiguity: A.4 is explicit.
+- Whole suite: **299 passed**, one existing Starlette/httpx deprecation warning.
+  Two earlier tests were updated to supply valid Conversation fixtures and expect
+  invalid shape rejection at load rather than after direct storage corruption.
+
 ## Slice 5 — Completed Work
 
 - Built Human Review pending/completion and Role/timeout routing; independence/stability
