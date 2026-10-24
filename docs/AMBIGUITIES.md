@@ -1,5 +1,68 @@
 # Ambiguities Log
 
+## 20. Decision batch scope and Report generation
+- **Sections:** C.3 Gates/Reports; C.10; I Ch.6.
+- **Quotation:** “Evaluate Gates against a set of Results”; “frozen when generated”.
+- **Readings:** arbitrary client Result subsets versus a complete batch, implicit versus
+  explicit report generation (C.3 lists Report reads but no generator path).
+- **Choice:** check body names execution_batch_id, reads every effective Result of that
+  Suite/Environment batch, rejects partial/in-flight evidence. POST /reports with that
+  batch explicitly generates a frozen Report, evaluating applicable Gates if never
+  evaluated or definitions changed. No client-supplied Results or Gate outcomes accepted.
+
+## 21. Aggregate formula, ThresholdMap and empty basis
+- **Sections:** I Ch.6 Aggregation; A.10/A.12.
+- **Quotation:** “counted at face value”; “a property of that Gate's own configuration”.
+- **Readings:** confidence discount after threshold, or weighted Boolean pass rate;
+  empty aggregates implicitly pass versus not_computed.
+- **Choice:** actionable pass=1/fail=0 weighted by positive Contract policies.weight
+  (default 1); no second Confidence discount. Dimension scalar threshold is minimum pass
+  rate. overall scalar combines dimension means equally. ThresholdMap keys may select
+  dimensions, pass_rate, latency_ms, total_tokens or cost; numeric metric bounds are
+  maxima for resource metrics, minima for pass rates. Bounds may be {min,max,weight}
+  to state dimension-combination weight; unknown/empty/nonfinite forms rejected.
+  No Evidence gives not_computed and insufficient_basis. Safety Validator failures veto
+  independently. Missing applicable current clauses/results are insufficient_basis,
+  never a fabricated Result. Regression threshold is maximum regression rate.
+
+## 22. Snapshot versions and Baseline identity
+- **Sections:** A.11/A.13; X Baselines and Snapshot Comparison.
+- **Quotation:** “exact ... Contract version”; “which Baseline or Snapshot ... named Baseline”.
+- **Readings:** mutable names as versions or content-addressed copies; first/multiple
+  Results in an Execution designated implicitly versus explicit result_id.
+- **Choice:** reusable versions are sha256 of canonical Contract content, stored with
+  full contents; effective per-Scenario Contracts also frozen for deterministic clause
+  comparison. Baseline POST requires execution_id and result_id; server adds id and
+  approval metadata. Optional name is used for regression lookup. Latest accepted
+  matching Baseline wins only with explicit latest_approved; Snapshot comparison uses
+  its frozen Baseline IDs. Incompatible Oracle/clause or absent references are uncomputed
+  comparisons rather than response text diffs. Baselines need not be passes, but must
+  be effective actionable findings; pass->fail is the defined regression.
+
+## 23. Resolution input and unavailable follow-up
+- **Sections:** I Ch.6 Result Resolution; C.3/C.7.
+- **Quotation:** “only ... current effective Result”; “same Oracle configuration”.
+- **Readings:** allow arbitrary new Oracle on unavailable versus exact Oracle; create
+  review workflow infrastructure now versus only the requested review endpoint.
+- **Choice:** reassess requires exact frozen oracle string and unavailable effective
+  state. Human review directly supplies verdict/supporting_evidence, optional numeric
+  Confidence; absent means not_applicable. Only inconclusive or awaiting Human Review
+  may be reviewed; a failed/available actionable verdict cannot be reopened. Full Human
+  workflow routing/timeout/panels/requalification remain slice 5. Duplicate resolution
+  links reject atomically; the awaiting_review completion preserves recorded_at.
+
+## 24. Approval fields, report freshness and Service Account rejection
+- **Sections:** XII Principals/Approval Workflow; A.12/A.14; C.3.
+- **Quotation:** “Principal who recorded”; “configuration ... differs ... MUST NOT ... recorded”.
+- **Readings:** trust supplied approved_by/role/time and gates, or derive from Principal
+  and stored Report; allow old evaluations after more recent ones or require latest.
+- **Choice:** server derives actor/role/time and Gate entries. Inputs specify batch,
+  report_id, snapshot_id, decision, optional release_policy/notes. A Report must describe
+  the latest evaluation for that batch and config must still match Snapshot, even for
+  rejected decisions. User supplies no GateResult copies. Standing Policy revocation is
+  a separate append-only event; historical policies/releases remain readable. Existing
+  minimal direct Approval Workflow is reused, never a new admin exemption.
+
 ## 12. Built-in Validator target and expected formats
 - **Section:** Volume V Built-in Validators; Appendix A §A.5.
 - **Quotation:** “Structure varies by validator type”; “response, conversation, artifacts.*, or a specific path”.

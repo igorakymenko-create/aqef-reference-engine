@@ -18,6 +18,7 @@ class Result(AQEFBaseModel):
     disposition: Literal["actionable", "inconclusive", "awaiting_review", "oracle_unavailable", "not_assessed"]
     supporting_evidence: dict
     recorded_at: datetime
+    resolves: str | None = None
     assertions: StrictInt | None = Field(default=None, gt=1)
 
     @model_validator(mode="after")

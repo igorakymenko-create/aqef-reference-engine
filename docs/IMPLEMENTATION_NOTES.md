@@ -1,5 +1,134 @@
 # Implementation Notes
 
+## Slice 4 — plan
+
+### Entities and operations
+- Effective Result chains: review/reassess endpoints under Execution Results, append-only
+  resolutions and the one awaiting_review completion exception (I Ch.6 Result Resolution;
+  C.3, C.7). Reassessment uses stored Evidence and the frozen clause/Oracle only.
+- Decision service: Metrics, Confidence-modeled weighted aggregates and Basis; batch
+  Gates/check producing immutable GateResults and an automatic scoped Snapshot (I Ch.6;
+  X; A.10–A.13). Baselines and explicit Snapshots have list/get/create APIs.
+- Report: explicit POST generation for one batch plus list/get, frozen C.10 shape and
+  six always-present signal lists (XI Reports; C.10).
+- Governance: per-GateResult override, Person-approved Baseline, Release Policies and
+  revocation, Release Decisions tied to a Report and current Snapshot (XII; A.11–A.14).
+
+### Rules with section references
+1. Resolutions are linear: only current non-actionable effective Result; actionable
+   cannot reopen. Human review is Person+review (and clause role where declared), only
+   inconclusive/unresolved Human Results; same-Oracle reassessment only unavailable.
+   Both preserve old records; no subject call; no requalified-control behavior before
+   slice 5. Unique resolution links prevent competing branches (I Ch.6; C.3/C.7).
+2. Apply Confidence before aggregation: use effective actionable Results at face value;
+   non-actionable/stale/unadmitted Results block and are counted separately. Positive
+   Contract weight affects pass rate; deterministic Safety failure is an independent
+   veto, never outvoted. Seeded Controls are excluded from every aggregate/basis (I Ch.6).
+3. Every Gate reads all relevant dimension Results, reports distinct Scenario/Execution
+   counts and min_basis_met/not_declared; all applicable failure reasons are retained.
+   Empty evidence is not_computed and cannot pass. All Project and scoped Suite Gates
+   are evaluated, advisory and blocking; unknown metrics/threshold syntax rejected
+   rather than guessed (I Ch.6; A.10/A.12; C.3).
+4. Snapshot freezes Environment, inline Contracts in attachment order, every referenced
+   reusable Contract with content-hash version, Gates and scoped Baselines. Staleness
+   compares full Environment and identified clause content, unnamed clauses against
+   whole effective Contract. Re-evaluation never refreshes old Evidence. Release rejects
+   any scoped Contract/Gate/Environment change; unrelated scope changes do not affect it
+   (I Ch.6 Staleness; X Snapshot Comparison; A.13).
+5. Baseline explicitly designates one effective actionable Result/Execution, pins exact
+   Evidence, Dataset/version, effective Contract, Oracle, approving Person/role/time.
+   Regression compares pass->fail for matching Scenario/clause/Oracle against a named
+   Baseline, latest_approved or Snapshot's Baselines; missing comparison cannot pass.
+   Drift diagnostics compare prompt/model/dataset/Oracle without literal response diff
+   (X; A.11). No automatic baseline replacement.
+6. Override names one failed blocking GateResult id AND its batch and Gate, with nonempty
+   justification. Person gate_override plus Gate-specific permission; logged Approval
+   and Audit; no later evaluation inherits it. Report copies latest GateResults and
+   overlays recorded override at generation only (I Ch.6; XII; A.12; C.3/C.5).
+7. Report stores C.10 scope, Metrics with definitions and exact Result IDs, all Gates,
+   Basis, and six list signals. Frozen after generation, survives live deletion; fresh
+   Reports read current Results/Admission and latest evaluations (XI; C.10/C.8).
+8. Release requires applicable Gates, matching batch/report/snapshot, current scoped
+   configuration. approved iff all blocking Gates pass; overridden iff every failed
+   blocking Gate has its own override; rejected remains allowed. Every applicable
+   advisory Gate is included. Actor/role/time and Approval/Audit are recorded (A.12).
+9. Only Person release_decide may create/revoke a Policy; immutable except revocation.
+   Service Account Release requires in-force Policy covering actor/Suite/Environment,
+   only approved with all blocking Gates passing without overrides, or rejected.
+   Baseline/override are Person-only regardless of permissions (XII; A.14; C.4/C.5).
+10. Authenticated reads require read; writes use canonical atomic permissions; bounded
+    pagination, typed requests, reason-bearing errors and durable append-only history
+    across restart. No slice-5 panels/controls/requalification implemented (C.3–C.8).
+
+### Unclear points
+Entries 20–24 record batch scope, thresholds/weights, Report generation, baseline
+identity/comparison and review/release authoring fields. Tests cover each numbered rule.
+
+## Slice 4 — Completed Work
+
+### What was built
+- `engine/decision.py` and `engine/api/decision.py`: complete batch decision path with
+  Confidence-modeled weighted aggregation, separate deterministic Safety/declared veto,
+  Basis (including per-metric bases for ThresholdMaps), GateResults and scoped Snapshots.
+- Linear review/reassess Result chains with unique resolution links and no subject
+  re-invocation; awaiting_review completion is the only in-place Result change and
+  preserves recorded_at. Same-Oracle recovery of unavailable Validator/Judge is supported.
+- Frozen Reports with exact Result IDs/Metric definitions, all six list signals, explicit
+  generation API, and baseline comparison/drift correlations. Reports refresh evaluations
+  for changed config, effective Result standing or Admission, and otherwise preserve
+  exact GateResult/override identities. Historical Reports never change.
+- Person-approved explicit Baselines pin Result, Evidence, Dataset and full configuration;
+  regression checks named/latest Baseline or a Snapshot's frozen Baseline IDs.
+- Exact-GateResult overrides, standing Release Policy approval/revocation, and Release
+  records derived from matching current Snapshot/Report/latest evaluation. Advisory Gates
+  are retained. Automation can record only covered approved/rejected decisions under
+  an in-force Person-approved Policy; override/baseline/review remain Person-only.
+- Persistent append-only decision records, pagination/get APIs and Approval/Audit traces.
+  Decision/configuration writes and Admission changes are serialized by a per-Storage
+  lock in the single-process Minimal Engine deployment. SQLite unique links independently
+  reject duplicate resolution branches.
+
+### Required earlier behavior changes
+- Result adds optional resolves; absent remains absent on earlier normal Result shapes.
+  Assessment helpers accept a resolution target and re-use frozen Evidence/configuration.
+- Empty Dataset batches now persist batch scope alongside executions, allowing Gates
+  to record not_computed/insufficient_basis instead of losing the returned batch ID.
+- Project GET now reflects current project Gate definitions. Gate list/get/update also
+  handle Suite Gates, retaining scope, and registration enforces cross-Suite/Project
+  Gate name uniqueness. Full Project round trips cannot revert accepted Gate edits.
+- Shared StorageConflictError handling returns an observable 409; old request/error
+  conventions and the subject/Judge provider protocols are unchanged.
+
+### Tests and results
+- `python -m pytest -q`: **236 passed**, including all 193 cases after O-2 and **43 new
+  slice-4 cases** in `tests/test_decision.py`. One existing Starlette/httpx deprecation
+  warning remains. `git diff --check` passes.
+- Cases cover planned rules 1–10: linear/duplicate/actionable resolution rejection,
+  exact Oracle recovery without subject calls, awaiting_review completion/freshness,
+  Confidence and admission blocking, weights/maps/resource metrics, Safety/declared
+  veto, all applicable reasons, honest Basis and row breadth, seeded-result exclusion,
+  empty/failed batches, immutable snapshots/reports, named/unnamed clause staleness,
+  unchanged unrelated scope, Project/Suite Gate updates, exact override scope, advisory
+  versus blocking/no Gates, Person-only actions and Gate-specific permissions, policy
+  actor/Suite/Environment coverage and revocation, approved/rejected/overridden releases,
+  explicit Baseline/Snapshot regression, six Report signals, restart and deletion retention.
+- New ambiguity entries: **20–24**. O-2 was completed separately in **df49a83**, tagged
+  and pushed as slice-3.2 before implementation of this slice. No conformance/external
+  test material accessed; no changes to the supplied specification.
+
+### Deliberate limits / deferred work
+- Full Human Review routing/escalation/timeouts, Multi Judge panels and seeded-control
+  confirmation/invalidation/requalification remain slice 5. This slice implements only
+  the resolution endpoints Chapter 6/C.3 require, rejecting requests needing unavailable
+  requalification. Their Report signal lists remain present even when empty.
+- Action Boundary enforcement/acting tools, nonstatic datasets, UI/Dashboards, SDKs and
+  CI integrations remain outside this engine's scope. Existing recorded boundary facts
+  can be surfaced without enabling those capabilities.
+- Snapshot reusable versions are content hashes because configuration has no explicit
+  Contract version field. Full copied contents preserve reproducibility. Aggregate
+  statistical intervals are MAY and are not implemented; no statistical number is
+  mislabeled Confidence. No in-scope MUST is intentionally omitted.
+
 ## Slice 3.2 — O-2 owner decision
 - Parameterless Custom Validator Constraints accept expected null or {}. All other
   structures fail model validation at configuration load, naming the clause id (or

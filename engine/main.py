@@ -18,10 +18,11 @@ from engine.api.projects import get_projects_router
 from engine.api.suites_scenarios import get_suites_scenarios_router
 from engine.auth import get_current_principal_dependency
 from engine.models.principal import Principal, PrincipalKind, Role, Team
-from engine.storage import Storage
+from engine.storage import Storage, StorageConflictError
 from engine.providers import HTTPProvider, load_provider_urls
 from engine.api.executions import get_executions_router
 from engine.api.assessment import get_assessment_router
+from engine.api.decision import get_decision_router
 
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
@@ -65,6 +66,10 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     app.state.storage = storage
     app.state.provider = provider
 
+    @app.exception_handler(StorageConflictError)
+    async def storage_conflict(request: Request, exc: StorageConflictError):
+        return JSONResponse(status_code=409, content={"detail":str(exc)})
+
     # Register Routers
     app.include_router(get_governance_router(storage, principal_dep))
     app.include_router(get_projects_router(storage, principal_dep))
@@ -75,6 +80,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     app.include_router(get_gates_router(storage, principal_dep))
     app.include_router(get_executions_router(storage, principal_dep, provider))
     app.include_router(get_assessment_router(storage, principal_dep))
+    app.include_router(get_decision_router(storage, principal_dep, provider))
 
     @app.get("/healthz", tags=["System"])
     def health_check():

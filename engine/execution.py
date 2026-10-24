@@ -137,7 +137,8 @@ class ExecutionEngine:
         except (ValueError, TypeError) as exc:
             raise HTTPException(422, str(exc)) from exc
         # All batch inputs are validated before recording or invoking any subject.
-        store.save_executions(records)
+        store.save_executions(records, {"id":batch, "project":project_name, "suite":suite.name,
+                                       "environment":env.name, "created_at":now()})
         return batch, records
 
     async def execute(self, record):

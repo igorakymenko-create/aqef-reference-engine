@@ -21,7 +21,10 @@ The engine's purpose is to demonstrate that the AQEF specification can be implem
 - [x] **Slice 3: Assessment**
   - Deterministic built-in and registered Custom Validators with composition/veto
   - HTTP Single Judge, Confidence, immutable Results and Admission records
-- [ ] **Slice 4: Decision and Release**
+- [x] **Slice 4: Decision and Release**
+  - Result resolution, weighted aggregation/Basis, Gates and exact-result overrides
+  - Frozen Snapshots/Reports/Baselines, staleness and regression comparisons
+  - Governed Release Decisions and standing Service Account Release Policies
 - [ ] **Slice 5: Scoped Capabilities**
 - [ ] **Slice 6: Conformance Statement**
 

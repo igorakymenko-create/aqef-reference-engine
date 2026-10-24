@@ -9,6 +9,8 @@ References:
 import json
 import sqlite3
 import uuid
+from threading import RLock
+from functools import wraps
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from engine.models.contract import Contract
@@ -39,9 +41,18 @@ class StorageNotFoundError(Exception):
     pass
 
 
+def synchronized(method):
+    @wraps(method)
+    def locked(self, *args, **kwargs):
+        with self.config_lock:
+            return method(self, *args, **kwargs)
+    return locked
+
+
 class Storage:
     def __init__(self, db_path: str = ":memory:"):
         self.db_path = db_path
+        self.config_lock = RLock()
         self._shared_conn: Optional[sqlite3.Connection] = None
         if self.db_path == ":memory:":
             mem_name = f"aqef_mem_{uuid.uuid4().hex}"
@@ -64,6 +75,12 @@ class Storage:
 
     def _init_db(self) -> None:
         with self._get_connection() as conn:
+            conn.execute("""CREATE TABLE IF NOT EXISTS execution_batches (
+                id TEXT PRIMARY KEY, project_name TEXT NOT NULL, data_json TEXT NOT NULL)""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS decision_records (
+                kind TEXT NOT NULL, id TEXT NOT NULL, project_name TEXT NOT NULL,
+                data_json TEXT NOT NULL, PRIMARY KEY(kind, id))""")
+            conn.execute("CREATE TABLE IF NOT EXISTS result_links (previous TEXT PRIMARY KEY, following TEXT UNIQUE NOT NULL)")
             # Frozen runtime history deliberately has no cascade to live configuration.
             conn.execute("""CREATE TABLE IF NOT EXISTS executions (
                 id TEXT PRIMARY KEY, project_name TEXT NOT NULL, data_json TEXT NOT NULL
@@ -235,10 +252,19 @@ class Storage:
                 )
             """)
 
-    def save_executions(self, records):
+    def save_executions(self, records, batch=None):
         with self._get_connection() as conn:
+            if batch is not None:
+                conn.execute("INSERT INTO execution_batches VALUES (?, ?, ?)",
+                             (batch["id"], batch["project"], json.dumps(batch)))
             conn.executemany("INSERT INTO executions VALUES (?, ?, ?)",
                              [(r["id"], r["project"], json.dumps(r)) for r in records])
+
+    def get_batch(self, project, identifier):
+        with self._get_connection() as conn:
+            row = conn.execute("SELECT data_json FROM execution_batches WHERE project_name = ? AND id = ?",
+                               (project, identifier)).fetchone()
+            return json.loads(row[0]) if row else None
 
     def update_execution(self, record):
         with self._get_connection() as conn:
@@ -259,19 +285,73 @@ class Storage:
             return [json.loads(row["data_json"]) for row in conn.execute(
                 "SELECT data_json FROM executions WHERE project_name = ? ORDER BY rowid", (project_name,))]
 
+    @synchronized
     def append_result(self, project_name, result):
         from engine.models.assessment import Result
         validated = Result.model_validate(result)
         data = validated.model_dump(mode="json")
-        if data["assertions"] is None:
-            del data["assertions"]
+        for field in ("assertions", "resolves"):
+            if data[field] is None:
+                del data[field]
         with self._get_connection() as conn:
             try:
+                if data.get("resolves"):
+                    previous = conn.execute("SELECT data_json FROM assessment_results WHERE id = ? AND project_name = ?",
+                                            (data["resolves"], project_name)).fetchone()
+                    if not previous:
+                        raise StorageConflictError("Resolution target not found")
+                    previous = json.loads(previous[0])
+                    if (previous["execution"], previous["clause"]) != (data["execution"], data["clause"]) or previous["disposition"] == "actionable":
+                        raise StorageConflictError("Only a non-actionable Result for the same execution/clause may be resolved")
+                    conn.execute("INSERT INTO result_links VALUES (?, ?)", (data["resolves"], data["id"]))
                 conn.execute("INSERT INTO assessment_results VALUES (?, ?, ?, ?)",
                              (data["id"], project_name, data["execution"], json.dumps(data)))
             except sqlite3.IntegrityError as exc:
                 raise StorageConflictError("Result is immutable") from exc
         return data
+
+    @synchronized
+    def complete_review(self, project_name, data):
+        from engine.models.assessment import Result
+        Result.model_validate(data)
+        with self._get_connection() as conn:
+            old = conn.execute("SELECT data_json FROM assessment_results WHERE id = ? AND project_name = ?",
+                               (data["id"], project_name)).fetchone()
+            if not old or json.loads(old[0])["disposition"] != "awaiting_review":
+                raise StorageConflictError("Review has already completed")
+            if json.loads(old[0])["recorded_at"] != data["recorded_at"]:
+                raise StorageConflictError("Review must preserve recorded_at")
+            conn.execute("UPDATE assessment_results SET data_json = ? WHERE id = ?", (json.dumps(data), data["id"]))
+        return data
+
+    @synchronized
+    def save_decision(self, kind, project_name, data):
+        with self._get_connection() as conn:
+            try:
+                conn.execute("INSERT INTO decision_records VALUES (?, ?, ?, ?)",
+                             (kind, data["id"], project_name, json.dumps(data)))
+            except sqlite3.IntegrityError as exc:
+                raise StorageConflictError(f"{kind} record already exists and is immutable") from exc
+            if kind == "report":
+                conn.execute("INSERT INTO reports VALUES (?, ?, ?)", (data["id"], project_name, data["generated_at"]))
+            elif kind == "snapshot":
+                conn.execute("INSERT INTO snapshots VALUES (?, ?, ?, ?)",
+                             (data["id"], project_name, data["captured_at"], json.dumps(data)))
+            elif kind == "baseline":
+                conn.execute("INSERT INTO baselines VALUES (?, ?, ?, ?, ?)",
+                             (data["id"], project_name, data["environment"], data.get("dataset"), None))
+        return data
+
+    def decision_records(self, kind, project_name):
+        with self._get_connection() as conn:
+            return [json.loads(r[0]) for r in conn.execute(
+                "SELECT data_json FROM decision_records WHERE kind = ? AND project_name = ? ORDER BY rowid", (kind, project_name))]
+
+    def decision_record(self, kind, project_name, identifier):
+        with self._get_connection() as conn:
+            row = conn.execute("SELECT data_json FROM decision_records WHERE kind = ? AND project_name = ? AND id = ?",
+                               (kind, project_name, identifier)).fetchone()
+            return json.loads(row[0]) if row else None
 
     def list_results(self, project_name, execution_id):
         with self._get_connection() as conn:
@@ -293,6 +373,7 @@ class Storage:
             return [json.loads(row[0]) for row in conn.execute(
                 "SELECT data_json FROM custom_validators WHERE project_name = ? ORDER BY rowid", (project_name,))]
 
+    @synchronized
     def append_admission(self, project_name, data):
         with self._get_connection() as conn:
             try:
@@ -422,6 +503,7 @@ class Storage:
 
     # ---------------- Projects ----------------
 
+    @synchronized
     def create_project(self, project: Project) -> Project:
         with self._get_connection() as conn:
             now_iso = datetime.now(timezone.utc).isoformat()
@@ -479,6 +561,8 @@ class Storage:
                 "SELECT data_json FROM environments WHERE project_name = ? ORDER BY rowid", (name,))]
             project.suites = [Suite.model_validate_json(r[0]) for r in conn.execute(
                 "SELECT data_json FROM suites WHERE project_name = ? ORDER BY rowid", (name,))]
+            project.quality_gates = [QualityGate.model_validate_json(r[0]) for r in conn.execute(
+                "SELECT data_json FROM quality_gates WHERE project_name = ? ORDER BY rowid", (name,))]
             for index, contract in enumerate(project.contracts):
                 if isinstance(contract, Contract) and contract.name:
                     current = conn.execute("SELECT data_json FROM contracts WHERE project_name = ? AND name = ?",
@@ -492,6 +576,7 @@ class Storage:
             names = [row[0] for row in conn.execute("SELECT name FROM projects ORDER BY name")]
         return [self.get_project(name) for name in names]
 
+    @synchronized
     def update_project(self, project: Project) -> Project:
         with self._get_connection() as conn:
             cur = conn.execute(
@@ -531,6 +616,7 @@ class Storage:
                                   datetime.now(timezone.utc).isoformat()))
         return project
 
+    @synchronized
     def delete_project(self, project_name: str, retain_history: bool = False) -> None:
         """Delete a Project with referential integrity checks (Appendix C §C.8)."""
         with self._get_connection() as conn:
@@ -553,6 +639,7 @@ class Storage:
 
     # ---------------- Environments ----------------
 
+    @synchronized
     def create_environment(self, project_name: str, environment: Environment) -> Environment:
         with self._get_connection() as conn:
             p = conn.execute("SELECT name FROM projects WHERE name = ?", (project_name,)).fetchone()
@@ -585,6 +672,7 @@ class Storage:
             )
             return [Environment.model_validate_json(row["data_json"]) for row in cursor]
 
+    @synchronized
     def update_environment(self, project_name: str, environment: Environment) -> Environment:
         with self._get_connection() as conn:
             cur = conn.execute(
@@ -595,6 +683,7 @@ class Storage:
                 raise StorageNotFoundError(f"Environment '{environment.name}' not found in Project '{project_name}'")
         return environment
 
+    @synchronized
     def delete_environment(self, project_name: str, env_name: str) -> None:
         # Appendix C §C.8: Check referential integrity with Baselines
         with self._get_connection() as conn:
@@ -615,7 +704,11 @@ class Storage:
 
     # ---------------- Suites & Scenarios ----------------
 
+    @synchronized
     def create_suite(self, project_name: str, suite: Suite) -> Suite:
+        existing_gates = {g.name for g in self.list_quality_gates(project_name)}
+        if any(g.name in existing_gates for g in suite.quality_gates):
+            raise StorageConflictError("Quality Gate names must be unique across Project and Suites")
         with self._get_connection() as conn:
             p = conn.execute("SELECT name FROM projects WHERE name = ?", (project_name,)).fetchone()
             if not p:
@@ -653,6 +746,7 @@ class Storage:
             )
             return [Suite.model_validate_json(row["data_json"]) for row in cursor]
 
+    @synchronized
     def create_scenario(self, project_name: str, suite_name: str, scenario: Scenario) -> Scenario:
         with self._get_connection() as conn:
             s = conn.execute(
@@ -692,6 +786,7 @@ class Storage:
                 return None
             return Scenario.model_validate_json(row["data_json"])
 
+    @synchronized
     def update_scenario(self, project_name: str, suite_name: str, scenario: Scenario) -> Scenario:
         with self._get_connection() as conn:
             s = conn.execute(
@@ -717,6 +812,7 @@ class Storage:
             )
         return scenario
 
+    @synchronized
     def delete_scenario(self, project_name: str, suite_name: str, scenario_name: str) -> None:
         with self._get_connection() as conn:
             s = conn.execute(
@@ -831,6 +927,7 @@ class Storage:
             )
             return [Contract.model_validate_json(row["data_json"]) for row in cursor]
 
+    @synchronized
     def update_contract(self, project_name: str, contract: Contract) -> Contract:
         if not contract.name:
             raise ValueError("Reusable Contract must have a 'name'")
@@ -845,7 +942,10 @@ class Storage:
 
     # ---------------- Quality Gates ----------------
 
+    @synchronized
     def create_quality_gate(self, project_name: str, gate: QualityGate) -> QualityGate:
+        if any(g.name == gate.name for g in self.list_quality_gates(project_name)):
+            raise StorageConflictError("Quality Gate names must be unique across Project and Suites")
         with self._get_connection() as conn:
             p = conn.execute("SELECT name FROM projects WHERE name = ?", (project_name,)).fetchone()
             if not p:
@@ -866,7 +966,7 @@ class Storage:
                 (project_name, gate_name),
             ).fetchone()
             if not row:
-                return None
+                return next((g for suite in self.list_suites(project_name) for g in suite.quality_gates if g.name == gate_name), None)
             return QualityGate.model_validate_json(row["data_json"])
 
     def list_quality_gates(self, project_name: str) -> List[QualityGate]:
@@ -875,8 +975,9 @@ class Storage:
                 "SELECT data_json FROM quality_gates WHERE project_name = ? ORDER BY name",
                 (project_name,),
             )
-            return [QualityGate.model_validate_json(row["data_json"]) for row in cursor]
+            return [QualityGate.model_validate_json(row["data_json"]) for row in cursor] + [g for suite in self.list_suites(project_name) for g in suite.quality_gates]
 
+    @synchronized
     def update_quality_gate(self, project_name: str, gate: QualityGate) -> QualityGate:
         with self._get_connection() as conn:
             cur = conn.execute(
@@ -884,6 +985,12 @@ class Storage:
                 (gate.model_dump_json(), project_name, gate.name),
             )
             if cur.rowcount == 0:
+                for suite in self.list_suites(project_name):
+                    if any(g.name == gate.name for g in suite.quality_gates):
+                        suite.quality_gates = [gate if g.name == gate.name else g for g in suite.quality_gates]
+                        conn.execute("UPDATE suites SET data_json = ? WHERE project_name = ? AND name = ?",
+                                     (suite.model_dump_json(), project_name, suite.name))
+                        return gate
                 raise StorageNotFoundError(f"Quality Gate '{gate.name}' not found in Project '{project_name}'")
         return gate
 

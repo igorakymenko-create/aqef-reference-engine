@@ -47,7 +47,7 @@ class AssessmentEngine:
         self.storage = storage
         self.provider = provider
 
-    def validate(self, record, clause, reference):
+    def validate(self, record, clause, reference, resolves=None):
         name = clause["validator"]
         custom = record["configuration"]["validators"].get(name)
         oracle = canonical({"type": "validator", "name": name, "version": "1",
@@ -71,9 +71,11 @@ class AssessmentEngine:
             result["disposition"] = "actionable"
         except Exception as exc:
             supporting["error"] = f"{type(exc).__name__}: {exc}"
+        if resolves:
+            result["resolves"] = resolves
         return self.storage.append_result(record["project"], result)
 
-    async def judge(self, record, clause, reference):
+    async def judge(self, record, clause, reference, resolves=None):
         from engine.execution import duration
         evidence = {"conversation": deepcopy(record["conversation"]), "artifacts": deepcopy(record["artifacts"])}
         supporting = {"evidence": evidence, "criteria": clause["criteria"], "attempts": []}
@@ -101,6 +103,8 @@ class AssessmentEngine:
         except Exception as exc:
             attempt["error"] = f"{type(exc).__name__}: {str(exc) or 'Judge timeout'}"
         attempt["completed_at"] = timestamp()
+        if resolves:
+            result["resolves"] = resolves
         return self.storage.append_result(record["project"], result)
 
     async def assess(self, record):
