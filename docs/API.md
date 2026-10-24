@@ -1,5 +1,28 @@
 # AQEF Engine API Documentation
 
+## Slice 2 execution API
+
+Configure provider URLs before startup as specified in [PROVIDERS.md](PROVIDERS.md).
+`POST /projects/{project}/executions` requires `execute` and exactly
+`{"suite":"suite-name","environment":"environment-name"}`. It synchronously returns
+201 with `execution_batch_id` and `executions`, including failed executions as recorded
+infrastructure failures rather than quality verdicts. Preflight errors return 404 for
+missing resources or 422 for invalid settings, missing Variables, invalid fixed Evidence,
+or unmapped model identifiers. Error bodies use `detail` naming the reason.
+
+Authenticated `read` endpoints:
+- `GET /projects/{project}/executions`: list with offset (default 0), limit (default
+  100, range 1–1000), optional suite/environment/status and date_from/date_to filters.
+  Date filters are inclusive ISO timestamps with timezone.
+- `GET .../executions/{id}`: persisted metadata and frozen runtime configuration.
+- `GET .../executions/{id}/conversation`: one completed transcript, or 409 if none.
+- `GET .../executions/{id}/artifacts`: list with the same offset/limit convention.
+- `GET .../executions/{id}/results`: empty list until assessment is implemented.
+
+Missing/invalid authentication returns 401, missing permission 403, missing Execution
+404, invalid request fields 422. Finished records cannot be updated or deleted. Their
+frozen configuration and Evidence remain readable even after live configuration deletion.
+
 ## Running the Engine
 
 The engine is built on Python 3.12, FastAPI, SQLite, and Uvicorn.

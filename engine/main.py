@@ -19,9 +19,12 @@ from engine.api.suites_scenarios import get_suites_scenarios_router
 from engine.auth import get_current_principal_dependency
 from engine.models.principal import Principal, PrincipalKind, Role, Team
 from engine.storage import Storage
+from engine.providers import HTTPProvider, load_provider_urls
+from engine.api.executions import get_executions_router
 
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
+    provider = HTTPProvider(load_provider_urls())
     storage = Storage(db_path=db_path)
 
     # Bootstrap default admin team, role, and principal if not already present
@@ -59,6 +62,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         lifespan=lifespan,
     )
     app.state.storage = storage
+    app.state.provider = provider
 
     # Register Routers
     app.include_router(get_governance_router(storage, principal_dep))
@@ -68,6 +72,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     app.include_router(get_contracts_router(storage, principal_dep))
     app.include_router(get_datasets_router(storage, principal_dep))
     app.include_router(get_gates_router(storage, principal_dep))
+    app.include_router(get_executions_router(storage, principal_dep, provider))
 
     @app.get("/healthz", tags=["System"])
     def health_check():

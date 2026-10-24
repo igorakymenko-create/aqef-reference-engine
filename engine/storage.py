@@ -64,6 +64,10 @@ class Storage:
 
     def _init_db(self) -> None:
         with self._get_connection() as conn:
+            # Frozen runtime history deliberately has no cascade to live configuration.
+            conn.execute("""CREATE TABLE IF NOT EXISTS executions (
+                id TEXT PRIMARY KEY, project_name TEXT NOT NULL, data_json TEXT NOT NULL
+            )""")
             # Teams, Roles, Principals, Auth Tokens
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS teams (
@@ -221,6 +225,30 @@ class Storage:
                     generated_at TEXT NOT NULL
                 )
             """)
+
+    def save_executions(self, records):
+        with self._get_connection() as conn:
+            conn.executemany("INSERT INTO executions VALUES (?, ?, ?)",
+                             [(r["id"], r["project"], json.dumps(r)) for r in records])
+
+    def update_execution(self, record):
+        with self._get_connection() as conn:
+            existing = conn.execute("SELECT data_json FROM executions WHERE id = ?", (record["id"],)).fetchone()
+            if not existing or json.loads(existing["data_json"])["status"] not in ("queued", "running"):
+                raise StorageConflictError("Completed Execution is immutable")
+            conn.execute("UPDATE executions SET data_json = ? WHERE id = ?",
+                         (json.dumps(record), record["id"]))
+
+    def get_execution(self, project_name, execution_id):
+        with self._get_connection() as conn:
+            row = conn.execute("SELECT data_json FROM executions WHERE project_name = ? AND id = ?",
+                               (project_name, execution_id)).fetchone()
+            return json.loads(row["data_json"]) if row else None
+
+    def list_executions(self, project_name):
+        with self._get_connection() as conn:
+            return [json.loads(row["data_json"]) for row in conn.execute(
+                "SELECT data_json FROM executions WHERE project_name = ? ORDER BY rowid", (project_name,))]
 
     # ---------------- Principals, Teams, Roles ----------------
 

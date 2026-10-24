@@ -1,5 +1,59 @@
 # Ambiguities Log
 
+## 7. Execution defaults and retry count
+- **Section:** Appendix A §A.9; Volume III Timeouts, Retry.
+- **Quotation:** “overridden at the Suite level field by field”; “Maximum retry count.”
+- **Readings:** merge nested retry attributes or replace the retry field; count total
+  attempts or retries after the initial call; unbounded or finite default timeout.
+- **Choice:** replace explicitly supplied non-null Suite fields, including the whole
+  RetryConfig. `max_attempts` counts retries, so total calls may be 1 + max_attempts.
+  Defaults: sequential, parallelization 1, 30s whole-Execution timeout, zero retries.
+  Reject null overrides and unsupported scheduling; these prevent silent unbounded runs.
+
+## 8. Batch request, response and scheduling
+- **Section:** Appendix C §C.3 Execution; Volume III Scheduling.
+- **Quotation:** “Trigger Execution(s) for a Suite × Environment”; “logged and reproducible”.
+- **Readings:** asynchronous jobs or a synchronous batch; arbitrary subset or whole Suite.
+- **Choice:** POST accepts exactly `{suite, environment}`, runs the whole Suite and all
+  rows in declared order, and returns `{execution_batch_id, executions}` after completion.
+  Parallel mode limits concurrency and returns the same declaration order. Every record
+  freezes scheduling reason, order, actor, configuration and trigger time before calls.
+  No custom priority/cadence syntax is inferred; unknown strategies are rejected.
+
+## 9. Conversation protocol and retry boundary
+- **Section:** Volume III Variables, Conversation Engine, Retry.
+- **Quotation:** “later turns are constructed by the Conversation Engine from Context”;
+  “before the subject has produced a genuine Response”.
+- **Readings:** single-turn only; invent a Scenario turn DSL; provider supplies a finish
+  signal while the engine constructs deterministic continuation from transcript Context.
+- **Choice:** provider returns a string `response`, optional Boolean `complete` (true
+  by default), and optional artifact/usage data. For false, the next prompt is literally
+  `Continue.` with the full preceding transcript in `context`. No acting tools execute.
+  After any response string is received, no retry of that Execution is allowed, even
+  if another field is invalid or a later turn fails. Unknown response fields are rejected.
+  This preserves genuine unfavorable responses instead of replacing them.
+
+## 10. Failed execution evidence and fixed evidence shape
+- **Section:** Volume III Timeouts, Pipeline; Appendix A §A.4.
+- **Quotation:** “produces no Conversation to assess at all”; “in the form the implementation stores Conversations”.
+- **Readings:** discard partial traces, or retain diagnostics separately from assessable Evidence.
+- **Choice:** failed runs expose no completed Conversation (409), but store partial turns,
+  artifacts and attempts for diagnosis, never assessed. Fixed Conversation must be the
+  same nonempty `{turns: [{prompt: string, response: string}]}` shape as live output;
+  reject invalid fixed Evidence at batch preflight. Optional source_execution is retained;
+  absence is allowed because provenance is SHOULD, and cannot be fabricated by the engine.
+
+## 11. Placeholder values and runtime bounds
+- **Section:** Appendix A §A.4; Volume III Variables, Timeouts.
+- **Quotation:** “Placeholder syntax is implementation-defined”; “same literal Prompt text every time”.
+- **Readings:** host-language string conversion or canonical JSON for nonstring Variables;
+  per-attempt timeout reset or whole-Execution deadline across retries and turns.
+- **Choice:** `{{ name }}` uses the existing alphanumeric/underscore syntax. Strings
+  substitute literally; other JSON values use compact sorted-key UTF-8 JSON (no NaN).
+  Substitution is one pass, without recursively interpreting inserted text. Durations
+  accept positive decimal ms/s/m/h; timeout covers the entire Execution including retries
+  and all turns, excluding scheduling wait. No new subject invocation after expiration.
+
 This document records points in the AQEF specification (Working Draft 0.41.1) where the text allows more than one reading, following Rule 3 of the Implementer's Brief:
 - Pick the more conservative reading (rejects more, blocks more, records more).
 - Never decide an ambiguity silently.

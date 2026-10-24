@@ -1,5 +1,106 @@
 # Implementation Notes
 
+## Slice 2 — plan
+
+### Entities and operations
+- Execution batch: authenticated `POST /projects/{project}/executions` with `suite` and
+  `environment`; one Execution per Scenario × pinned dataset row (or one for fixed
+  Variables/Evidence). Read metadata, Conversation, Artifacts and empty Results via
+  Appendix C §C.2–C.4; paginated/filterable execution list (§C.6).
+- Execution: immutable completed record containing IDs, timestamps, status, frozen
+  Scenario, Environment, effective Contract, resolved settings, Variables, row identity,
+  scheduling decision, attempts and errors (Volume III Runtime, Scheduling, Retry).
+- Conversation: `{turns: [{prompt, response}]}`. Context is a private accumulated
+  transcript; the deterministic continuation prompt is `Continue.` when the provider
+  explicitly returns `complete: false` (Volume III Variables, Context, Conversation Engine).
+- Artifacts: provider auxiliary data plus locally measured per-call latency and usage,
+  captured on receipt; retained partial evidence is never assessed (Artifact Collection).
+
+### Rules and references
+1. Preflight the entire batch before any call: resolve existing Suite/Environment,
+   versioned rows, all placeholders, effective Contracts and provider mapping. Reject
+   missing inputs, unsupported scheduling and invalid durations (III Pipeline, Variables;
+   A.4, A.9; C.1). Deterministic interpolation uses documented canonical JSON for nonstrings.
+2. Resolve Project defaults and Suite overrides field by field, replacing RetryConfig as
+   a field; default sequential, one worker, 30s timeout, no retry (A.9; ambiguity 7).
+3. Log trigger actor/time, ordering, row, settings and configuration before running;
+   sequential follows Scenario and row declaration order, parallel uses a bounded pool
+   with private deep-copied state and preserves output order (III Scheduling, Parallelization).
+4. Retry only infrastructure failure before any genuine Response in the Execution;
+   preserve every attempt/error. `max_attempts` is a maximum retry count per A.9.
+   Exhaustion and whole-Execution timeout yield infrastructure failure, no Conversation
+   for assessment; never retry after a Response, including later-turn failure (III Retry,
+   Timeouts). Keep partial turns separately for diagnosis.
+5. Runtime freezes Environment/configuration, Variables and effective Contract; identical
+   input yields identical prompt and provider conditions, independent of worker placement
+   (III Runtime, Variables; I Chapter 4). No distributed topology is required.
+6. A completed run supplies exactly one Conversation; multi-turn next prompt and finish
+   logic are deterministic. Capture returned Artifacts/usage and observed latency per
+   call. Fixed Evidence bypasses the subject and copies its Conversation/Artifacts into
+   the same batch and Environment (III Pipeline, Context, Conversation Engine, Collection).
+7. Persist evidence in SQLite independently of live configuration deletion; completed
+   records have no update/delete API. Reads require `read`, triggers `execute`; errors
+   name reasons; lists support offset/limit and suite/environment/status/date filters
+   (C.3, C.4, C.6, C.8). No assessment, resolution or control confirmation in this slice.
+8. Load and validate identifier-to-HTTP(S)-URL mapping once at app creation from
+   `AQEF_PROVIDER_URLS`; no URL in AQEF configuration. Missing mapping rejects preflight;
+   malformed startup settings fail startup. Subject wire protocol is fully specified in
+   PROVIDERS.md (BRIEF §4; III Runtime).
+
+### Unclear points
+Entries 7–11 in AMBIGUITIES.md record defaults/inheritance, batch/wire shape,
+multi-turn/retry boundaries, evidence on failure, and canonical variable rendering.
+Each numbered rule above will have unit/API coverage; the whole earlier suite must pass.
+
+## Slice 2 — Completed Work
+
+### What was built
+- `engine/execution.py`: batch preflight and expansion, frozen runtime configuration,
+  deterministic prompt rendering and continuation, private Context/Variables, sequential
+  and bounded parallel scheduling, retry histories and total execution deadlines.
+- `engine/providers.py`: startup identifier-to-URL mapping validation, HTTP subject
+  transport and strict response envelope. PROVIDERS.md now defines the exact wire
+  protocol, PowerShell startup example, mapping lifecycle and failure behavior.
+- `engine/api/executions.py`: authenticated execution trigger/list/metadata, Conversation,
+  Artifacts and empty Results endpoints. Pagination and common execution filters included.
+- SQLite runtime history persists independently of live configuration and across restart;
+  scheduling decisions are written before calls and terminal records reject replacement.
+- Fixed Evidence is validated and supplied without invoking the subject; confirmation,
+  assessment and downstream decisions remain in their designated later slices.
+
+### Earlier behavior changed because the specification requires it
+- ExecutionConfig now serializes only supplied fields. Previously SQLite serialization
+  materialized omitted values as null/defaults, losing field presence and breaking A.9's
+  field-by-field inheritance. Explicit values (including explicit null for preflight
+  rejection) are preserved. No earlier tests or governance behavior were changed.
+- Direct dependencies are pinned to the installed, tested versions as BRIEF §4 requires.
+  Existing LICENSE and the untracked owner-supplied AGENTS.md are left untouched.
+
+### Tests and results
+- `python -m pytest -q`: **73 passed** on Python 3.12.1, comprising all 42 pre-existing
+  cases and 31 new cases in `tests/test_execution.py`.
+- Coverage includes all eight planned rules: real loopback HTTP integration and SQLite
+  restart; strict wire/settings validation; authentication/permissions; row expansion;
+  preflight with no side effects; immutable history/deletion survival; canonical rendering;
+  settings inheritance/repeatability; sequential/parallel pool bounds and state isolation;
+  retry budget/exhaustion; malformed envelopes after a real Response; multi-turn Context;
+  timeout across turns; HTTP 429/redirect/malformed JSON; fixed Evidence; pagination/filters.
+- One installed Starlette/httpx deprecation warning remains; it does not affect results.
+- New ambiguity entries: **7–11**. No conformance test material was accessed.
+
+### Deliberate limits and SHOULDs
+- No distributed worker topology: the specification permits a single-process Minimal
+  Engine. Scheduling is on-demand sequential/parallel; unrecognized strategies are
+  rejected instead of interpreted as cadence or priority syntax.
+- No acting tools/Action Boundary, nonstatic sources, assessment or Decision behavior.
+  Results are empty until slice 3. Control confirmation/invalidation is slice 5.
+- Fixed Evidence source_execution is retained when supplied; the engine does not invent
+  provenance when absent (A.4 SHOULD). Callers remain responsible for supplying recently
+  captured Evidence from the same Environment.
+- Execution POST is synchronous. A process crash may leave a queued/running diagnostic
+  record; there is no automatic replay on restart, which could replace a real Response
+  whose receipt was interrupted. Remote provider work cannot be undone on local timeout.
+
 ## Slice 1 — Plan
 
 ### 1. Overview

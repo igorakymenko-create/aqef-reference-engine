@@ -13,7 +13,11 @@ The engine's purpose is to demonstrate that the AQEF specification can be implem
   - Quality Contracts with additive composition and conflict detection
   - Quality Gates with basis requirements and name uniqueness
   - Approval Workflow governing contract and quality gate changes
-- [ ] **Slice 2: Execution and Evidence**
+- [x] **Slice 2: Execution and Evidence**
+  - Suite × Environment batches, static row expansion, isolated sequential/parallel runs
+  - Deterministic Variables/Context, multi-turn Conversations, captured Artifacts
+  - Infrastructure retries, whole-execution timeouts, durable frozen Evidence
+  - HTTP subject provider; startup mapping and wire contract in [docs/PROVIDERS.md](docs/PROVIDERS.md)
 - [ ] **Slice 3: Assessment**
 - [ ] **Slice 4: Decision and Release**
 - [ ] **Slice 5: Scoped Capabilities**

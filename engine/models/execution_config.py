@@ -8,7 +8,7 @@ References:
 
 from enum import Enum
 from typing import Optional
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_serializer
 from engine.models.base import AQEFBaseModel
 
 
@@ -38,3 +38,9 @@ class ExecutionConfig(AQEFBaseModel):
     scheduling: Optional[str] = None
     parallelization: Optional[int] = Field(None, ge=1)
     on_seeded_control_miss: SeededControlMissPolicy = SeededControlMissPolicy.SKIP_CLASS
+
+    @model_serializer(mode="wrap")
+    def serialize_supplied_fields(self, handler):
+        # A.9 field-by-field inheritance depends on presence, including after SQLite
+        # round trips. Serializing defaults would turn omitted fields into overrides.
+        return {key: value for key, value in handler(self).items() if key in self.model_fields_set}
