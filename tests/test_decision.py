@@ -430,6 +430,27 @@ def test_low_confidence_signal_retained_after_resolution(harness,monkeypatch):
     assert r["gates"]["semantic"]["basis"]["results"]==1
 
 
+def test_d4_c10_low_confidence_includes_zero_inconclusive_denominators(harness,monkeypatch):
+    # Appendix C C.10 Signals; I Ch.6 Aggregate Basis: every Scenario/Oracle pair,
+    # including 0 of 1, is needed to distinguish 2 of 2 from 2 of 3.
+    p=project();p["contracts"][0]["constraints"]=[]
+    p["contracts"][0]["expectations"]=[expectation()]
+    p["suites"][0]["scenarios"]=[{"name":name,"prompt":{"template":name}} for name in ("one","two","three")]
+    app,client,_=configure(harness,p)
+    app.state.provider.urls["judge-v1"]="http://judge.local"
+
+    async def call(model,payload,timeout):
+        if model=="subject-v1":return {"response":payload["prompt"]}
+        text=payload["evidence"]["conversation"]["turns"][0]["response"]
+        return {"verdict":"pass","confidence":.9 if text=="three" else .2,"assertions":1,"explanation":"checked"}
+    monkeypatch.setattr(app.state.provider,"call",call)
+    r=report(client,run(client)["execution_batch_id"])
+    rows=r["signals"]["low_confidence"]
+    assert len(rows)==3
+    assert {x["scenario"]:(x["inconclusive"],x["results"]) for x in rows}=={"s/one":(1,1),"s/two":(1,1),"s/three":(0,1)}
+    assert sum(x["inconclusive"] for x in rows)==2 and sum(x["results"] for x in rows)==3
+
+
 def test_rejected_service_release_and_no_override_authority(harness):
     app,client,_=setup(harness,[gate()],checks=[constraint("forbidden-content","response",{"patterns":["bad"]},id="bad")])
     automation=bot(app)

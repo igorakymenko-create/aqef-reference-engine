@@ -413,7 +413,7 @@ class DecisionEngine:
                         if isinstance(attempt, dict) and "target" in attempt:
                             signals["boundary_attempts"].append({**deepcopy(attempt), "execution":record["id"]})
         signals["retries"] = [{"scenario":k, "retries":v} for k,v in retries.items() if v]
-        signals["low_confidence"] = [{"scenario":k[0], "oracle":k[1], "inconclusive":v[0], "results":v[1]} for k,v in lows.items() if v[0]]
+        signals["low_confidence"] = [{"scenario":k[0], "oracle":k[1], "inconclusive":v[0], "results":v[1]} for k,v in lows.items()]
         signals["unadmitted_judges"] = sorted(unadmitted)
         metrics = []
         for dimension in ("functional", "semantic", "safety", "operational"):

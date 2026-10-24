@@ -1,5 +1,13 @@
 # Implementation Notes
 
+## Slice 4.1 — D-4 external review
+- Confirmed Appendix C C.10 explicitly requires per-Scenario/per-Oracle inconclusive
+  and total counts. Removed the filter that hid pairs with zero inconclusive Results.
+- Regression test names C.10 and I Ch.6 Aggregate Basis: three Scenarios, one Judge,
+  two inconclusive and one actionable, preserving all three denominator entries.
+- Report remains frozen; no recorded Result is modified. Correction committed/tagged
+  separately before slice 5. Whole suite: **237 passed**; one existing Starlette/httpx deprecation warning.
+
 ## Slice 4 — plan
 
 ### Entities and operations
@@ -577,4 +585,5 @@ Slice 1 ("Foundation and Definition") implements the foundational entities, gove
 
 ### Deviations from SHOULD-level requirements:
 - None. All applicable MUST, MUST NOT, and SHOULD requirements for Slice 1 scope were fully implemented.
+
 
