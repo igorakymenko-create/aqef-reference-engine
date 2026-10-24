@@ -1,25 +1,39 @@
-# AQEF Reference Engine — kit
+# AQEF Reference Engine
 
-A kit for building a minimal AQEF engine (P2) with an AI coding agent, from the
-specification text alone.
+A reference implementation of the **[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF)**, Working Draft 0.41.1.
 
-| File | Purpose |
-|---|---|
-| `BRIEF.md` | What to build, the rules, the scope, the stack, where implementations go wrong, the slices and what to read for each. The agent reads it first. |
-| `PROMPT-1-START.md` | The prompt that starts slice 1. |
-| `PROMPT-2-NEXT-SLICE.md` | The prompt for slices 2 to 6. |
-| `PROMPT-3-REVIEW.md` | How failures from the conformance tests go back to the agent: only engine defects, never the test text. |
-| `spec/` | AQEF Working Draft 0.41.1, complete, without the Conformance Test Specification. Unmodified copy of the repository at commit `b9ab587`; the specification text is that of release v0.41.1. |
+The engine's purpose is to demonstrate that the AQEF specification can be implemented as written, adhering strictly to its normative rules, schema definitions, and REST API surface.
 
-How it is used:
+## Completed Slices
 
-1. Open the kit folder in the agent's IDE, as the workspace, and send
-   `PROMPT-1-START.md`.
-2. When the agent reports slice 1 done, run the conformance tests of the matching
-   sections against the engine.
-3. Sort the failures: engine, test, or specification defect.
-4. Send only the engine defects with `PROMPT-3-REVIEW.md`.
-5. Repeat for slices 2 to 6 with `PROMPT-2-NEXT-SLICE.md`.
+- [x] **Slice 1: Foundation and Definition**
+  - Principals, Teams, Roles, Permissions, authentication, audit log
+  - Projects, Environments, Suites, Scenarios
+  - Static Datasets with versioning and immutability
+  - Quality Contracts with additive composition and conflict detection
+  - Quality Gates with basis requirements and name uniqueness
+  - Approval Workflow governing contract and quality gate changes
+- [ ] **Slice 2: Execution and Evidence**
+- [ ] **Slice 3: Assessment**
+- [ ] **Slice 4: Decision and Release**
+- [ ] **Slice 5: Scoped Capabilities**
+- [ ] **Slice 6: Conformance Statement**
 
-Keep `docs/AMBIGUITIES.md` from the agent: it is the main output for the specification,
-alongside the test results.
+## Installation and Usage
+
+The engine is built on Python 3.12, FastAPI, SQLite, and pytest.
+
+For installation, bootstrapping, running the API server, authentication details, and HTTP status codes, see **[docs/API.md](docs/API.md)**.
+
+### Quick Start
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run test suite
+pytest
+
+# Start the REST API server
+uvicorn engine.main:app --host 127.0.0.1 --port 8000
+```

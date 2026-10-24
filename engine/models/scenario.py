@@ -11,11 +11,12 @@ References:
 import re
 from enum import Enum
 from typing import Any, Dict, Optional, Union
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+from engine.models.base import AQEFBaseModel
 from engine.models.contract import Constraint, Contract
 
 
-class PromptDef(BaseModel):
+class PromptDef(AQEFBaseModel):
     template: str = Field(..., min_length=1)
 
     def extract_variables(self) -> set[str]:
@@ -34,7 +35,7 @@ class SeededControlConfirmation(str, Enum):
     CONSTRUCTION = "construction"
 
 
-class SeededControlConfig(BaseModel):
+class SeededControlConfig(AQEFBaseModel):
     kind: SeededControlKind = SeededControlKind.DEFECT
     defect_class: str = Field(..., min_length=1)
     difficulty_prior: Optional[Union[float, str]] = None
@@ -79,13 +80,13 @@ class SeededControlConfig(BaseModel):
         return self
 
 
-class FixedEvidence(BaseModel):
+class FixedEvidence(AQEFBaseModel):
     conversation: Any = Field(...)
     artifacts: Optional[Dict[str, Any]] = None
     source_execution: Optional[str] = Field(None, min_length=1)
 
 
-class Scenario(BaseModel):
+class Scenario(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     contract: Optional[Union[Contract, str]] = None
     prompt: Optional[PromptDef] = None

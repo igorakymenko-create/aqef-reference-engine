@@ -10,7 +10,8 @@ References:
 
 from enum import Enum
 from typing import Any, List, Optional, Union
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+from engine.models.base import AQEFBaseModel
 
 
 class QualityDimension(str, Enum):
@@ -31,7 +32,7 @@ BUILTIN_VALIDATOR_DIMENSIONS = {
 }
 
 
-class Constraint(BaseModel):
+class Constraint(AQEFBaseModel):
     validator: str = Field(..., min_length=1)
     target: str = Field(..., min_length=1)
     expected: Any = Field(...)
@@ -62,7 +63,7 @@ class ConfidenceSource(str, Enum):
     AGREEMENT = "agreement"
 
 
-class JudgeConfig(BaseModel):
+class JudgeConfig(AQEFBaseModel):
     model: str = Field(..., min_length=1)
     confidence_source: ConfidenceSource
 
@@ -72,7 +73,7 @@ class DisagreementAction(str, Enum):
     FAIL = "fail"
 
 
-class ConsensusConfig(BaseModel):
+class ConsensusConfig(AQEFBaseModel):
     method: str = Field(..., min_length=1)
     threshold: Optional[Union[str, float]] = None
     min_agreement: Optional[float] = Field(None, ge=0.0, le=1.0)
@@ -104,7 +105,7 @@ class MultiJudgePurpose(str, Enum):
     STABILITY = "stability"
 
 
-class MultiJudgeConfig(BaseModel):
+class MultiJudgeConfig(AQEFBaseModel):
     purpose: MultiJudgePurpose
     judges: Optional[List[JudgeConfig]] = None
     judge: Optional[JudgeConfig] = None
@@ -129,7 +130,7 @@ class MultiJudgeConfig(BaseModel):
         return self
 
 
-class HumanReviewerConfig(BaseModel):
+class HumanReviewerConfig(AQEFBaseModel):
     role: str = Field(..., min_length=1)
     captures_confidence: bool = False
 
@@ -139,7 +140,7 @@ class TimeoutAction(str, Enum):
     ESCALATE = "escalate"
 
 
-class Expectation(BaseModel):
+class Expectation(AQEFBaseModel):
     criteria: str = Field(..., min_length=1)
     judge: Optional[JudgeConfig] = None
     multi_judge: Optional[MultiJudgeConfig] = None
@@ -177,12 +178,12 @@ class Expectation(BaseModel):
         return self
 
 
-class Policies(BaseModel):
+class Policies(AQEFBaseModel):
     validator_composition: str = "AND"
     weight: Optional[float] = None
 
 
-class Contract(BaseModel):
+class Contract(AQEFBaseModel):
     name: Optional[str] = None
     constraints: List[Constraint] = Field(default_factory=list)
     expectations: List[Expectation] = Field(default_factory=list)

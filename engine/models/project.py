@@ -7,7 +7,8 @@ References:
 """
 
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+from engine.models.base import AQEFBaseModel
 from engine.models.contract import Contract, JudgeConfig
 from engine.models.dataset import Dataset
 from engine.models.environment import Environment
@@ -16,7 +17,7 @@ from engine.models.gate import QualityGate
 from engine.models.suite import Suite
 
 
-class DefectClassConfig(BaseModel):
+class DefectClassConfig(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     difficulty_prior: Optional[Union[float, str]] = None
     prior_basis: Optional[int] = Field(None, ge=1)
@@ -43,7 +44,7 @@ class DefectClassConfig(BaseModel):
         return self
 
 
-class Project(BaseModel):
+class Project(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     environments: List[Environment] = Field(..., min_length=1)
     suites: List[Suite] = Field(default_factory=list)

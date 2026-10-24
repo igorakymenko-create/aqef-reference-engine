@@ -9,7 +9,8 @@ References:
 
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+from engine.models.base import AQEFBaseModel
 
 
 class DatasetSource(str, Enum):
@@ -19,17 +20,33 @@ class DatasetSource(str, Enum):
     PRODUCTION_REPLAY = "production_replay"
 
 
-class Row(BaseModel):
+class MechanismType(str, Enum):
+    DATA_MUTATION = "data_mutation"
+    FUZZING = "fuzzing"
+    EDGE_CASES = "edge_cases"
+    ADVERSARIAL = "adversarial"
+
+
+class MechanismConfig(AQEFBaseModel):
+    # Appendix A §A.8, Appendix B §B.2:
+    # type | String | MUST | data_mutation, fuzzing, edge_cases, or adversarial.
+    type: MechanismType = Field(...)
+    transforms: Optional[List[Dict[str, Any]]] = None
+    perturbations: Optional[List[Dict[str, Any]]] = None
+
+
+class Row(AQEFBaseModel):
     id: str = Field(..., min_length=1)
     variables: Dict[str, Any] = Field(default_factory=dict)
 
 
-class Dataset(BaseModel):
+class Dataset(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     version: str = Field(..., min_length=1)
-    source: DatasetSource
+    source: DatasetSource = Field(...)
     rows: Optional[List[Row]] = None
     base_dataset: Optional[str] = None
+    mechanisms: Optional[List[MechanismConfig]] = None
 
     @model_validator(mode="after")
     def validate_dataset(self) -> "Dataset":

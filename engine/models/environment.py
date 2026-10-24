@@ -10,7 +10,8 @@ References:
 
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+from engine.models.base import AQEFBaseModel
 
 
 class BoundaryEntryKind(str, Enum):
@@ -19,7 +20,7 @@ class BoundaryEntryKind(str, Enum):
     REAL = "real"
 
 
-class BoundaryEntry(BaseModel):
+class BoundaryEntry(AQEFBaseModel):
     target: str = Field(..., min_length=1)
     kind: BoundaryEntryKind
     tripwire: bool = False
@@ -33,25 +34,27 @@ class BoundaryEntry(BaseModel):
         return self
 
 
-class ActionBoundary(BaseModel):
+class ActionBoundary(AQEFBaseModel):
     enforced: bool
     entries: List[BoundaryEntry] = Field(..., min_length=1)
 
 
-class ToolDef(BaseModel):
+class ToolDef(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     parameters: Dict[str, Any] = Field(default_factory=dict)
 
 
-class ToolConfig(BaseModel):
+class ToolConfig(AQEFBaseModel):
     tools: List[ToolDef] = Field(default_factory=list)
 
 
-class Environment(BaseModel):
+class Environment(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     model_version: str = Field(..., min_length=1)
     prompt_version: str = Field(..., min_length=1)
-    tool_configuration: Optional[ToolConfig] = None
+    # Appendix A §A.2: tool_configuration | ToolConfig or null | MUST
+    # A configuration without the key is incomplete and must be rejected; null is the Single-LLM case.
+    tool_configuration: Optional[ToolConfig] = Field(...)
     action_boundary: Optional[ActionBoundary] = None
     infra_target: str = Field(..., min_length=1)
 

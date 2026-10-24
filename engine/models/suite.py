@@ -7,14 +7,15 @@ References:
 """
 
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+from engine.models.base import AQEFBaseModel
 from engine.models.contract import Contract
 from engine.models.execution_config import ExecutionConfig
 from engine.models.gate import QualityGate
 from engine.models.scenario import Scenario
 
 
-class Suite(BaseModel):
+class Suite(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     scenarios: List[Scenario] = Field(..., min_length=1)
     contracts: List[Union[Contract, str]] = Field(default_factory=list)

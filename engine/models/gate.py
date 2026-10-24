@@ -8,7 +8,8 @@ References:
 
 from enum import Enum
 from typing import Any, Dict, Optional, Union
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+from engine.models.base import AQEFBaseModel
 
 
 class GateFailureAction(str, Enum):
@@ -16,7 +17,7 @@ class GateFailureAction(str, Enum):
     WARN = "warn"
 
 
-class MinBasis(BaseModel):
+class MinBasis(AQEFBaseModel):
     results: Optional[int] = Field(None, ge=1)
     scenarios: Optional[int] = Field(None, ge=1)
 
@@ -29,7 +30,7 @@ class MinBasis(BaseModel):
         return self
 
 
-class QualityGate(BaseModel):
+class QualityGate(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     aggregate: str = Field(..., min_length=1)
     threshold: Union[float, Dict[str, Any]]

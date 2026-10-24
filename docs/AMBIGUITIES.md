@@ -67,3 +67,18 @@ This document records points in the AQEF specification (Working Draft 0.41.1) wh
   1. External OAuth/JWT server.
   2. Bearer token lookup table / database mapping tokens directly to Principal records, each with `kind` (`person` or `service_account`), `team_ids`, and assigned `roles` which map to granular `permissions`.
 - **Choice and rationale:** Reading 2. In accordance with BRIEF.md §4 ("A bearer token per Principal is enough. Document how Principals, Teams, Roles, and Permissions are created"), the engine implements a token store where each Bearer token maps to a Principal entity. All requests without a valid `Authorization: Bearer <token>` are rejected with HTTP 401 Unauthorized.
+
+---
+
+## 6. Dataset Mechanisms on Static Datasets and Unknown Field Handling
+
+- **Section:** Appendix A §A.8 (Dataset, MechanismConfig) & BRIEF.md §3, §10
+- **Quotation:**
+  > "`mechanisms` | List of MechanismConfig | MAY | Coverage mechanisms applied to this Dataset." (Appendix A §A.8)
+  > "`type` | String | MUST | `data_mutation`, `fuzzing`, `edge_cases`, or `adversarial`." (MechanismConfig)
+  > "A conformant implementation MUST accept configurations expressible within this specification" (Appendix A, intro)
+- **Readings seen:**
+  1. *Reject all mechanisms as out of scope:* Since BRIEF.md §3 limits scope to Static datasets and claims core, human_review, multi_judge, and seeded_controls, reject any dataset containing `mechanisms`.
+  2. *Support MechanismConfig in data schema with strict validation of `type`, preserving mechanisms rather than dropping them, and reject unknown configuration keys across all models:* The specification explicitly permits `mechanisms` to be configured on Static datasets (Volume IV: "M -> DS (versioned)"). Thus, `mechanisms` is supported in Dataset configuration, enforcing the required `type` field (`data_mutation`, `fuzzing`, `edge_cases`, `adversarial`). A `MechanismConfig` missing `type` MUST be rejected with HTTP 422. Furthermore, in accordance with the requirement that fields are never silently dropped, all configuration models strictly forbid unknown keys (`extra='forbid'`).
+- **Choice and rationale:** Reading 2. Rejecting invalid `MechanismConfig` (lacking `type`) and forbidding unknown keys across all configuration models guarantees strict compliance with Appendix A and Appendix B schemas, ensuring no configuration field is silently dropped.
+

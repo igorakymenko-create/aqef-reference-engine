@@ -83,7 +83,7 @@ def test_dataset_versioning_and_immutability():
     # "Every Dataset, regardless of source, MUST be versioned."
     # "Two configurations referencing the same Dataset name + version MUST resolve to identical rows."
     storage = Storage(db_path=":memory:")
-    env = Environment(name="dev", model_version="gpt-4o", prompt_version="v1", infra_target="local")
+    env = Environment(name="dev", model_version="gpt-4o", prompt_version="v1", tool_configuration=None, infra_target="local")
     proj = Project(name="p1", environments=[env])
     storage.create_project(proj)
 
@@ -198,7 +198,7 @@ def test_gate_name_uniqueness_across_project_and_suites():
     g1 = QualityGate(name="safety_gate", aggregate="safety", threshold=1.0, on_failure="block_release")
     g2 = QualityGate(name="safety_gate", aggregate="safety", threshold=0.9, on_failure="block_release")
 
-    env = Environment(name="e1", model_version="gpt-4o", prompt_version="v1", infra_target="us-east-1")
+    env = Environment(name="e1", model_version="gpt-4o", prompt_version="v1", tool_configuration=None, infra_target="us-east-1")
     sc = Scenario(name="sc", prompt=PromptDef(template="Hi"), contract=Contract(constraints=[Constraint(validator="schema", target="response", expected={})]))
     suite = Suite(name="s1", scenarios=[sc], quality_gates=[g2])
 
@@ -220,6 +220,7 @@ def test_independent_oracle_identity_violation():
         name="prod",
         model_version="gpt-4o-2025-06-01",  # IDENTICAL to judge model!
         prompt_version="v1",
+        tool_configuration=None,
         infra_target="prod",
     )
     sc = Scenario(name="sc", prompt=PromptDef(template="Hi"), contract=contract)
@@ -234,8 +235,8 @@ def test_independent_oracle_identity_violation():
 def test_environment_name_uniqueness_within_project():
     # Appendix A §A.2, Appendix B §B.2:
     # "Environment name MUST be unique within the Project."
-    e1 = Environment(name="staging", model_version="gpt-4o", prompt_version="v1", infra_target="us-east-1")
-    e2 = Environment(name="staging", model_version="claude-3-5", prompt_version="v1", infra_target="us-west-2")
+    e1 = Environment(name="staging", model_version="gpt-4o", prompt_version="v1", tool_configuration=None, infra_target="us-east-1")
+    e2 = Environment(name="staging", model_version="claude-3-5", prompt_version="v1", tool_configuration=None, infra_target="us-west-2")
     with pytest.raises(ValidationError) as exc:
         Project(name="p1", environments=[e1, e2])
     assert "Duplicate environment name 'staging'" in str(exc.value)
@@ -244,7 +245,7 @@ def test_environment_name_uniqueness_within_project():
 def test_suite_name_uniqueness_within_project():
     # Appendix A §A.3, Appendix B §B.2:
     # "Suite name MUST be unique within the Project."
-    env = Environment(name="staging", model_version="gpt-4o", prompt_version="v1", infra_target="us-east-1")
+    env = Environment(name="staging", model_version="gpt-4o", prompt_version="v1", tool_configuration=None, infra_target="us-east-1")
     sc1 = Scenario(name="sc1", prompt=PromptDef(template="test"), contract=Contract(constraints=[Constraint(validator="schema", target="response", expected={})]))
     s1 = Suite(name="regression", scenarios=[sc1])
     s2 = Suite(name="regression", scenarios=[sc1])
@@ -288,7 +289,7 @@ def test_referential_integrity_environment_deletion_with_baseline():
     # Appendix C §C.8:
     # "DELETE on an Environment, Dataset, or Contract still referenced by a Baseline... MUST be rejected"
     storage = Storage(db_path=":memory:")
-    env = Environment(name="prod", model_version="gpt-4o", prompt_version="v1", infra_target="cloud")
+    env = Environment(name="prod", model_version="gpt-4o", prompt_version="v1", tool_configuration=None, infra_target="cloud")
     proj = Project(name="proj_test", environments=[env])
     storage.create_project(proj)
 
@@ -309,7 +310,7 @@ def test_deletion_last_scenario_in_suite_rejected():
     storage = Storage(db_path=":memory:")
     sc = Scenario(name="only_scenario", prompt=PromptDef(template="hi"), contract=Contract(constraints=[Constraint(validator="schema", target="response", expected={})]))
     suite = Suite(name="single_suite", scenarios=[sc])
-    env = Environment(name="e1", model_version="gpt-4o", prompt_version="v1", infra_target="cloud")
+    env = Environment(name="e1", model_version="gpt-4o", prompt_version="v1", tool_configuration=None, infra_target="cloud")
     proj = Project(name="proj_sc", environments=[env], suites=[suite])
     storage.create_project(proj)
 

@@ -1,5 +1,6 @@
 """Export all AQEF domain models."""
 
+from engine.models.base import AQEFBaseModel
 from engine.models.contract import (
     BUILTIN_VALIDATOR_DIMENSIONS,
     ConfidenceSource,
@@ -16,7 +17,7 @@ from engine.models.contract import (
     TimeoutAction,
     Contract,
 )
-from engine.models.dataset import Dataset, DatasetSource, Row
+from engine.models.dataset import Dataset, DatasetSource, MechanismConfig, MechanismType, Row
 from engine.models.environment import (
     ActionBoundary,
     BoundaryEntry,
@@ -52,6 +53,7 @@ from engine.models.scenario import (
 from engine.models.suite import Suite
 
 __all__ = [
+    "AQEFBaseModel",
     "ApprovalRecord",
     "ApprovalStatus",
     "AuditLogEntry",
@@ -74,6 +76,8 @@ __all__ = [
     "GateFailureAction",
     "HumanReviewerConfig",
     "JudgeConfig",
+    "MechanismConfig",
+    "MechanismType",
     "MinBasis",
     "MultiJudgeConfig",
     "MultiJudgePurpose",

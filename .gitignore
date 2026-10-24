@@ -71,3 +71,9 @@ coverage.xml
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Kit files (kept on disk, excluded from repository)
+spec/
+BRIEF.md
+PROMPT-*.md
+

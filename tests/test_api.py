@@ -116,7 +116,13 @@ def test_reusable_contracts_and_governance_approval(client):
         json={
             "name": "proj_contracts",
             "environments": [
-                {"name": "dev", "model_version": "gpt-4o-mini", "prompt_version": "v1", "infra_target": "local"}
+                {
+                    "name": "dev",
+                    "model_version": "gpt-4o-mini",
+                    "prompt_version": "v1",
+                    "tool_configuration": None,
+                    "infra_target": "local",
+                }
             ],
         },
         headers=headers,
@@ -171,7 +177,15 @@ def test_dataset_versioning_and_pagination_api(client):
         "/projects",
         json={
             "name": "proj_data",
-            "environments": [{"name": "dev", "model_version": "m1", "prompt_version": "p1", "infra_target": "local"}],
+            "environments": [
+                {
+                    "name": "dev",
+                    "model_version": "m1",
+                    "prompt_version": "p1",
+                    "tool_configuration": None,
+                    "infra_target": "local",
+                }
+            ],
         },
         headers=headers,
     )
@@ -218,7 +232,15 @@ def test_quality_gates_api(client):
         "/projects",
         json={
             "name": "proj_gates",
-            "environments": [{"name": "dev", "model_version": "m1", "prompt_version": "p1", "infra_target": "local"}],
+            "environments": [
+                {
+                    "name": "dev",
+                    "model_version": "m1",
+                    "prompt_version": "p1",
+                    "tool_configuration": None,
+                    "infra_target": "local",
+                }
+            ],
         },
         headers=headers,
     )
@@ -252,3 +274,121 @@ def test_quality_gates_api(client):
     assert res.status_code == 200
     assert len(res.json()) == 2
     assert all(entry["action"] == "contract_define" for entry in res.json())
+
+
+def test_defect_1_omitted_tool_configuration_rejected(client):
+    # Defect D-1: Appendix A §A.2 (Environment)
+    # tool_configuration is a required field whose value may be null.
+    # Omitting the key entirely MUST be rejected with 422.
+    headers = {"Authorization": "Bearer admin-token"}
+    payload_omitted = {
+        "name": "proj_d1",
+        "environments": [
+            {
+                "name": "staging",
+                "model_version": "gpt-4o",
+                "prompt_version": "v1.0",
+                # "tool_configuration" key is omitted
+                "infra_target": "us-east-1",
+            }
+        ],
+    }
+    res = client.post("/projects", json=payload_omitted, headers=headers)
+    assert res.status_code == 422
+    assert "tool_configuration" in str(res.json())
+
+    # Explicit null MUST be accepted (Single-LLM case)
+    payload_explicit_null = {
+        "name": "proj_d1_valid",
+        "environments": [
+            {
+                "name": "staging",
+                "model_version": "gpt-4o",
+                "prompt_version": "v1.0",
+                "tool_configuration": None,
+                "infra_target": "us-east-1",
+            }
+        ],
+    }
+    res = client.post("/projects", json=payload_explicit_null, headers=headers)
+    assert res.status_code == 201
+
+
+def test_defect_2_mechanism_config_without_type_rejected(client):
+    # Defect D-2: Appendix A §A.8 (Dataset, MechanismConfig)
+    # type | String | MUST | data_mutation, fuzzing, edge_cases, or adversarial
+    # A MechanismConfig without type MUST be rejected with 422.
+    headers = {"Authorization": "Bearer admin-token"}
+    payload_no_type = {
+        "name": "proj_d2",
+        "environments": [
+            {
+                "name": "staging",
+                "model_version": "gpt-4o",
+                "prompt_version": "v1.0",
+                "tool_configuration": None,
+                "infra_target": "us-east-1",
+            }
+        ],
+        "datasets": [
+            {
+                "name": "test_ds",
+                "version": "1.0",
+                "source": "static",
+                "rows": [{"id": "r1", "variables": {}}],
+                "mechanisms": [{}],  # Missing type!
+            }
+        ],
+    }
+    res = client.post("/projects", json=payload_no_type, headers=headers)
+    assert res.status_code == 422
+    assert "type" in str(res.json())
+
+    # Valid MechanismConfig with type MUST be accepted and preserved
+    payload_with_type = {
+        "name": "proj_d2_valid",
+        "environments": [
+            {
+                "name": "staging",
+                "model_version": "gpt-4o",
+                "prompt_version": "v1.0",
+                "tool_configuration": None,
+                "infra_target": "us-east-1",
+            }
+        ],
+        "datasets": [
+            {
+                "name": "test_ds",
+                "version": "1.0",
+                "source": "static",
+                "rows": [{"id": "r1", "variables": {}}],
+                "mechanisms": [{"type": "data_mutation"}],
+            }
+        ],
+    }
+    res = client.post("/projects", json=payload_with_type, headers=headers)
+    assert res.status_code == 201
+    created_proj = res.json()
+    assert created_proj["datasets"][0]["mechanisms"][0]["type"] == "data_mutation"
+
+
+def test_defect_2_unknown_field_rejected(client):
+    # Defect D-2 check: Appendix A introduction
+    # Unrecognized configuration keys MUST NOT be silently dropped; they must be rejected naming the key.
+    headers = {"Authorization": "Bearer admin-token"}
+    payload = {
+        "name": "proj_unknown_key",
+        "unrecognized_field": "some_value",
+        "environments": [
+            {
+                "name": "staging",
+                "model_version": "gpt-4o",
+                "prompt_version": "v1.0",
+                "tool_configuration": None,
+                "infra_target": "us-east-1",
+            }
+        ],
+    }
+    res = client.post("/projects", json=payload, headers=headers)
+    assert res.status_code == 422
+    assert "unrecognized_field" in str(res.json())

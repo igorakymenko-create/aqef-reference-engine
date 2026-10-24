@@ -8,7 +8,8 @@ References:
 
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
+from engine.models.base import AQEFBaseModel
 
 
 class SeededControlMissPolicy(str, Enum):
@@ -16,7 +17,7 @@ class SeededControlMissPolicy(str, Enum):
     HALT_RUN = "halt_run"
 
 
-class RetryConfig(BaseModel):
+class RetryConfig(AQEFBaseModel):
     max_attempts: int = Field(..., ge=1)
     on: str = Field(...)
 
@@ -31,7 +32,7 @@ class RetryConfig(BaseModel):
         return v
 
 
-class ExecutionConfig(BaseModel):
+class ExecutionConfig(AQEFBaseModel):
     timeout: Optional[str] = None
     retry: Optional[RetryConfig] = None
     scheduling: Optional[str] = None
