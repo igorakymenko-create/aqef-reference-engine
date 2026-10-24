@@ -1,5 +1,89 @@
 # Ambiguities Log
 
+## 25. Panel Confidence and unavailable members
+- **Section:** VI Consensus/Voting/Confidence; A.7; C.7.
+- **Quotation:** “not ... a substitute for a Judge's own stated Confidence”; “panel ... counted”.
+- **Readings:** use vote fraction as Confidence or retain member uncertainty separately;
+  treat unavailable members as fails or block absent assessment.
+- **Choice:** voting Confidence is the minimum own Confidence among winner voters;
+  confidence_weighted_mean uses confidence-weighted pass scores, mean own Confidence,
+  and separately declared agreement. Never replace own Confidence with agreement.
+  No response is a vote. Missing availability without control exclusion blocks as
+  oracle_unavailable when quorum is otherwise met; control exclusions below quorum
+  yield not_assessed. Only voting/confidence_weighted_mean are supported methods.
+  Member agreement confidence_source requests self_rating on the wire and retains the
+  configured source in identity; agreement is reported separately.
+  Unavailable-panel recovery preserves already returned verdicts and retries only
+  members that failed before any verdict, including when malformed Confidence made
+  the overall response unavailable. It cannot solicit a replacement for a real vote.
+
+## 26. Human routing and timeout defaults
+- **Section:** VI Human Review; A.5; C.3/C.7.
+- **Quotation:** “MAY instead be routed”; “block ... leaves ... blocking”; “escalate ... Role”.
+- **Readings:** automatically route every low-confidence Judge or expose the explicit
+  review endpoint; make timeout fabricate unavailable versus remain awaiting_review.
+- **Choice:** direct Human Expectations and unresolved consensus route automatically;
+  low-confidence Single Judge remains inconclusive and explicitly reviewable (MAY route).
+  Consensus Human fallback requires review permission without inventing a named Role,
+  with optional numeric Confidence, because A.7 supplies no Role. Default timeout is
+  24h; explicit review_timeout overrides it. After
+  expiration block is marked timed_out while still blocking; escalate changes required
+  Role to escalate_to, preserving the Result and requiring an actual Person's verdict.
+  Routing/timer metadata is derived, not written onto immutable pending Results.
+
+## 27. One control Scenario, several Oracles and dataset rows
+- **Section:** VIII Seeded Controls; C.3 Seeded Control Reporting.
+- **Quotation:** “one entry per Seeded Control Scenario”; “same Oracle ... shares that class”.
+- **Readings:** one scalar outcome hides differing Oracle results; duplicate control
+  entries violate the one-per-Scenario shape.
+- **Choice:** one batch/Scenario record with per-Oracle details and Result IDs, plus the
+  required scalar summary (any false_alarm/missed dominates invalid; invalid dominates
+  passed/caught). Invalidation uses only per-Oracle confirmed misses. Every dataset row
+  must confirm the control's declaration; unconfirmed rows make it invalid. A reached
+  verdict below required Confidence does not demonstrate detection and is a miss.
+  Control phases are serial before normal parallel work; halted records are cancelled
+  without subject/Oracle invocation, not fake quality failures.
+  Only clauses covering the control's class test that class. No verdict (pending review
+  or unavailable transport) leaves the control's Oracle outcome invalid rather than
+  inventing a failure. low_confidence denominators include member Results as well as the
+  panel aggregate, with distinct Oracle identities; member Results are not double-counted
+  in Quality aggregates.
+
+## 28. Corrected Oracle selection and fresh requalification controls
+- **Section:** VIII Requalification; C.3 reassess/requalifications.
+- **Quotation:** “never the control it missed”; “for every defect class ... kind that failed”.
+- **Readings:** trust supplied control IDs versus verify stored confirmed outcomes;
+  accept any new model string versus an inspectable versioned configuration.
+- **Choice:** oracle is the canonical JSON identity produced by the engine, including
+  criteria/configuration; corrected configuration must assess the same frozen clause
+  criteria/target and differ from the invalidated Oracle. Qualification controls may
+  come from multiple fresh batches, but every ID must be caught/passed by that exact
+  configuration. Freshness excludes every control Scenario and source_execution exposed
+  by a miss in affected batches. Member Results are preserved with IDs inside panel
+  supporting_evidence and can support member requalification. Qualification records
+  are never themselves a license to reopen actionable Results.
+  Identical captured Conversations are also exposed; fresh control scores must follow
+  the confirmed miss, both when recording qualification and when using it for reassess.
+  Cross-run quarantine follows VIII's until-requalified rule, while invalidated_by stays
+  derived from misses in the Result's own run. Prior-run skips retain source control IDs.
+  Corrected configuration preserves the frozen clause's target/expected or criteria;
+  panels preserve purpose, sample/member count and Consensus/quorum. Weakening these
+  requires a governed Contract change, not a reassessment shortcut. A corrected Human
+  Oracle may change its designated Role after fresh controls establish it.
+
+## 29. Difficulty prior provenance and zero-reference catches
+- **Section:** VIII Difficulty prior; A.1/A.4.
+- **Quotation:** “Same provenance rules”; “MUST state how many control instances”.
+- **Readings:** per-control numeric override without basis fields versus explicit same
+  provenance as class; allow prior 0 to gate versus require Human confirmation.
+- **Choice:** add prior_basis/prior_source/reference_oracles to per-control override
+  schema, require basis/source for numeric priors, check exact-model independence from
+  tested Judges. Unknown prior is exposed as not_established. A numeric zero from
+  reference_oracles cannot gate until a Person confirms the control, even if construction
+  or Validator confirmed the Evidence. Priors are copied from configuration and never
+  derived from the tested Oracle. Human independence/exposure beyond declared metadata
+  is an authoring responsibility, recorded as an unverifiable SHOULD.
+
 ## 20. Decision batch scope and Report generation
 - **Sections:** C.3 Gates/Reports; C.10; I Ch.6.
 - **Quotation:** “Evaluate Gates against a set of Results”; “frozen when generated”.

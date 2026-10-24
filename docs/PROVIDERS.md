@@ -1,4 +1,4 @@
-# HTTP provider interface — slices 2–3
+# HTTP provider interface — slices 2–5
 
 ## Startup mapping
 
@@ -129,7 +129,7 @@ GET `.../executions/{id}/conversation` returns:
 Failed runs return 409 there; diagnostic partial_turns and Artifacts remain in metadata,
 never assessed. Fixed Evidence uses this same nonempty Conversation shape, copies its
 artifacts map with turn null, retains source_execution, and invokes no subject.
-Confirmation and invalidation belong to slice 5.
+Confirmation and invalidation are documented in the slice 5 API section.
 
 GET `.../{id}/artifacts` returns a paginated list of `{name, data, turn}`.
 GET `.../{id}/results` returns immutable Validator and Single Judge Results in slice 3.
@@ -161,7 +161,7 @@ For self_rating the provider must obtain the Judge's own explicit Confidence in 
 verdict; for token_probability it must return the model's probability for that verdict.
 Both are returned in the same numeric `confidence` field. The engine does not reinterpret
 Confidence as importance, a quality score or a panel vote count. Single Judge with
-`agreement` is rejected at execution preflight; Multi Judge belongs to slice 5.
+`agreement` is rejected for Single Judge at execution preflight; panel handling is below.
 
 ## Judge response
 
@@ -185,7 +185,7 @@ count is copied to the Result's `assertions`. No `panel` field appears for Singl
 
 At or above the clause's confidence_threshold, the Result is `actionable`, including
 a fail verdict. Below it, the verdict and Confidence are retained with `inconclusive`.
-Human routing and Result resolution are deferred to later slices; no low score is retried.
+Human routing and Result resolution follow docs/API.md; no low score is retried.
 
 An unavailable Judge includes an unmapped model, non-2xx (429 and redirects included),
 connection/read failure, timeout, invalid JSON, wrong/missing fields, nonfinite/out-of-range
@@ -209,3 +209,51 @@ The Result's `oracle` is a canonical compact sorted-key JSON string, for example
 That exact string identifies this Judge configuration in Admission records. Different
 models, confidence sources, criteria or protocol versions have different identities;
 thresholds consume Confidence and do not change the Oracle that produced it.
+
+## Multi Judge calls — slice 5
+
+There are **no new Judge request or response fields**. Each configured Judge receives
+its own ordinary http-judge-v1 POST, with its own `model`, literal clause `criteria`,
+`confidence_source` and the same frozen Evidence. Its exact model identifier resolves
+through AQEF_PROVIDER_URLS at startup, independently of the other panel members:
+
+```powershell
+$env:AQEF_PROVIDER_URLS = '{"subject-v1":"http://localhost:9001/subject","judge-a":"http://localhost:9002/judge","judge-b":"http://localhost:9003/judge"}'
+```
+
+For purpose independence with judges a/b, one POST goes to :9002 and one to :9003,
+in configuration order. For purpose stability with judge-a and samples 3, three POSTs
+go to :9002 with identical request conditions. No member receives another member's
+response, a hidden consensus prompt, an extra system instruction or a fabricated vote.
+Responses retain the same required verdict/confidence/explanation/assertions fields.
+
+Every member's full C.7-shaped Result, stable id, response/error and attempts are kept
+in the panel Result's supporting_evidence.member_results. They may be referenced by
+Requalification. The execution Results collection exposes the panel's clause Result;
+members are nested evidence, not additional quality-aggregate contributions.
+
+Voting uses actual counted verdicts and ceil(fraction*count); majority is strictly more
+than half. Its Confidence is the minimum own Confidence among winner voters. A forced
+fail on disagreement uses minimum member Confidence. confidence_weighted_mean combines
+Boolean pass scores using member Confidence as weights, retains mean own Confidence,
+and reports weighted_pass_score and agreement separately. min_agreement is optional;
+absent means no extra agreement minimum. Agreement is never substituted for a member's
+own Confidence. A member configured confidence_source agreement is asked for self_rating
+on the wire; its configured identity is retained and panel agreement is a separate signal.
+
+An unavailable member contributes no vote. When eligible membership meets quorum but
+a member is unavailable, the panel is oracle_unavailable. A Seeded Control exclusion
+below quorum yields not_assessed. panel always contains configured and counted; stability
+counts samples. With no quorum declared, the full configured panel is required.
+
+If a partial unavailable panel is reassessed, any member response carrying a genuine
+verdict is retained; only members failing before a verdict may be called again. A
+verdict inside malformed Confidence/protocol data also prevents that member's retry.
+A Single Judge response containing such a verdict cannot be re-attempted through reassess.
+Nothing asks again until a more favorable answer appears. Control outcomes follow a
+same-Oracle unavailable recovery while preserving the original unavailable Result.
+
+Human Review does not call a model provider. Direct Human clauses create an awaiting
+Result; consensus disagreement routes to a separate Human Result resolving the panel.
+Single Judge low Confidence remains explicitly reviewable through the review endpoint.
+No subject is invoked for fixed controls, Human review, or re-assessment of stored Evidence.

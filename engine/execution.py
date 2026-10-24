@@ -27,6 +27,7 @@ class Conversation(AQEFBaseModel):
 class ExecutionRequest(AQEFBaseModel):
     suite: str = Field(min_length=1)
     environment: str = Field(min_length=1)
+    gates: list[str] | None = None
 
 
 def now():
@@ -34,6 +35,11 @@ def now():
 
 
 def duration(value):
+    if isinstance(value,str) and value.startswith("P"):
+        iso = re.fullmatch(r"P(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?",value)
+        if iso and any(iso.groups()):
+            seconds=sum(float(v or 0)*factor for v,factor in zip(iso.groups(),(86400,3600,60,1)))
+            if 0<seconds<float("inf"):return seconds
     match = re.fullmatch(r"(\d+(?:\.\d+)?)(ms|s|m|h)", value or "")
     if not match:
         raise ValueError("timeout must be a positive duration with unit ms, s, m, or h")
@@ -80,6 +86,9 @@ class ExecutionEngine:
         env = store.get_environment(project_name, request.environment)
         if project is None or suite is None or env is None:
             raise HTTPException(404, "Project, Suite or Environment not found")
+        applicable={g.name for g in project.quality_gates+suite.quality_gates}
+        if request.gates and not set(request.gates)<=applicable:
+            raise HTTPException(422,"Requested Gates must apply to this Suite/Environment scope")
         batch = str(uuid.uuid4())
         records = []
         try:
@@ -91,15 +100,27 @@ class ExecutionEngine:
                 if effective.policies and effective.policies.validator_composition not in ("AND", "OR", "hard-veto"):
                     raise ValueError("Unsupported validator_composition")
                 for expectation in effective.expectations:
-                    if expectation.judge is None:
-                        raise ValueError("Human Review and Multi Judge execution are deferred to slice 5")
-                    if expectation.judge.confidence_source.value == "agreement":
+                    if expectation.judge and expectation.judge.confidence_source.value == "agreement":
                         raise ValueError("Single Judge cannot use panel agreement as its Confidence")
-                    if expectation.judge.model.strip().lower() == env.model_version.strip().lower():
-                        raise ValueError("Independent Oracle violation: Judge and subject models must differ")
+                    judges = [expectation.judge] if expectation.judge else (expectation.multi_judge.judges or [expectation.multi_judge.judge]) if expectation.multi_judge else []
+                    for judge in judges:
+                        if judge.model.strip().lower() == env.model_version.strip().lower():
+                            raise ValueError("Independent Oracle violation: Judge and subject models must differ")
+                    if expectation.multi_judge and expectation.multi_judge.consensus.method not in ("voting","confidence_weighted_mean"):
+                        raise ValueError("Unsupported Consensus method")
+                    if expectation.review_timeout:duration(expectation.review_timeout)
+                if scenario.seeded_control:
+                    control=scenario.seeded_control
+                    defect=next((c for c in project.defect_classes if c.name==control.defect_class),None)
+                    refs=control.reference_oracles or (defect.reference_oracles if defect else None) or []
+                    tested=[j.model for e in effective.expectations for j in ([e.judge] if e.judge else (e.multi_judge.judges or [e.multi_judge.judge]) if e.multi_judge else [])]
+                    if any(ref.model.strip().lower()==model.strip().lower() for ref in refs for model in tested):
+                        raise ValueError(f"Control '{scenario.name}' reference Oracle is not independent of tested Oracle")
                 definitions = store.list_custom_validators(project_name)
                 frozen_validators = {}
-                for constraint in effective.constraints:
+                to_freeze=list(effective.constraints)
+                if scenario.seeded_control and scenario.seeded_control.confirmation:to_freeze.append(scenario.seeded_control.confirmation)
+                for constraint in to_freeze:
                     matching = [d for d in definitions if constraint.validator in (d["name"], d["name"] + "@" + d["version"])]
                     if len(matching) == 1:
                         frozen_validators[constraint.validator] = matching[0]
@@ -125,6 +146,7 @@ class ExecutionEngine:
                             "scenario": scenario.model_dump(mode="json"),
                             "contract": effective.model_dump(mode="json"),
                             "validators": deepcopy(frozen_validators),
+                            "defect_classes":[c.model_dump(mode="json") for c in project.defect_classes],
                             "execution": deepcopy(config)},
                         "scheduling": {"strategy": config["scheduling"], "order": len(records),
                                        "reason": "on_demand Suite × Environment; declaration order",
@@ -220,5 +242,27 @@ class ExecutionEngine:
                     await self.execute(record)
                     from engine.assessment import AssessmentEngine
                     await AssessmentEngine(self.storage, self.provider).assess(record)
-            await asyncio.gather(*(worker(record) for record in records))
-        return {"execution_batch_id": batch, "executions": records}
+            from engine.scoped import ControlManager
+            manager=ControlManager(self.storage)
+            groups={}
+            for record in records:
+                if record["configuration"]["scenario"]["seeded_control"] is not None:
+                    groups.setdefault(record["scenario"],[]).append(record)
+            for group in groups.values():
+                if manager.halted(project,batch):break
+                for record in group:await worker(record)
+                manager.record(group)
+            ordinary=[r for r in records if r["configuration"]["scenario"]["seeded_control"] is None]
+            if not manager.halted(project,batch):await asyncio.gather(*(worker(record) for record in ordinary))
+            for record in records:
+                if record["status"]=="queued":
+                    record.update(status="cancelled",error="halt_run",completed_at=now())
+                    self.storage.update_execution(record)
+            manager.ensure_unrun(records)
+        from engine.scoped import decorate_execution
+        records=[decorate_execution(self.storage,r) for r in records]
+        response={"execution_batch_id":batch,"executions":records}
+        if request.gates:
+            from engine.decision import DecisionEngine
+            with self.storage.config_lock:response["gate_evaluation"]=DecisionEngine(self.storage).evaluate(project,batch)
+        return response

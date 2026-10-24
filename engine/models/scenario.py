@@ -13,7 +13,7 @@ from enum import Enum
 from typing import Any, Dict, Optional, Union
 from pydantic import Field, model_validator
 from engine.models.base import AQEFBaseModel
-from engine.models.contract import Constraint, Contract
+from engine.models.contract import Constraint, Contract, JudgeConfig
 
 
 class PromptDef(AQEFBaseModel):
@@ -43,6 +43,9 @@ class SeededControlConfig(AQEFBaseModel):
     confirmed_by: SeededControlConfirmation
     confirmation: Optional[Constraint] = None
     generator: Optional[str] = None
+    prior_basis: Optional[int] = Field(None, ge=1)
+    prior_source: Optional[str] = None
+    reference_oracles: Optional[list[JudgeConfig]] = None
 
     @model_validator(mode="after")
     def validate_seeded_control(self) -> "SeededControlConfig":
@@ -76,6 +79,12 @@ class SeededControlConfig(AQEFBaseModel):
         else:
             if self.confirmation is not None:
                 raise ValueError("confirmation MUST NOT appear unless confirmed_by is 'validator'")
+
+        if self.kind == SeededControlKind.CLEAN and any(v is not None for v in (self.prior_basis,self.prior_source,self.reference_oracles)):
+            raise ValueError("Difficulty prior provenance MUST NOT appear on clean controls")
+        if isinstance(self.difficulty_prior,(int,float)):
+            if self.prior_basis is None or self.prior_source not in ("reference_oracles","human_reviewer"):
+                raise ValueError("Numeric control difficulty_prior requires prior_basis and prior_source")
 
         return self
 

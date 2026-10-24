@@ -95,6 +95,18 @@ def validate_project_configuration(
                                 f"to Environment '{env.name}' model_version '{env.model_version}'"
                             )
 
+            if scenario.seeded_control:
+                control=scenario.seeded_control
+                class_config=next((c for c in project.defect_classes if c.name==control.defect_class),None)
+                refs=control.reference_oracles or (class_config.reference_oracles if class_config else None) or []
+                tested=[]
+                for exp in effective_contract.expectations:
+                    if exp.judge:tested.append(exp.judge.model)
+                    if exp.multi_judge:
+                        tested.extend(j.model for j in (exp.multi_judge.judges or [exp.multi_judge.judge]))
+                if any(ref.model.strip().lower()==model.strip().lower() for ref in refs for model in tested):
+                    raise ConfigurationValidationError(f"Seeded Control '{scenario.name}' reference Oracle MUST be independent of tested Oracle")
+
             # Dataset reference check
             if scenario.dataset:
                 ds = _get_dataset(scenario.dataset)

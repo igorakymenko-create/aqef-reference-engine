@@ -19,11 +19,15 @@ class Result(AQEFBaseModel):
     supporting_evidence: dict
     recorded_at: datetime
     resolves: str | None = None
+    panel: dict[str, StrictInt] | None = None
     assertions: StrictInt | None = Field(default=None, gt=1)
 
     @model_validator(mode="after")
     def consistency(self):
         from engine.validators import number
+        if self.panel is not None and (set(self.panel) != {"configured", "counted"} or
+            not 0 <= self.panel["counted"] <= self.panel["configured"] or self.panel["configured"] < 2):
+            raise ValueError("panel requires configured >=2 and 0 <= counted <= configured")
         if self.assertions is not None and self.oracle_type != "judge":
             raise ValueError("assertions applies only to Judge Results")
         if self.verdict is None:

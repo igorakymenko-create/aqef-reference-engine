@@ -290,7 +290,7 @@ class Storage:
         from engine.models.assessment import Result
         validated = Result.model_validate(result)
         data = validated.model_dump(mode="json")
-        for field in ("assertions", "resolves"):
+        for field in ("assertions", "resolves", "panel"):
             if data[field] is None:
                 del data[field]
         with self._get_connection() as conn:
@@ -301,7 +301,9 @@ class Storage:
                     if not previous:
                         raise StorageConflictError("Resolution target not found")
                     previous = json.loads(previous[0])
-                    if (previous["execution"], previous["clause"]) != (data["execution"], data["clause"]) or previous["disposition"] == "actionable":
+                    from engine.scoped import invalidators
+                    if (previous["execution"], previous["clause"]) != (data["execution"], data["clause"]) or (
+                        previous["disposition"] == "actionable" and not invalidators(self, project_name, previous)):
                         raise StorageConflictError("Only a non-actionable Result for the same execution/clause may be resolved")
                     conn.execute("INSERT INTO result_links VALUES (?, ?)", (data["resolves"], data["id"]))
                 conn.execute("INSERT INTO assessment_results VALUES (?, ?, ?, ?)",
@@ -389,6 +391,13 @@ class Storage:
                 "SELECT data_json FROM admissions WHERE project_name = ? ORDER BY rowid", (project_name,))]
 
     def is_admitted(self, project_name, oracle):
+        try:configuration=json.loads(oracle)
+        except (ValueError,TypeError):configuration={}
+        if isinstance(configuration,dict) and configuration.get("type")=="multi_judge":
+            from engine.assessment import judge_identity
+            panel=configuration["configuration"]
+            judges=panel.get("judges") or [panel["judge"]]
+            return all(self.is_admitted(project_name,judge_identity({"judge":j,"criteria":configuration["criteria"]})) for j in judges)
         records = [r for r in self.list_admissions(project_name) if r["oracle"] == oracle]
         return bool(records and records[-1]["admitted"])
 

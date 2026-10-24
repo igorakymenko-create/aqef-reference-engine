@@ -33,7 +33,7 @@ def effective(rows):
 
 def result_state(entries):
     # awaiting_review completion keeps its id, but changes its assessed standing.
-    return digest([{k:e["result"][k] for k in ("id", "disposition", "verdict", "confidence")} for e in entries])
+    return digest([{k:e["result"].get(k) for k in ("id", "disposition", "verdict", "confidence", "invalidated_by")} for e in entries])
 
 
 def find_clause(record, reference):
@@ -101,6 +101,7 @@ class DecisionEngine:
         snapshot = {"project":project, "suites":sorted(set(suites)), "environments":{},
                     "contracts":{}, "inline_contracts":{}, "quality_gates":[],
                     "contract_contents":{}, "effective_contracts":{}}
+        snapshot["seeded_scenarios"]=[]
 
         def collect(value, attachment):
             if isinstance(value, str):
@@ -137,6 +138,7 @@ class DecisionEngine:
             for contract in suite.contracts:
                 collect(contract, "suite:" + name)
             for scenario in suite.scenarios:
+                if scenario.seeded_control is not None:snapshot["seeded_scenarios"].append(f"{name}/{scenario.name}")
                 if scenario.contract is not None:
                     collect(scenario.contract, f"scenario:{name}/{scenario.name}")
                 try:
@@ -166,7 +168,7 @@ class DecisionEngine:
 
     def current(self, snapshot):
         live = self.scope(snapshot["project"], snapshot["suites"], list(snapshot["environments"]))
-        return all(live[k] == snapshot[k] for k in live)
+        return all(live[k] == snapshot.get(k,[] if k=="seeded_scenarios" else None) for k in live)
 
     def entries(self, records, snapshot):
         entries = []
@@ -175,6 +177,8 @@ class DecisionEngine:
                 continue
             current = snapshot["effective_contracts"].get(record["suite"] + "/" + record["scenario"])
             for result in effective(self.store.list_results(record["project"], record["id"])):
+                from engine.scoped import decorate_result
+                result=decorate_result(self.store,record["project"],result)
                 clause = find_clause(record, result["clause"])
                 stale = record["configuration"]["environment"] != snapshot["environments"].get(record["environment"])
                 if clause.get("id"):
@@ -203,7 +207,9 @@ class DecisionEngine:
         matching = [b for b in baselines if b["suite"] == entry["record"]["suite"] and
                     b["scenario"] == entry["record"]["scenario"] and b["result"]["clause"] == entry["result"]["clause"]
                     and b["result"]["oracle"] == entry["result"]["oracle"]]
-        return matching[-1] if matching else None
+        if not matching:return None
+        from engine.scoped import invalidators
+        return matching[-1] if not invalidators(self.store,project,matching[-1]["result"]) else None
 
     def gate(self, project, definition, entries, records, snapshot):
         dimension = definition["aggregate"]
@@ -216,12 +222,26 @@ class DecisionEngine:
         if dimension == "overall" and selected:
             relevant = [e for e in relevant if e["clause"]["dimension"] in selected]
         reasons = set()
+        from engine.scoped import controls
+        run_controls=[c for batch in {r["execution_batch_id"] for r in records} for c in controls(self.store,project,batch)]
+        def miss_reason(kind):return "seeded_control_false_alarm" if kind=="clean" else "seeded_control_miss"
+        for c in run_controls:
+            if c["invalidation_scope"]=="full_run" and (not relevant or any(r["status"]=="cancelled" for r in records)):
+                reasons.add(miss_reason(c["kind"]))
         usable = []
         for entry in relevant:
             r = entry["result"]
             bad = False
+            blocked=list(r["supporting_evidence"].get("blocked_by",[]))
+            blocked += [b for m in r["supporting_evidence"].get("member_results",[]) for b in m["supporting_evidence"].get("blocked_by",[])] if r["disposition"]=="not_assessed" else []
+            for source in blocked:reasons.add(miss_reason(source["kind"]))
+            if r.get("invalidated_by"):
+                for ref in r["invalidated_by"]:
+                    for c in run_controls:
+                        if (c["scenario"],c["defect_class"])==(ref["scenario"],ref["defect_class"]):reasons.add(miss_reason(c["kind"]))
+                bad=True
             if r["disposition"] != "actionable":
-                reasons.add("non_actionable_results")
+                if not blocked and not r.get("invalidated_by"):reasons.add("non_actionable_results")
                 bad = True
             if entry["stale"]:
                 reasons.add("stale_results")
@@ -246,6 +266,7 @@ class DecisionEngine:
             reasons.add("insufficient_basis")
         recorded_scenarios = {r["suite"] + "/" + r["scenario"] for r in records}
         for name, contract in snapshot["effective_contracts"].items():
+            if name in snapshot.get("seeded_scenarios",[]):continue
             if name not in recorded_scenarios and any(dimension in ("overall", "regression") or c["dimension"] == dimension
                 for kind in ("constraints", "expectations") for c in contract[kind]):
                 reasons.add("insufficient_basis")
@@ -363,6 +384,8 @@ class DecisionEngine:
                 "result_state":result_state(entries),
                 "admissions":{e["result"]["oracle"]:self.store.is_admitted(project, e["result"]["oracle"])
                               for e in entries if e["result"]["oracle_type"] == "judge"}}
+        from engine.scoped import controls
+        data["control_state"]=digest(controls(self.store,project,batch))
         self.store.save_decision("evaluation", project, data)
         return data
 
@@ -385,7 +408,8 @@ class DecisionEngine:
         entries = self.entries(records, snapshot)
         admissions = {e["result"]["oracle"]:self.store.is_admitted(project, e["result"]["oracle"])
                       for e in entries if e["result"]["oracle_type"] == "judge"}
-        if result_state(entries) != evaluation["result_state"] or admissions != evaluation["admissions"]:
+        from engine.scoped import controls
+        if result_state(entries) != evaluation["result_state"] or admissions != evaluation["admissions"] or digest(controls(self.store,project,batch))!=evaluation.get("control_state",digest([])):
             evaluation = self.evaluate(project, batch)
         signals = {key:[] for key in ("retries", "low_confidence", "multi_judge", "unenforced_boundaries", "boundary_attempts", "unadmitted_judges")}
         signals["unenforced_boundaries"] = sorted(name for name,env in snapshot["environments"].items()
@@ -396,13 +420,18 @@ class DecisionEngine:
         for record in records:
             scenario = record["suite"] + "/" + record["scenario"]
             retries[scenario] = retries.get(scenario, 0) + record["retry_count"]
-            for r in self.store.list_results(project, record["id"]):
+            recorded=self.store.list_results(project, record["id"])
+            report_rows=[row for top in recorded for row in [top]+top["supporting_evidence"].get("member_results",[])]
+            for r in report_rows:
                 key = (scenario, r["oracle"])
                 count = lows.setdefault(key, [0, 0])
                 count[0] += r["disposition"] == "inconclusive"
                 count[1] += 1
                 if r["oracle_type"] == "judge" and not self.store.is_admitted(project, r["oracle"]):
-                    unadmitted.add(r["oracle"])
+                    members=r["supporting_evidence"].get("member_results",[])
+                    unadmitted.update(m["oracle"] for m in members if not self.store.is_admitted(project,m["oracle"])) if members else unadmitted.add(r["oracle"])
+                if r.get("panel"):
+                    signals["multi_judge"].append({"execution":record["id"],"clause":r["clause"],"purpose":r["supporting_evidence"]["purpose"]})
             boundary = record["configuration"]["environment"].get("action_boundary")
             if boundary and not boundary["enforced"] and record["environment"] not in signals["unenforced_boundaries"]:
                 signals["unenforced_boundaries"].append(record["environment"])
@@ -417,7 +446,7 @@ class DecisionEngine:
         signals["unadmitted_judges"] = sorted(unadmitted)
         metrics = []
         for dimension in ("functional", "semantic", "safety", "operational"):
-            rows = [e for e in entries if e["clause"]["dimension"] == dimension and not e["stale"] and e["result"]["disposition"] == "actionable"]
+            rows = [e for e in entries if e["clause"]["dimension"] == dimension and not e["stale"] and not e["result"].get("invalidated_by") and e["result"]["disposition"] == "actionable"]
             value = sum(e["weight"]*(e["result"]["verdict"] == "pass") for e in rows)/sum(e["weight"] for e in rows) if rows else "not_computed"
             metrics.append({"name":dimension + ".pass_rate", "definition":"Contract-weighted actionable pass rate; Confidence applied before aggregation",
                             "value":value, "result_ids":[e["result"]["id"] for e in rows]})

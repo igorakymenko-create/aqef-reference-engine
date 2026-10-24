@@ -1,5 +1,235 @@
 # AQEF Engine API Documentation
 
+## Slice 5 — Human Review, panels and Seeded Controls
+
+The body of POST /executions still uses suite/environment. Optional
+`"gates":["safety-gate"]` requests evaluation after assessment; names must apply to the
+scope, and the response adds gate_evaluation (all applicable Gates are evaluated so a
+caller cannot discard unfavorable Gates). Human pending Results remain blocking.
+
+### Recording a Human Reviewer's verdict and Role routing
+
+Direct Human Expectations bind `human_reviewer: {role: security-reviewer,
+captures_confidence: false}`. They produce a C.7 Human Result with awaiting_review,
+verdict null, confidence not_applicable and the declared review Role. Only a Person
+with review permission and the routed Role may return a verdict. For an inconclusive
+Judge without a named Human Role, review permission suffices. Example resolving that
+Judge: POST `/projects/demo/executions/e-1/results/judge-result-1/review`:
+
+```json
+{"verdict":"pass","confidence":0.95,"supporting_evidence":{"reason":"Checked the cited primary source"}}
+```
+
+Response 201:
+
+```json
+{"id":"human-result-2","execution":"e-1","clause":"factual","resolves":"judge-result-1",
+ "oracle_type":"human_reviewer","oracle":"{\"role\":\"review\",\"type\":\"human_reviewer\",\"version\":\"1\"}",
+ "verdict":"pass","confidence":0.95,"disposition":"actionable",
+ "supporting_evidence":{"reviewer":"alice","reviewed_at":"2026-10-24T12:00:00+00:00","evidence":{"reason":"Checked the cited primary source"}},
+ "recorded_at":"2026-10-24T12:00:00+00:00"}
+```
+
+The original Judge Result is unchanged. The new Result is the effective chain tip.
+Actionable/already-resolved Results cannot be reopened; invalidation requires a qualified
+corrected Oracle rather than an ordinary review shortcut. A review never invokes subject.
+
+### Completing an awaiting review
+
+GET `/projects/demo/executions/e-1/results` shows routing information on pending Human
+Results, for example:
+
+```json
+{"id":"human-pending-1","execution":"e-1","clause":"signoff","oracle_type":"human_reviewer",
+ "oracle":"{\"role\":\"security-reviewer\",\"type\":\"human_reviewer\",\"version\":\"1\"}",
+ "verdict":null,"confidence":"not_applicable","disposition":"awaiting_review",
+ "supporting_evidence":{"review":{"role":"security-reviewer","captures_confidence":false,"timeout":"24h","on_timeout":"block","escalate_to":null},"criteria":"Security sign-off","evidence":{"conversation":{"turns":[{"prompt":"Question","response":"Answer"}]},"artifacts":[]}},
+ "recorded_at":"2026-10-24T11:00:00+00:00",
+ "review_route":{"role":"security-reviewer","state":"pending","captures_confidence":false,"timeout":"24h","required_roles":["security-reviewer"]}}
+```
+
+POST `/projects/demo/executions/e-1/results/human-pending-1/review`:
+
+```json
+{"verdict":"pass","supporting_evidence":{"reason":"Security inspection complete"}}
+```
+
+Response 201 keeps the same id and recorded_at:
+
+```json
+{"id":"human-pending-1","execution":"e-1","clause":"signoff","oracle_type":"human_reviewer",
+ "oracle":"{\"role\":\"security-reviewer\",\"type\":\"human_reviewer\",\"version\":\"1\"}",
+ "verdict":"pass","confidence":"not_applicable","disposition":"actionable",
+ "supporting_evidence":{"review":{"role":"security-reviewer","captures_confidence":false,"timeout":"24h","on_timeout":"block","escalate_to":null},"criteria":"Security sign-off","evidence":{"reason":"Security inspection complete"},"reviewer":"alice","reviewed_at":"2026-10-24T12:00:00+00:00","reviewed_route":{"role":"security-reviewer","state":"pending","captures_confidence":false,"timeout":"24h"}},
+ "recorded_at":"2026-10-24T11:00:00+00:00"}
+```
+
+This is the sole in-place Result mutation. Captured Confidence is numeric [0,1] and
+required when captures_confidence is true; otherwise omit it, never send null. A direct
+Human interface declaring captures_confidence false rejects a supplied numeric rating.
+review_timeout defaults to 24h. Shorthand and ISO PT durations are supported. Expiration
+is derived at read/review: block shows timed_out, still blocking; escalate routes to
+escalate_to and shows escalated. The escalated Role replaces the original Role only
+after expiration. Neither policy creates a verdict. Corrected Human Oracle routing
+cannot waive the frozen clause's policy Role; required_roles lists all required Roles.
+
+### Panel configuration, panel output and quorum
+
+Example Expectation (the normal http-judge-v1 calls are detailed in PROVIDERS.md):
+
+```json
+{"id":"answer-quality","criteria":"The answer is correct.","confidence_threshold":0.7,
+ "multi_judge":{"purpose":"independence","judges":[{"model":"judge-a","confidence_source":"self_rating"},{"model":"judge-b","confidence_source":"token_probability"}],
+ "consensus":{"method":"voting","threshold":"majority","min_qualified":1,"on_disagreement":"human_review"}}}
+```
+
+Stability instead uses purpose stability, judge (one config) and samples >=2, with no
+judges list. Consensus methods are voting/confidence_weighted_mean; unsupported methods
+are rejected before execution. Voting accepts majority, unanimous or a number >0.5
+and <=1. Panel Results returned in GET .../results include:
+
+```json
+{"id":"panel-result-1","execution":"e-1","clause":"answer-quality","oracle_type":"judge",
+ "oracle":"<canonical panel configuration JSON>","verdict":"pass","confidence":0.9,"disposition":"actionable",
+ "panel":{"configured":2,"counted":1},
+ "supporting_evidence":{"purpose":"independence","member_results":[],"excluded_oracles":["<excluded Oracle>"],"quorum":1,"agreement":1.0},
+ "recorded_at":"2026-10-24T12:00:00+00:00"}
+```
+
+The member_results list in an actual response contains every configured member/sample's
+full Result, including stable id, own Confidence, raw provider response or error. The
+empty list above is a shape illustration, not an omitted actual transcript. configured
+is full membership; counted is actual verdicts after exclusions. With no declared quorum
+all members are required. A missed member is excluded for affected classes; stability
+excludes all its samples. Below quorum gives not_assessed. Unavailable members are never
+votes. Unresolved consensus routes a new awaiting Human Result resolving the panel;
+on_disagreement fail records a fail instead. Report signals.multi_judge records purpose;
+low_confidence includes panel and member denominators, including 0 inconclusive cases.
+Admission requires every configured member configuration, not an invented panel admission.
+
+### Human confirmation of a Seeded Control
+
+Controls run before normal assessments. Construction uses fixed Evidence without calling
+the subject; Validator confirmation checks actual captured Evidence against confirmation;
+Human confirmation stays invalid until a Person with review records the fact. Example:
+POST `/projects/demo/executions/e-1/seeded-controls/toxicity-control/confirm`:
+
+```json
+{"confirmed":true,"supporting_evidence":{"reason":"Verified the planted phrase in the captured response"}}
+```
+
+Response 201 has the C.3 control fields (additional IDs/provenance/per-Oracle trace fields
+are also returned):
+
+```json
+{"scenario":"toxicity-control","defect_class":"toxicity","kind":"defect","outcome":"missed",
+ "confirmed_by":"human_reviewer","invalidation_scope":"defect_class","reason":null}
+```
+
+For a clean control this confirms absence of the class; outcomes are passed/false_alarm.
+Until Evidence is confirmed the control is invalid, never a catch/miss. A control awaiting
+its Oracle's actual verdict also remains invalid rather than inventing a verdict.
+The endpoint may use any Execution of that same batch. It requires a Person, rejects
+duplicate/negative/empty-Evidence confirmations, and does not fabricate a quality verdict.
+A zero reference-Oracle prior also requires this Human sanity check, including for fixed
+construction controls. Clean controls carry no difficulty prior. Numeric priors require
+basis/source; exact-model nonindependent references are rejected. Priors never update
+from tested Oracle performance. Blind review, generator diversity, tuner separation and
+recent same-Environment source_execution are authoring SHOULDs; this API has no UI that
+can guarantee blindness or infer undeclared provenance.
+
+### Where seeded_control_results appears
+
+POST /executions and GET `/executions/{execution}` include seeded_control_results whenever
+the batch has controls: one entry per control Scenario, also on ordinary Executions.
+Each entry has the required fields shown above plus per-Oracle outcomes, tested Result
+IDs, confirmation evidence, batch identity and difficulty_prior where applicable.
+Only same-Oracle Results sharing the class are invalidated; undeclared/empty classes
+cover all tested classes. An actual miss takes precedence in a multi-Oracle summary;
+per-Oracle details remain authoritative. All dataset rows must confirm the declaration.
+
+GET .../results derives, without storing on the original Result:
+
+```json
+{"invalidated_by":[{"scenario":"toxicity-control","defect_class":"toxicity"}]}
+```
+
+This is an added read-only field on the full Result. Original verdict/disposition are
+unchanged. A later affected assessment is not_assessed, with no Oracle call. Other Oracles
+and classes continue. Controls never enter quality aggregates/Basis. Confirmations can
+arrive later and change current Gate evaluation; frozen Reports/GateResults/Releases stand.
+
+### Full-run invalidation
+
+POST `/projects/demo/executions/e-1/seeded-controls/toxicity-control/invalidate`, permission
+seeded_control_invalidate (an ordinary checked, logged action, no Approval Workflow):
+
+```json
+{"reason":"The instrument failure compromises this entire candidate run"}
+```
+
+Response 201, required control fields:
+
+```json
+{"scenario":"toxicity-control","defect_class":"toxicity","kind":"defect","outcome":"missed",
+ "confirmed_by":"construction","invalidation_scope":"full_run","reason":"The instrument failure compromises this entire candidate run"}
+```
+
+The control must actually be missed/false_alarm; a reason is mandatory. Service Accounts
+may invoke this action with the permission. Under on_seeded_control_miss halt_run, scope
+is automatically full_run and reason is exactly halt_run. Subsequent unstarted Executions
+are cancelled without subject/Oracle calls. Every original Result in the run is blocked,
+including other Oracles/classes. Gates use seeded_control_miss or seeded_control_false_alarm,
+not a fictitious product-quality failure. Default skip_class affects only the failed class.
+
+### Record Requalification and reassess stored Evidence
+
+POST `/projects/demo/requalifications`, execute:
+
+```json
+{"oracle":"<exact corrected Oracle JSON from a fresh control Result>","defect_class":"toxicity",
+ "controls":["fresh-defect-result","fresh-clean-result"],"diagnosis":"Corrected the Judge model configuration"}
+```
+
+Response 201:
+
+```json
+{"id":"qualification-1","oracle":"<exact corrected Oracle JSON from a fresh control Result>","defect_class":"toxicity",
+ "controls":["fresh-defect-result","fresh-clean-result"],"diagnosis":"Corrected the Judge model configuration",
+ "recorded_at":"2026-10-24T12:30:00+00:00","recorded_by":"operator"}
+```
+
+GET /requalifications is paginated with read permission. Generated fields are rejected
+in input. Every control ID must be of the stated class and confirmed caught/passed by
+that exact Oracle. Member IDs inside panel supporting_evidence may be used. Reused
+Scenario/source_execution or identical captured Conversation exposed by a miss cannot
+qualify. Control scores must follow the diagnosed/confirmed miss; prospective records
+cannot authorize future misses. A false alarm requires fresh clean passes, a defect miss
+fresh defect catches; both require both kinds, for every affected class.
+
+POST `/projects/demo/executions/e-1/results/invalid-result-1/reassess`:
+
+```json
+{"oracle":"<exact corrected Oracle JSON from qualification-1>"}
+```
+
+Response 201 is a new full C.7 Result, for example:
+
+```json
+{"id":"corrected-result-1","execution":"e-1","clause":"toxicity","resolves":"invalid-result-1",
+ "oracle_type":"judge","oracle":"<exact corrected Oracle JSON from qualification-1>","verdict":"pass","confidence":0.95,"disposition":"actionable",
+ "supporting_evidence":{"criteria":"No toxic language.","evidence":{"conversation":{"turns":[{"prompt":"Question","response":"Answer"}]},"artifacts":[]},"attempts":[{"number":1,"started_at":"2026-10-24T12:31:00+00:00","completed_at":"2026-10-24T12:31:01+00:00"}],"provider_response":{"verdict":"pass","confidence":0.95,"explanation":"Checked content","assertions":1},"explanation":"Checked content","requalified_controls":["batch-1:smoke/toxicity-control"]},
+ "recorded_at":"2026-10-24T12:31:00+00:00"}
+```
+
+The subject is not called. The old Result is untouched; re-evaluation may read the new
+effective Result. Same Oracle is allowed only for uninvalidated oracle_unavailable and
+only before a genuine verdict was received. Partial panel recovery retains every member
+verdict already returned and calls only members that failed before any verdict. Corrected
+configuration cannot weaken frozen criteria/target/expected or panel purpose/count/
+Consensus/quorum. A corrected Human Role also retains the original clause's policy Role
+unless its configured escalation applies. An actionable effective Result is never reopened.
+
 ## Slice 4 — Decision and Release
 
 All examples use `/projects/demo` and a bearer-authenticated Person with the endpoint's
@@ -86,7 +316,7 @@ effective Result standing (including awaiting_review completion with unchanged i
 Admission state changed. Overrides are copied at generation;
 an old Report never changes after a later override/resolution. Signals expose per-Scenario
 retries, per-Scenario/Oracle inconclusive/total counts and every unadmitted Judge even
-where a Gate does not require Admission. Panel/control reporting is deferred to slice 5.
+where a Gate does not require Admission. Panel/control reporting is described above.
 Baseline comparison Metrics also include exact current/Baseline Result IDs and potential
 prompt/model/dataset drift causes; these are correlations, not fabricated diagnoses.
 Provider Artifacts named boundary_attempt (one object) or boundary_attempts (list), with
@@ -200,13 +430,13 @@ supported; omit it when uncaptured, never send null. It resolves only the curren
 inconclusive Result; actionable/already-resolved/unavailable automated Results are 409.
 The response is a new C.7 Human Reviewer Result with resolves, reviewing Person and time
 in supporting_evidence. An awaiting_review Human Result instead completes in place,
-retaining recorded_at (the sole mutation exception). Full review routing is slice 5.
+retaining recorded_at (the sole mutation exception). Full review routing is described above.
 
 POST `.../reassess` with `{"oracle":"<exact previous Oracle string>"}` requires execute.
 Only current oracle_unavailable may be rechecked by the same frozen Oracle; no subject
 call occurs. Response is a new Result with resolves. Failed re-attempts also become
 new unavailable Results in a linear chain. Actionable/inconclusive retries or changed
-Oracle are 409; control requalification conditions remain slice 5.
+Oracle are 409 unless the corrected Oracle satisfies the slice 5 requalification conditions above.
 
 All decision collection reads support offset/limit (0/100 defaults; limit 1–1000) and
 read permission. Generated fields/unknown request keys are rejected with 422. Not found

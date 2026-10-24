@@ -25,7 +25,9 @@ The engine's purpose is to demonstrate that the AQEF specification can be implem
   - Result resolution, weighted aggregation/Basis, Gates and exact-result overrides
   - Frozen Snapshots/Reports/Baselines, staleness and regression comparisons
   - Governed Release Decisions and standing Service Account Release Policies
-- [ ] **Slice 5: Scoped Capabilities**
+- [x] **Slice 5: Scoped Capabilities**
+  - Human Review routing/completion, Multi Judge consensus and quorum
+  - Confirmed Seeded Controls, invalidation, halt_run and fresh-control Requalification
 - [ ] **Slice 6: Conformance Statement**
 
 ## Installation and Usage

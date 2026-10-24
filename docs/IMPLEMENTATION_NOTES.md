@@ -1,5 +1,99 @@
 # Implementation Notes
 
+## Slice 5 — Completed Work
+
+- Built Human Review pending/completion and Role/timeout routing; independence/stability
+  panels, voting/weighted consensus, quorum, member evidence and panel Admission;
+  persistent defect/clean controls, actual-Evidence confirmation, class/Oracle-scoped
+  invalidation, halt_run, explicit full-run invalidation and fresh-control Requalification.
+- Reassessment uses frozen Evidence, retains earlier verdicts and requires a qualified
+  corrected Oracle after control failure. Reports expose control/panel signals and
+  derived invalidation; late confirmation also invalidates cached evaluation freshness.
+- Required earlier-slice changes: guarded Result resolution after invalidation; recursive
+  panel Admission; controls scheduled before ordinary work and excluded from Basis;
+  provider member calls; optional execution Gate selection; ISO review durations;
+  explicit per-control prior provenance. Existing recorded Results remain immutable
+  except the specified completion of awaiting_review Human Results.
+- API examples cover review, completion, confirmation, full-run invalidation,
+  Requalification/reassess and control/panel response locations. PROVIDERS documents
+  individual member URLs and unchanged exact Judge wire messages.
+- Validation: **284 passed**, including all previous slices and 47 new scoped tests.
+  One existing Starlette/httpx deprecation warning. D-4 was separately committed and
+  pushed as f1a2f01 / slice-4.1; its C.10 denominator regression remains included.
+- New ambiguity entries **25–29** document every implementation choice listed below.
+- Limits: generator selection/blinding and authorship/reference-model provenance are
+  supplied by configuration and external reviewers; the engine cannot verify hidden
+  training data or model ancestry. No generator/UI or conformance statement was added.
+  Single-Judge low-confidence automatic routing is optional and remains explicit review.
+  Execution retains the earlier synchronous single-process interface. No slice 6 work
+  or external/conformance test material was used.
+
+## Slice 5 — plan
+
+### Entities and operations
+- Human Reviewer Oracle and pending review routing/completion, block/escalate timeout
+  state; existing C.3 review endpoint plus read-only routing information (VI Human Review;
+  A.5; C.7). Timed-out reviews stay blocking and never invent a verdict.
+- Multi Judge independence/stability, voting/confidence_weighted_mean, quorum, panel
+  metadata and per-member evidence (VI Multi Judge/Consensus/Voting/Confidence; A.7).
+- Batch-scoped Seeded Control records, confirmation by construction/Validator/Person,
+  derived invalidation, skip_class/halt_run, explicit full-run invalidation, fresh-control
+  Requalification and guarded reassessment (VIII Seeded Controls; C.3; A.1/A.4/A.9).
+
+### Rules and references
+1. Direct Human Expectations produce awaiting_review with null verdict and inapplicable
+   Confidence. Low Confidence/unresolved panel consensus may route to a separate Human
+   Result resolving the original. Person+review and the routed Role are required;
+   captures_confidence determines whether numeric Confidence is required. Completion
+   preserves id/recorded_at; escalation changes routing, never verdict (VI; A.5; C.3/C.7).
+2. Independence calls each configured Judge once at its own startup-mapped URL; stability
+   calls one configuration samples times. Every member sees the same frozen Evidence
+   and literal criteria. Preserve per-member verdict/Confidence/error with stable IDs.
+   Panel Result includes configured/counted; panel identity includes purpose/configuration.
+   Missing availability is never a pass (VI Multi Judge; C.7).
+3. Voting counts qualified members/samples: majority > half, unanimous all, numeric
+   threshold ceil(fraction*count), default human_review on no winner. confidence_weighted_mean
+   is explicit and min_agreement applies. Confidence remains the members' own uncertainty;
+   agreement is separate supporting evidence, never substituted for Confidence. Quorum
+   defaults full configured count; below it yields not_assessed. A miss excludes all
+   stability samples of that Oracle (VI Consensus/Voting/Confidence; A.7).
+4. Controls run before ordinary assessments, preserving deterministic order and private
+   state. Confirm actual Evidence before any catch/miss claim. Unconfirmed/failed-confirmation
+   controls are invalid, infer nothing about any Oracle. Clean controls confirm absence;
+   defect controls confirm presence. Fixed Evidence never calls subject. Human confirmation
+   can update derived outcome later without rewriting Results/GateResults/Releases (VIII).
+5. Each run has one persisted control entry per Scenario, with per-Oracle details when
+   there are several. A defect catches only fail; clean passes only pass, with usable
+   Confidence. Miss/false_alarm affects same Oracle and declared defect classes; undeclared
+   clauses cover every class. Results stay unchanged; invalidated_by is derived. Later
+   affected assessments record not_assessed without Oracle calls, others continue (VIII;
+   C.3/C.7). Control Results never enter aggregates or Basis.
+6. halt_run stops subsequent subject/Oracle work and records full_run, reason halt_run.
+   Existing Results of all classes/Oracles are blocked; explicit invalidate requires
+   seeded_control_invalidate, a real miss and a nonempty logged reason. Gate reasons
+   distinguish defect miss/clean false alarm; Report/evaluation freshness includes derived
+   invalidation, so a late confirmation cannot leave a misleading latest Gate (VIII; C.3).
+7. Requalification records exact Oracle/class and fresh successful control Result IDs;
+   reject wrong class/Oracle/outcome and any control exposed by a miss/false alarm in a
+   run to be reassessed. Reassess needs a different corrected Oracle and qualification
+   for every applicable class, of every failed kind (defect/clean/both). Same Oracle only
+   recovers oracle_unavailable, never a genuine verdict; no subject call. Original chain
+   stays intact; current effective state alone determines resolvability (VIII; I Ch.6; C.3).
+8. Class/control difficulty defaults not_established, never zero; numeric priors require
+   basis/source and independent reference Oracle provenance. Never update from tested
+   Oracle performance. No-reference-catch controls require Human confirmation before
+   gating. Exposure/generator/source_execution SHOULDs and unverifiable provenance are
+   explicitly documented rather than invented (VIII; A.1/A.4).
+9. Report keeps all C.10 lists, complete low_confidence denominators (D-4), panel purpose
+   and every unadmitted member configuration; a panel is admitted only if every member
+   configuration is admitted. Derived invalidation blocks Gates and remains visible in
+   metadata/results. Auth/permissions, immutable history, pagination and prior suites
+   continue to hold (VI Admission; C.3/C.7/C.10).
+
+### Unclear points
+Entries 25–29 record panel Confidence/availability, routing defaults/timeouts, per-Oracle
+control outcomes, requalification binding/freshness and prior provenance. No slice 6 work.
+
 ## Slice 4.1 — D-4 external review
 - Confirmed Appendix C C.10 explicitly requires per-Scenario/per-Oracle inconclusive
   and total counts. Removed the filter that hid pairs with zero inconclusive Results.

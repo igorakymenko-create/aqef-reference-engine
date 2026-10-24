@@ -13,6 +13,8 @@ from engine.models.base import AQEFBaseModel
 from engine.models.principal import PrincipalKind
 from engine.storage import StorageConflictError
 from engine.validators import canonical
+from engine.scoped import invalidators, review_route, qualifications_for, assess_expectation
+import json
 
 
 class BatchRequest(AQEFBaseModel):
@@ -126,7 +128,7 @@ def get_decision_router(storage, principal_dep, provider):
         if record is None:
             raise HTTPException(404, "Execution not found")
         result = next((r for r in effective(storage.list_results(project, record["id"])) if r["id"] == request.result_id), None)
-        if not result or result["disposition"] != "actionable" or record["status"] != "completed":
+        if not result or result["disposition"] != "actionable" or invalidators(storage,project,result) or record["status"] != "completed":
             raise HTTPException(409, "Baseline requires an effective actionable Result of a completed Execution")
         if record["configuration"]["scenario"]["seeded_control"]:
             raise HTTPException(409, "Seeded Control cannot designate subject baseline")
@@ -185,6 +187,10 @@ def get_decision_router(storage, principal_dep, provider):
         current_entries = service.entries(records, snapshot)
         if evaluations[-1]["result_state"] != result_state(current_entries):
             raise HTTPException(409, "Effective Results changed; evaluate Gates again")
+        from engine.scoped import controls
+        from engine.decision import digest
+        if evaluations[-1].get("control_state",digest([]))!=digest(controls(storage,project,request.execution_batch_id)):
+            raise HTTPException(409,"Seeded Control state changed; evaluate Gates again")
         if any(storage.is_admitted(project, oracle) != admitted for oracle, admitted in evaluations[-1]["admissions"].items()):
             raise HTTPException(409, "Judge Admission changed; evaluate Gates again")
         if not report["gates"] or set(report["gates"]) != {g["name"] for g in snapshot["quality_gates"]}:
@@ -222,7 +228,7 @@ def get_decision_router(storage, principal_dep, provider):
         row = next((r for r in rows if r["id"] == key), None)
         if row is None:
             raise HTTPException(404, "Result not found")
-        if key not in {r["id"] for r in effective(rows)} or row["disposition"] == "actionable":
+        if key not in {r["id"] for r in effective(rows)} or (row["disposition"] == "actionable" and not invalidators(storage,project,row)):
             raise HTTPException(409, "Only current non-actionable effective Result may be resolved")
         return record, row, find_clause(record, row["clause"])
 
@@ -232,21 +238,30 @@ def get_decision_router(storage, principal_dep, provider):
         if principal.kind != PrincipalKind.PERSON:
             raise HTTPException(403, "Human Review requires a Person")
         record, previous, clause = result_context(project, execution, result)
+        if invalidators(storage,project,previous) and not (previous["oracle_type"]=="human_reviewer" and previous["disposition"]=="awaiting_review"):
+            raise HTTPException(409,"Invalidated instruments require requalification, not ordinary review")
         if previous["disposition"] not in ("inconclusive", "awaiting_review"):
             raise HTTPException(409, "This Result is not open to Human Review resolution")
         human = clause.get("human_reviewer") or {}
-        if human.get("role") and human["role"] not in principal.roles:
+        route=review_route(previous)
+        role=route["role"] if route else human.get("role")
+        captures=route["captures_confidence"] if route else human.get("captures_confidence",False)
+        if role and role not in principal.roles:
             raise HTTPException(403, "Reviewer lacks clause's required Role")
+        if human.get("role") and role!=human["role"] and (not route or route["state"]!="escalated") and human["role"] not in principal.roles:
+            raise HTTPException(403,"Corrected Human Oracle does not waive the frozen clause's policy Role")
         if "confidence" in request.model_fields_set and request.confidence is None:
             raise HTTPException(422, "Omit uncaptured Confidence; never supply null")
-        if human.get("captures_confidence") and request.confidence is None:
+        if captures and request.confidence is None:
             raise HTTPException(422, "This review requires Confidence")
+        if human and not captures and request.confidence is not None:
+            raise HTTPException(422,"This Human Reviewer does not capture Confidence")
         confidence = request.confidence if request.confidence is not None else "not_applicable"
         disposition = "inconclusive" if request.confidence is not None and request.confidence < (clause.get("confidence_threshold") or 0) else "actionable"
         evidence = {"reviewer":principal.id, "reviewed_at":now(), "evidence":request.supporting_evidence}
-        if previous["disposition"] == "awaiting_review":
+        if previous["disposition"] == "awaiting_review" and previous["oracle_type"]=="human_reviewer":
             completed = deepcopy(previous)
-            completed.update(verdict=request.verdict, confidence=confidence, disposition=disposition, supporting_evidence=evidence)
+            completed.update(verdict=request.verdict, confidence=confidence, disposition=disposition, supporting_evidence={**previous["supporting_evidence"],**evidence,"reviewed_route":route})
             return storage.complete_review(project, completed)
         data = result_base(record, previous["clause"], "human_reviewer",
                            canonical({"type":"human_reviewer", "role":human.get("role", "review"), "version":"1"}), evidence)
@@ -260,14 +275,62 @@ def get_decision_router(storage, principal_dep, provider):
     async def reassess(project: str, execution: str, result: str, request: ReassessRequest, principal=Depends(principal_dep)):
         check_permission(principal, "execute", storage)
         record, previous, clause = result_context(project, execution, result)
-        if previous["disposition"] != "oracle_unavailable" or previous["oracle"] != request.oracle:
-            raise HTTPException(409, "Only same-Oracle unavailable reassessment is permitted before control requalification")
+        same=previous["oracle"]==request.oracle
+        if same and (previous["disposition"]!="oracle_unavailable" or invalidators(storage,project,previous)):
+            raise HTTPException(409,"Same Oracle may only recover uninvalidated oracle_unavailable")
+        seen=previous["supporting_evidence"].get("provider_response",{})
+        if same and isinstance(seen,dict) and seen.get("verdict") in ("pass","fail"):
+            raise HTTPException(409,"A received verdict cannot be retried away despite malformed Confidence/protocol")
+        members=previous["supporting_evidence"].get("member_results",[])
+        if same and members and not any(m["disposition"]=="oracle_unavailable" and
+            (not isinstance(m["supporting_evidence"].get("provider_response"),dict) or
+             m["supporting_evidence"]["provider_response"].get("verdict") not in ("pass","fail")) for m in members):
+            raise HTTPException(409,"No panel member can be re-attempted before a verdict; received verdicts stand")
+        exemptions=previous["supporting_evidence"].get("requalified_controls",[]) if same else qualifications_for(storage,record,previous,request.oracle)
+        try:config=json.loads(request.oracle)
+        except ValueError as exc:raise HTTPException(422,"Oracle must be an inspectable canonical configuration") from exc
+        corrected=deepcopy(clause)
+        working=deepcopy(record)
+        if not same:
+            if config.get("type")=="validator" and previous["oracle_type"]=="validator":
+                if (config["target"],config["expected"])!=(clause["target"],clause["expected"]):
+                    raise HTTPException(409,"Reassessment cannot change the frozen clause's target or expected requirement")
+                corrected.update(validator=config["name"],target=config["target"],expected=config["expected"])
+                if config.get("custom"):working["configuration"]["validators"][config["name"]]=config["custom"]
+            elif config.get("type")=="judge" and previous["oracle_type"]!="validator":
+                if clause.get("multi_judge") or clause.get("human_reviewer") or config["criteria"]!=clause["criteria"]:
+                    raise HTTPException(409,"Corrected Judge must preserve the frozen clause criteria and Oracle architecture")
+                corrected.update(judge={"model":config["model"],"confidence_source":config["confidence_source"]},multi_judge=None,human_reviewer=None,criteria=config["criteria"])
+            elif config.get("type")=="multi_judge" and previous["oracle_type"]!="validator":
+                original=clause.get("multi_judge")
+                new=config["configuration"]
+                if original is None or config["criteria"]!=clause["criteria"] or any(original.get(k)!=new.get(k) for k in ("purpose","consensus","samples")) or len(original.get("judges") or [original.get("judge")])!=len(new.get("judges") or [new.get("judge")]):
+                    raise HTTPException(409,"Corrected panel must preserve criteria, purpose, count and Consensus/quorum requirements")
+                corrected.update(judge=None,multi_judge=config["configuration"],human_reviewer=None,criteria=config["criteria"])
+            elif config.get("type")=="human_reviewer" and previous["oracle_type"]=="human_reviewer":
+                corrected["human_reviewer"]={**(clause.get("human_reviewer") or {}),"role":config["role"]}
+            else:raise HTTPException(409,"Corrected Oracle must have a compatible executable Oracle type")
         assessment = AssessmentEngine(storage, provider)
         try:
             if previous["oracle_type"] == "validator":
-                return assessment.validate(record, clause, previous["clause"], previous["id"])
+                new=assessment.validate(working,corrected,previous["clause"],persist=False)
+                if new["oracle"]!=request.oracle:raise HTTPException(409,"Corrected Validator identity/version mismatch")
+                new["resolves"]=previous["id"]
+                if exemptions:new["supporting_evidence"]["requalified_controls"]=exemptions
+                return storage.append_result(project,new)
             if previous["oracle_type"] == "judge":
-                return await assessment.judge(record, clause, previous["clause"], previous["id"])
+                from engine.assessment import judge_identity
+                from engine.scoped import panel_identity
+                identity=judge_identity(corrected) if corrected.get("judge") else panel_identity(corrected)
+                if identity!=request.oracle:raise HTTPException(409,"Corrected Judge identity/version mismatch")
+                judges=[corrected["judge"]] if corrected.get("judge") else corrected["multi_judge"].get("judges") or [corrected["multi_judge"]["judge"]]
+                if any(j["model"].strip().lower()==record["configuration"]["environment"]["model_version"].strip().lower() for j in judges):
+                    raise HTTPException(422,"Corrected Judge must remain independent of subject")
+                return await assess_expectation(assessment,working,corrected,previous["clause"],previous["id"],exemptions,
+                                                previous["supporting_evidence"].get("member_results") if same else None)
+            if previous["oracle_type"]=="human_reviewer" and not same:
+                from engine.scoped import pending_review
+                return pending_review(storage,working,corrected,previous["clause"],previous["id"],exemptions)
         except StorageConflictError as exc:
             raise HTTPException(409, str(exc)) from exc
         raise HTTPException(409, "Human Reviewer unavailability cannot be reassessed as an automated Oracle")

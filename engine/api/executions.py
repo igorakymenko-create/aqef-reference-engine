@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from engine.auth import check_permission
 from engine.execution import ExecutionEngine, ExecutionRequest
+from engine.scoped import decorate_execution, decorate_result
 
 
 def get_executions_router(storage, principal_dep, provider):
@@ -38,12 +39,12 @@ def get_executions_router(storage, principal_dep, provider):
                 and (status is None or r["status"] == status)
                 and (date_from is None or datetime.fromisoformat(r["created_at"]) >= date_from)
                 and (date_to is None or datetime.fromisoformat(r["created_at"]) <= date_to)]
-        return rows[offset:offset + limit]
+        return [decorate_execution(storage,r) for r in rows[offset:offset + limit]]
 
     @router.get("/{execution}")
     def metadata(project: str, execution: str, principal=Depends(principal_dep)):
         check_permission(principal, "read", storage)
-        return get_record(project, execution)
+        return decorate_execution(storage,get_record(project, execution))
 
     @router.get("/{execution}/conversation")
     def conversation(project: str, execution: str, principal=Depends(principal_dep)):
@@ -66,7 +67,7 @@ def get_executions_router(storage, principal_dep, provider):
         check_permission(principal, "read", storage)
         get_record(project, execution)
         rows = storage.list_results(project, execution)
-        return [r for r in rows if (oracle_type is None or r["oracle_type"] == oracle_type)
+        return [decorate_result(storage,project,r) for r in rows if (oracle_type is None or r["oracle_type"] == oracle_type)
                 and (verdict is None or r["verdict"] == verdict)][offset:offset + limit]
 
     return router

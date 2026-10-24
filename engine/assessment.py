@@ -27,6 +27,11 @@ def judge_identity(clause):
     return canonical({"type": "judge", "version": "http-judge-v1", **clause["judge"], "criteria": clause["criteria"]})
 
 
+def validator_identity(record, clause):
+    return canonical({"type":"validator", "name":clause["validator"], "version":"1", "target":clause["target"],
+                      "expected":clause["expected"], "custom":record["configuration"]["validators"].get(clause["validator"])})
+
+
 def clause_reference(contract, kind, index):
     clause = contract[kind][index]
     if clause.get("id"):
@@ -47,11 +52,10 @@ class AssessmentEngine:
         self.storage = storage
         self.provider = provider
 
-    def validate(self, record, clause, reference, resolves=None):
+    def validate(self, record, clause, reference, resolves=None, persist=True):
         name = clause["validator"]
         custom = record["configuration"]["validators"].get(name)
-        oracle = canonical({"type": "validator", "name": name, "version": "1",
-                            "target": clause["target"], "expected": clause["expected"], "custom": custom})
+        oracle = validator_identity(record, clause)
         supporting = {"configuration": deepcopy(clause)}
         result = result_base(record, reference, "validator", oracle, supporting)
         try:
@@ -73,9 +77,9 @@ class AssessmentEngine:
             supporting["error"] = f"{type(exc).__name__}: {exc}"
         if resolves:
             result["resolves"] = resolves
-        return self.storage.append_result(record["project"], result)
+        return self.storage.append_result(record["project"], result) if persist else result
 
-    async def judge(self, record, clause, reference, resolves=None):
+    async def judge(self, record, clause, reference, resolves=None, persist=True):
         from engine.execution import duration
         evidence = {"conversation": deepcopy(record["conversation"]), "artifacts": deepcopy(record["artifacts"])}
         supporting = {"evidence": evidence, "criteria": clause["criteria"], "attempts": []}
@@ -105,7 +109,7 @@ class AssessmentEngine:
         attempt["completed_at"] = timestamp()
         if resolves:
             result["resolves"] = resolves
-        return self.storage.append_result(record["project"], result)
+        return self.storage.append_result(record["project"], result) if persist else result
 
     async def assess(self, record):
         if record["status"] != "completed":
@@ -115,7 +119,9 @@ class AssessmentEngine:
         constraints.sort(key=lambda item: COST_ORDER.get(item[1]["validator"], 4))
         outcomes = []
         for index, clause in constraints:
-            result = self.validate(record, clause, clause_reference(contract, "constraints", index))
+            from engine.scoped import blocked_result
+            reference = clause_reference(contract, "constraints", index)
+            result = blocked_result(self.storage, record, clause, reference, "validator", validator_identity(record,clause)) or self.validate(record, clause, reference)
             outcomes.append((clause, result))
         if any(r["disposition"] != "actionable" or (c["veto"] and r["verdict"] == "fail") for c, r in outcomes):
             return
@@ -125,4 +131,5 @@ class AssessmentEngine:
         if not passed:
             return
         for index, clause in enumerate(contract["expectations"]):
-            await self.judge(record, clause, clause_reference(contract, "expectations", index))
+            from engine.scoped import assess_expectation
+            await assess_expectation(self, record, clause, clause_reference(contract, "expectations", index))
