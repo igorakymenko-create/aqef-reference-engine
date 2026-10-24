@@ -97,6 +97,9 @@ A single timeout deadline covers all turns/retries, starting when a worker begin
 excluding pool wait. Default 30s. Positive decimal durations with ms/s/m/h are accepted.
 Each HTTP call is bounded by the remaining time; expiration prevents further calls.
 Stopping the local wait cannot undo work already received by a remote provider.
+Positive ISO day/time durations are also accepted. This is the subject collection
+deadline; each Judge call gets a fresh configured timeout, and synchronous Validators
+have no preemptive bound. An end-to-end Execution budget is not claimed (review G8).
 
 ## Trigger and Evidence resources
 
@@ -117,7 +120,7 @@ retries per A.9: 2 permits one initial call plus at most two retries before a Re
 Execution metadata records frozen Environment, Scenario, effective Contract, Variables,
 settings, actor/time, scheduling reason/order, batch/row identity, attempts, retry_count,
 start/completion timestamps, duration_ms and error. Status is queued, running, completed
-or infrastructure_failure. Scheduling is persisted before calls. Runtime history is
+or infrastructure_failure; `halt_run` adds cancelled for work never invoked. Scheduling is persisted before calls. Runtime history is
 stored separately from deletable live configuration.
 
 GET `.../executions/{id}/conversation` returns:
@@ -132,7 +135,9 @@ artifacts map with turn null, retains source_execution, and invokes no subject.
 Confirmation and invalidation are documented in the slice 5 API section.
 
 GET `.../{id}/artifacts` returns a paginated list of `{name, data, turn}`.
-GET `.../{id}/results` returns immutable Validator and Single Judge Results in slice 3.
+GET `.../{id}/results` returns Validator, Judge/panel and Human Results. Only an
+awaiting_review Human Result may complete in place, preserving its recorded_at;
+resolutions otherwise append. Derived invalidated_by/review_route are added on reads.
 All resources require authentication and atomic read/execute permission.
 
 ## Judge request (http-judge-v1)

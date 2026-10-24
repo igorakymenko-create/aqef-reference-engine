@@ -1,5 +1,56 @@
 # Implementation Notes
 
+## Slice 6 — Completed Work
+
+- Published CONFORMANCE-REVIEW.md: 402 normative source units (paragraphs, mandatory
+  table rows and B.2 property blocks), evidence catalogue with real module/test names,
+  per-Volume/Appendix scope accounting, and explicit partial/untested findings. Related
+  happy-path coverage is never represented as a full property rejection proof.
+- Published CONFORMANCE-STATEMENT.md using §10's specification version and identifiers:
+  human_review, multi_judge, seeded_controls; core implicit. It documents unoffered
+  capabilities and implementation-defined choices and withholds an unqualified claim
+  of Conformance because G1, G3–G8 and U1 remain open. G2 is closed by the correction below.
+- Small normative corrections: authenticated framework docs/OpenAPI/health (C.4);
+  required Row.variables (A.8/B.2); resolved Service Account owner to an existing Person
+  at load/storage (XII/C.4); applied existing offset/limit pagination to ten older
+  collection routes (C.6). No new capability or background execution feature was added.
+- API/PROVIDERS/README now describe actual synchronous behavior, accepted fixed
+  Conversation, nullable/default fields, current authentication/bootstrap behavior,
+  pagination, errors, cancelled work and separate assessment timeouts. OPENAPI.json is
+  generated from 71 registered operations; unconstrained dynamic response schemas are
+  disclosed as G3 rather than portrayed as complete runtime types.
+- New ambiguity entries **30–33**: qualified scope declaration, asynchronous REST,
+  inherited policies and timeout boundary. Older choices are cross-referenced/superseded
+  where the review exposed a gap. No external/conformance test material was accessed.
+- Whole suite: **318 passed**, one Starlette/httpx deprecation warning; 19 new slice 6
+  regression cases. D-5 separately passed 299 and was pushed as 5b0ade0 / slice-5.1.
+- Deliberate SHOULD deviations (with full sources/reasons in the statement): external
+  family/provenance and blind reference labelling cannot be verified by this adapter;
+  no automatic Requirements/Risk feedback or semantic assertion decomposition; no
+  generated/rotating/blinded control-authoring workflow or mandatory recent source
+  Evidence; late human confirmation permitted; recommended date/Team/Baseline filters
+  not implemented; generated OpenAPI is not a complete prose-derived JSON Schema.
+  These decisions do not excuse separate MUST gaps G1/G3–G8/U1. Cheapest-first checks,
+  pure validator inputs, controls-first/fail-fast and zero-prior confirmation are followed.
+
+## Slice 6 — plan
+
+- Review §9/§10, the seven principles and all mandatory normative units in scoped
+  Volumes I–VIII, X–XII, XVII and Appendices A–C (including property blocks required
+  by B.2). Reference Appendices D–K and unoffered capabilities receive an explicit
+  scope disposition, not a fictitious implementation/test citation.
+- Publish a source-linked MUST/MUST NOT ledger in CONFORMANCE-REVIEW.md. Distinguish
+  traced implementation/tests from partial, untested and missing behavior; retain
+  known gaps instead of representing passing unit tests as proof of Conformance.
+- Publish §10's specification version and capability identifiers; the non-negotiable
+  core is implicit, never a capability identifier. State unoffered capabilities,
+  implementation-defined choices, deliberate SHOULD deviations and unresolved gaps.
+- Compare API/PROVIDERS/README with actual registered operations and model schemas.
+  Correct documentation; code changes only for small, unambiguous normative defects.
+- No new features, no external/conformance test material. D-5 precedes this slice as
+  its own commit/tag. New interpretations and scope findings will be recorded below
+  and in AMBIGUITIES.md with source quotations.
+
 ## Slice 5.1 — D-5 external review
 
 - A.4 FixedEvidence requires the stored Conversation form. Replaced the unconstrained

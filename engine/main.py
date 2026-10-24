@@ -7,7 +7,7 @@ References:
 
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from engine.api.contracts import get_contracts_router
 from engine.api.datasets import get_datasets_router
@@ -66,6 +66,16 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     )
     app.state.storage = storage
     app.state.provider = provider
+
+    @app.middleware("http")
+    async def authenticate_system_routes(request: Request, call_next):
+        # C.4 says all API operations; framework documentation/health are no exception.
+        if request.url.path in ("/healthz", "/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"):
+            try:
+                principal_dep(request.headers.get("authorization"))
+            except HTTPException as exc:
+                return JSONResponse(status_code=exc.status_code, content={"detail":exc.detail}, headers=exc.headers)
+        return await call_next(request)
 
     @app.exception_handler(StorageConflictError)
     async def storage_conflict(request: Request, exc: StorageConflictError):

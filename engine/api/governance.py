@@ -21,7 +21,7 @@ from engine.models.principal import (
 from engine.storage import Storage, StorageConflictError, StorageNotFoundError
 
 
-class PrincipalCreateRequest(BaseModel):
+class PrincipalCreateRequest(Principal):
     id: str = Field(..., min_length=1)
     kind: PrincipalKind
     name: str = Field(..., min_length=1)
@@ -38,9 +38,9 @@ def get_governance_router(storage: Storage, get_principal_dep) -> APIRouter:
     # --- Teams ---
 
     @router.get("/teams", response_model=List[Team])
-    def list_teams(current_user: Principal = Depends(get_principal_dep)):
+    def list_teams(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "team_read", storage)
-        return storage.list_teams()
+        return storage.list_teams()[offset:offset + limit]
 
     @router.post("/teams", response_model=Team, status_code=status.HTTP_201_CREATED)
     def create_team(team: Team, current_user: Principal = Depends(get_principal_dep)):
@@ -53,9 +53,9 @@ def get_governance_router(storage: Storage, get_principal_dep) -> APIRouter:
     # --- Roles ---
 
     @router.get("/roles", response_model=List[Role])
-    def list_roles(current_user: Principal = Depends(get_principal_dep)):
+    def list_roles(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "role_read", storage)
-        return storage.list_roles()
+        return storage.list_roles()[offset:offset + limit]
 
     @router.post("/roles", response_model=Role, status_code=status.HTTP_201_CREATED)
     def create_role(role: Role, current_user: Principal = Depends(get_principal_dep)):
@@ -73,6 +73,10 @@ def get_governance_router(storage: Storage, get_principal_dep) -> APIRouter:
         current_user: Principal = Depends(get_principal_dep),
     ):
         check_permission(current_user, "role_admin", storage)
+        if req.kind == PrincipalKind.SERVICE_ACCOUNT:
+            owner = storage.get_principal(req.owner_person_id)
+            if owner is None or owner.kind != PrincipalKind.PERSON:
+                raise HTTPException(422, "owner_person_id must name an existing Person")
         p = Principal(
             id=req.id,
             kind=req.kind,
@@ -94,17 +98,21 @@ def get_governance_router(storage: Storage, get_principal_dep) -> APIRouter:
         project: str,
         action: Optional[str] = Query(None),
         principal_id: Optional[str] = Query(None),
+        offset: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=1000),
         current_user: Principal = Depends(get_principal_dep),
     ):
         check_permission(current_user, "audit_read", storage)
-        return storage.list_audit_logs(project, action=action, principal_id=principal_id)
+        return storage.list_audit_logs(project, action=action, principal_id=principal_id)[offset:offset + limit]
 
     @router.get("/projects/{project}/approvals", response_model=List[ApprovalRecord])
     def get_approvals(
         project: str,
+        offset: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=1000),
         current_user: Principal = Depends(get_principal_dep),
     ):
         check_permission(current_user, "audit_read", storage)
-        return storage.list_approvals(project)
+        return storage.list_approvals(project)[offset:offset + limit]
 
     return router

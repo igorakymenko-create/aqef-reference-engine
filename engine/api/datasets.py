@@ -19,9 +19,9 @@ def get_datasets_router(storage: Storage, get_principal_dep) -> APIRouter:
     router = APIRouter(prefix="/projects/{project}/datasets", tags=["Datasets"])
 
     @router.get("", response_model=List[Dataset])
-    def list_datasets(project: str, current_user: Principal = Depends(get_principal_dep)):
+    def list_datasets(project: str, offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "read", storage)
-        return storage.list_datasets(project)
+        return storage.list_datasets(project)[offset:offset + limit]
 
     @router.post("", response_model=Dataset, status_code=status.HTTP_201_CREATED)
     def create_dataset(

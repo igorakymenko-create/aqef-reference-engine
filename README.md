@@ -2,7 +2,10 @@
 
 A reference implementation of the **[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF)**, Working Draft 0.41.1.
 
-The engine's purpose is to demonstrate that the AQEF specification can be implemented as written, adhering strictly to its normative rules, schema definitions, and REST API surface.
+The engine implements the core loop and Human Review, Multi Judge and Seeded Controls.
+The [Conformance Statement](docs/CONFORMANCE-STATEMENT.md) declares its offered scope
+and the [normative review](docs/CONFORMANCE-REVIEW.md) records known gaps. Full AQEF
+Conformance is not asserted while mandatory gaps remain.
 
 ## Completed Slices
 
@@ -16,7 +19,7 @@ The engine's purpose is to demonstrate that the AQEF specification can be implem
 - [x] **Slice 2: Execution and Evidence**
   - Suite × Environment batches, static row expansion, isolated sequential/parallel runs
   - Deterministic Variables/Context, multi-turn Conversations, captured Artifacts
-  - Infrastructure retries, whole-execution timeouts, durable frozen Evidence
+  - Infrastructure retries, subject collection timeouts, durable frozen Evidence
   - HTTP subject provider; startup mapping and wire contract in [docs/PROVIDERS.md](docs/PROVIDERS.md)
 - [x] **Slice 3: Assessment**
   - Deterministic built-in and registered Custom Validators with composition/veto
@@ -28,7 +31,9 @@ The engine's purpose is to demonstrate that the AQEF specification can be implem
 - [x] **Slice 5: Scoped Capabilities**
   - Human Review routing/completion, Multi Judge consensus and quorum
   - Confirmed Seeded Controls, invalidation, halt_run and fresh-control Requalification
-- [ ] **Slice 6: Conformance Statement**
+- [x] **Slice 6: Conformance Statement**
+  - Specification rule ledger with implementation/test references and explicit findings
+  - Scope, implementation choices, deliberate SHOULD deviations and known gaps
 
 ## Installation and Usage
 

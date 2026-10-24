@@ -1,5 +1,10 @@
 # AQEF Engine API Documentation
 
+This documents the implemented API, including known differences from the specification.
+See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level
+[review](CONFORMANCE-REVIEW.md). Team scoping, schema coverage and the
+synchronous trigger are known gaps; this document does not imply full Conformance.
+
 ## Slice 5 — Human Review, panels and Seeded Controls
 
 The body of POST /executions still uses suite/environment. Optional
@@ -462,8 +467,9 @@ serializes scoped Snapshot checks, configuration writes and decision recording.
 ## Slice 2 execution API
 
 Configure provider URLs before startup as specified in [PROVIDERS.md](PROVIDERS.md).
-`POST /projects/{project}/executions` requires `execute` and exactly
-`{"suite":"suite-name","environment":"environment-name"}`. It synchronously returns
+`POST /projects/{project}/executions` requires `execute` and
+`{"suite":"suite-name","environment":"environment-name"}`, with optional `gates`
+as described above. It synchronously returns
 201 with `execution_batch_id` and `executions`, including failed executions as recorded
 infrastructure failures rather than quality verdicts. Preflight errors return 404 for
 missing resources or 422 for invalid settings, missing Variables, invalid fixed Evidence,
@@ -645,7 +651,16 @@ Governance (Volume XII; Appendix C §C.4) requires every request to resolve to a
 - **Creating Roles**:
   - `POST /roles` with payload `{"name": "contract_author", "permissions": ["read", "contract_define"]}`. Requires `role_admin`.
 - **Managing Principals**:
-  - Administrative endpoints or seeding allows creating Person and Service Account principals. A Service Account must always specify `owner_person_id`.
+  - `POST /principals` requires `role_admin`, returns 201 and accepts `id`, `kind`
+    (`person`/`service_account`), `name`, optional `email`, `team_ids` (default []),
+    `roles` (default []), `owner_person_id`, and `token`. A Service Account's owner must
+    resolve to an existing Person (422 otherwise); Person cannot have an owner.
+    Omitted/empty token falls back to the Principal id. Token is not returned.
+    Role/Team name references are stored as supplied; Team membership does not yet
+    restrict Project access (review G1). Tokens/Principal ids must be unique (409).
+    Principal/Team/Role DTOs currently ignore extra input keys, unlike strict AQEF
+    configuration DTOs. Admin Role name/permission grants wildcard permissions; actor
+    kind, Human Role, policy and currency checks still apply.
 
 ## HTTP Status Codes
 
@@ -656,9 +671,136 @@ The engine returns standard HTTP status codes consistently:
 | **200 OK** | Successful read, update, or action execution |
 | **201 Created** | Successful resource creation |
 | **204 No Content** | Successful deletion |
-| **400 Bad Request** | Malformed JSON or invalid syntax |
+| **400 Bad Request** | Resource name in a replacement/version body does not match its path |
 | **401 Unauthorized** | Missing or invalid Bearer token |
 | **403 Forbidden** | Caller lacks the required Permission for this operation |
 | **404 Not Found** | Resource or parent resource not found |
 | **409 Conflict** | Name uniqueness violation, duplicate immutable dataset version, composition conflict, or deletion referential integrity violation |
-| **422 Unprocessable Entity** | Semantic validation rule failure (e.g. invalid template variables, empty contract, mutual exclusivity violation) |
+| **422 Unprocessable Entity** | Malformed JSON, request/model validation or semantic validation failure (field paths for model errors, a reason string for explicit checks) |
+
+All collection endpoints, including configuration and governance lists, use the same
+offset/limit convention: offset defaults to 0, limit to 100, limit range 1–1000.
+Unknown query parameters are ignored. Array order follows storage insertion order
+for runtime/decision history; configuration ordering is the storage's stable order.
+Audit supports action and principal_id filters only; no date/Team filter. Dataset GET
+and rows accept optional version; omitted version uses latest registration. Query
+parameters for every operation are in the code-derived inventory artifact below.
+
+`AQEF_ADMIN_TOKEN` is consumed only when creating the initial admin Principal in a
+database; changing it later does not rotate an already stored token. Generated
+response configuration includes defaulted/null fields rather than necessarily echoing
+only supplied fields. Most AQEF configuration models reject unknown keys; governance
+models are the exception described above. A 422 reason is not guaranteed to be a string:
+request errors use FastAPI's field-path list.
+
+## Dynamic runtime response contracts
+
+The runtime examples above show representative values. These are the complete top-level
+field families used by responses whose OpenAPI output schema is unconstrained:
+
+| Response | Fields and conditions |
+|---|---|
+| Execution batch (POST) | `execution_batch_id` string, `executions` array of Execution metadata; optional `gate_evaluation` when `gates` was supplied. |
+| Execution metadata | `id`, `execution_batch_id`, `project`, `suite`, `scenario`, `environment`; nullable `dataset`/`row_id`; `variables` map; `configuration` with environment/scenario/effective contract/validators/defect_classes/execution settings; `scheduling` with strategy/order/reason/requested_by/requested_at; `status`; created_at/started_at/completed_at (latter two nullable); attempts array; retry_count; conversation nullable; partial_turns array; artifacts array; error nullable; opening_prompt nullable. `duration_ms` exists after worker collection. Fixed Evidence adds nullable source_execution. A batch containing controls adds seeded_control_results to each metadata response. |
+| Attempt | number, started_at, completed_at after completion, nullable error. Artifacts are name/data/turn; measured latency also has attempt. Failed/partial subject text stays in partial_turns. |
+| Result | id/execution/clause/oracle_type/oracle, verdict (pass/fail or null), confidence (finite number or not_applicable), disposition, supporting_evidence map, recorded_at. Optional resolves, panel, assertions are omitted when absent, never emitted as null. Derived invalidated_by appears only when applicable; review_route appears for pending Human Results and contains role, state, required_roles, captures_confidence and timeout duration. Policy and escalate_to remain in supporting_evidence.review. |
+| Gate evaluation | id, snapshot_id, execution_batch_id, gates map, result_ids, evaluated_at, result_state digest, admissions map and control_state digest. Each GateResult has id/status/blocking/threshold/value/basis; fail includes reasons; an overridden copy includes override Approval id; ThresholdMap adds metric_basis. |
+| Snapshot | id, captured_at, project, suites, environments map, contracts content-version map, inline_contracts map, quality_gates list; additionally contract_contents, effective_contracts and seeded_scenarios preserve scope reconstruction. baselines is a list of ids; release_label is optional. |
+| Report | id, generated_at, scope (project/suites/environments/execution_batch_ids), snapshot_id, gates, metrics list, signals with all six lists. Metrics have name/definition/value/result_ids; regression comparison adds baseline_id and possible_causes. |
+| Baseline | id, suite, scenario, environment, execution_id, result_id, frozen result/configuration/dataset/evidence, approval_id, approved_by/approved_at/approval_role; name optional. Evidence contains conversation and artifacts. |
+| Override record | id (GateResult id), gate, execution_batch_id, justification, approval_id and approved_by/approved_at/approval_role. It does not change stored GateResult.status. |
+| Release Policy | id/project/suites/environments/service_accounts, approval_id and approved_by/approved_at/approval_role. Revoked reads add revoked_by/revoked_at; original policy record remains unchanged. |
+| Release Decision | id/project/suite/environment/execution_batch_id, report_id/snapshot_id, decision, gates, approval_id and approved_by/approved_at/approval_role; optional release_policy and notes. |
+| Admission / Custom Validator | Admission request fields plus generated id/recorded_at/recorded_by; absent arbitrations remains absent. Custom Validator returns name/version/rule unchanged. |
+| Requalification | id, oracle, defect_class, controls (Result ids), recorded_at, recorded_by; optional diagnosis. |
+| Seeded Control entry (including confirm/invalidate responses) | id/execution_batch_id/suite/scenario/defect_class/kind/confirmed_by/confirmed; assessments and root_assessments Result-id lists; confirmation_details; policy, needs_reference_review, nullable source_execution; recorded_at/evidence_fingerprint; oracles list of oracle/outcome/result_ids; outcome/invalidation_scope/reason. Defect controls add difficulty_prior; actual misses add miss_recorded_at; Human confirmation adds confirmation_record (id/confirmed_by Person/recorded_at/supporting_evidence). |
+
+Date/time fields are ISO strings with timezone. `value` may be numeric, a metric map,
+or `not_computed`; threshold-map values can independently be `not_computed`. Supporting
+evidence is type-dependent diagnostic data, not another accepted request contract.
+Stored records are append-only except pending Human completion; response decoration
+does not overwrite historical Results. Collection reads return arrays of the same
+objects, with no envelope or total-count field.
+
+<!-- CODE_DERIVED_OPERATIONS -->
+## Registered operation inventory (slice 6)
+
+This inventory is generated from the registered FastAPI operations. Exact typed request bodies, query/header parameters, defaults and response-model properties are in [OPENAPI.json](OPENAPI.json). Dynamic runtime response dictionaries have unconstrained OpenAPI schemas; use the execution, assessment and decision shapes/examples above. This is a documented schema gap (G3), not a promise that `{}` describes their fields.
+
+Create status is listed per operation; all GET/PUT actions below return 200 unless an error occurs. HTTP errors use `{"detail": "reason"}`; request-validation errors use `{"detail":[{"loc":["body","field"],"msg":"reason","type":"..."}]}` (additional diagnostic keys may be present).
+
+| Method | Path | Success | Request / response contract |
+|---|---|---|---|
+| GET | `/teams` | 200 | no body → list of Team |
+| POST | `/teams` | 201 | Team → Team |
+| GET | `/roles` | 200 | no body → list of Role |
+| POST | `/roles` | 201 | Role → Role |
+| POST | `/principals` | 201 | PrincipalCreateRequest → Principal |
+| GET | `/projects/{project}/audit` | 200 | no body → list of AuditLogEntry |
+| GET | `/projects/{project}/approvals` | 200 | no body → list of ApprovalRecord |
+| GET | `/projects` | 200 | no body → list of Project |
+| POST | `/projects` | 201 | Project → Project |
+| GET | `/projects/{project}` | 200 | no body → Project |
+| PUT | `/projects/{project}` | 200 | Project → Project |
+| DELETE | `/projects/{project}` | 204 | no body → no body |
+| GET | `/projects/{project}/environments` | 200 | no body → list of Environment |
+| POST | `/projects/{project}/environments` | 201 | Environment → Environment |
+| GET | `/projects/{project}/environments/{env}` | 200 | no body → Environment |
+| PUT | `/projects/{project}/environments/{env}` | 200 | Environment → Environment |
+| DELETE | `/projects/{project}/environments/{env}` | 204 | no body → no body |
+| GET | `/projects/{project}/suites` | 200 | no body → list of Suite |
+| POST | `/projects/{project}/suites` | 201 | Suite → Suite |
+| GET | `/projects/{project}/suites/{suite}` | 200 | no body → Suite |
+| GET | `/projects/{project}/suites/{suite}/scenarios/{scenario}` | 200 | no body → Scenario |
+| PUT | `/projects/{project}/suites/{suite}/scenarios/{scenario}` | 200 | Scenario → Scenario |
+| DELETE | `/projects/{project}/suites/{suite}/scenarios/{scenario}` | 204 | no body → no body |
+| POST | `/projects/{project}/suites/{suite}/scenarios` | 201 | Scenario → Scenario |
+| GET | `/projects/{project}/contracts` | 200 | no body → list of Contract |
+| POST | `/projects/{project}/contracts` | 201 | Contract → Contract |
+| GET | `/projects/{project}/contracts/{contract}` | 200 | no body → Contract |
+| PUT | `/projects/{project}/contracts/{contract}` | 200 | Contract → Contract |
+| GET | `/projects/{project}/datasets` | 200 | no body → list of Dataset |
+| POST | `/projects/{project}/datasets` | 201 | Dataset → Dataset |
+| GET | `/projects/{project}/datasets/{dataset}` | 200 | no body → Dataset |
+| GET | `/projects/{project}/datasets/{dataset}/rows` | 200 | no body → list of Row |
+| POST | `/projects/{project}/datasets/{dataset}/versions` | 201 | Dataset → Dataset |
+| GET | `/projects/{project}/gates` | 200 | no body → list of QualityGate |
+| POST | `/projects/{project}/gates` | 201 | QualityGate → QualityGate |
+| PUT | `/projects/{project}/gates/{gate}` | 200 | QualityGate → QualityGate |
+| POST | `/projects/{project}/executions` | 201 | ExecutionRequest → dynamic JSON |
+| GET | `/projects/{project}/executions` | 200 | no body → dynamic JSON |
+| GET | `/projects/{project}/executions/{execution}` | 200 | no body → dynamic JSON |
+| GET | `/projects/{project}/executions/{execution}/conversation` | 200 | no body → dynamic JSON |
+| GET | `/projects/{project}/executions/{execution}/artifacts` | 200 | no body → dynamic JSON |
+| GET | `/projects/{project}/executions/{execution}/results` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/admissions` | 201 | AdmissionRequest → dynamic JSON |
+| GET | `/projects/{project}/admissions` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/validators` | 201 | CustomValidator → dynamic JSON |
+| GET | `/projects/{project}/validators` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/gates/check` | 200 | BatchRequest → dynamic JSON |
+| POST | `/projects/{project}/snapshots` | 201 | SnapshotRequest → dynamic JSON |
+| GET | `/projects/{project}/snapshots` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/reports` | 201 | BatchRequest → dynamic JSON |
+| GET | `/projects/{project}/reports` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/gates/{gate}/override` | 201 | OverrideRequest → dynamic JSON |
+| POST | `/projects/{project}/baselines` | 201 | BaselineRequest → dynamic JSON |
+| GET | `/projects/{project}/baselines` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/release-policies` | 201 | PolicyRequest → dynamic JSON |
+| GET | `/projects/{project}/release-policies` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/release-policies/{policy}/revoke` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/releases` | 201 | ReleaseRequest → dynamic JSON |
+| GET | `/projects/{project}/releases` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/executions/{execution}/results/{result}/review` | 201 | ReviewRequest → dynamic JSON |
+| POST | `/projects/{project}/executions/{execution}/results/{result}/reassess` | 201 | ReassessRequest → dynamic JSON |
+| GET | `/projects/{project}/snapshots/{key}` | 200 | no body → dynamic JSON |
+| GET | `/projects/{project}/baselines/{key}` | 200 | no body → dynamic JSON |
+| GET | `/projects/{project}/reports/{key}` | 200 | no body → dynamic JSON |
+| GET | `/projects/{project}/releases/{key}` | 200 | no body → dynamic JSON |
+| GET | `/projects/{project}/release-policies/{key}` | 200 | no body → dynamic JSON |
+| POST | `/projects/{project}/executions/{execution}/seeded-controls/{scenario}/confirm` | 201 | ConfirmRequest → dynamic JSON |
+| POST | `/projects/{project}/executions/{execution}/seeded-controls/{scenario}/invalidate` | 201 | InvalidateRequest → dynamic JSON |
+| POST | `/projects/{project}/requalifications` | 201 | RequalificationRequest → dynamic JSON |
+| GET | `/projects/{project}/requalifications` | 200 | no body → dynamic JSON |
+| GET | `/healthz` | 200 | no body → dynamic JSON |
+
+Framework `/docs`, `/docs/oauth2-redirect`, `/redoc` and `/openapi.json` also require a bearer token (401 without one). They are not Reference UI. `/healthz` returns `{"status":"ok","specification_version":"0.41.1"}` with authentication. To view browser documentation, the browser must supply the Authorization header; no login/cookie flow is provided.

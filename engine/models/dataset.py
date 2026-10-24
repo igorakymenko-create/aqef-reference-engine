@@ -37,7 +37,7 @@ class MechanismConfig(AQEFBaseModel):
 
 class Row(AQEFBaseModel):
     id: str = Field(..., min_length=1)
-    variables: Dict[str, Any] = Field(default_factory=dict)
+    variables: Dict[str, Any]
 
 
 class Dataset(AQEFBaseModel):

@@ -1,5 +1,47 @@
 # Ambiguities Log
 
+## 30. Scope declaration while mandatory gaps remain
+- **Section:** Front Matter §10 Conformance Statement / non-negotiable core; BRIEF §3.
+- **Quotation:** “satisfies every applicable MUST-level requirement”; “core ... is part
+  of every claim and is not listed”; “does not show that the checks pass”.
+- **Readings:** label the implemented surface conformant because its unit suite passes,
+  or publish the requested scope with explicit failure to establish full compliance.
+- **Choice:** the statement targets 0.41.1 and lists human_review/multi_judge/
+  seeded_controls, never core as a capability identifier. It explicitly withholds an
+  unqualified conformance assertion while review G1–G8/U1 remain. Topology cannot waive
+  them. Related happy-path tests do not prove all required-field/type rejection cases;
+  untested units remain individual findings rather than fabricated coverage.
+
+## 31. Asynchronous REST versus synchronous Scheduling
+- **Section:** Appendix C C.3 Triggering; Volume XVII Minimal Engine.
+- **Quotation:** “Executions are asynchronous”; “synchronous Scheduling ... never which
+  rule applies”.
+- **Readings:** minimal topology permits the existing blocking POST, or only permits
+  synchronous workers behind the asynchronous REST operation.
+- **Choice:** conservatively record the blocking POST as G7, not as an exemption from
+  C.3. Entry 8 describes actual behavior but no longer justifies full compliance.
+  Optional gates were added in slice 5; no background-job feature is added in slice 6.
+
+## 32. Composition includes policies
+- **Section:** Volume VII Contract Composition; Appendix B B.3 Effective Contract.
+- **Quotation:** “Constraints, Expectations, and Policies”; “MUST NOT remove or weaken”.
+- **Readings:** same-ID clause conflict checks suffice, or an inherited policy must
+  also resist weakening by a lower-level OR/weight change.
+- **Choice:** the conservative review treats inherited policy weakening as G5. Existing
+  policy replacement remains visible, but is not asserted conformant. A complete
+  policy merge/ordering design and migration is larger than a small slice 6 fix.
+
+## 33. Execution timeout boundary includes assessment
+- **Section:** Volume III Timeouts; Volume VI Human Review (Oracle call attempts).
+- **Quotation:** “a runtime bound ... to abort a turn or an entire Execution”;
+  “within the Execution's timeout”.
+- **Readings:** timeout resets per assessment after collection, or bounds the whole
+  collected/assessed Execution (excluding pending human response routing).
+- **Choice:** the conservative review records separate per-Judge budgets/no preemptive
+  Validator bound as G8. Entries 7/11 describe the subject deadline and entry 16 the
+  separate assessment budget; they do not establish the stronger end-to-end bound.
+  No cancellation/scheduler redesign is silently introduced in the documentation slice.
+
 ## 25. Panel Confidence and unavailable members
 - **Section:** VI Consensus/Voting/Confidence; A.7; C.7.
 - **Quotation:** “not ... a substitute for a Judge's own stated Confidence”; “panel ... counted”.
@@ -290,7 +332,8 @@
 - **Choice:** failed runs expose no completed Conversation (409), but store partial turns,
   artifacts and attempts for diagnosis, never assessed. Fixed Conversation must be the
   same nonempty `{turns: [{prompt: string, response: string}]}` shape as live output;
-  reject invalid fixed Evidence at batch preflight. Optional source_execution is retained;
+  reject invalid fixed Evidence at configuration load/change (D-5, slice-5.1), with
+  defensive batch preflight validation as well. Optional source_execution is retained;
   absence is allowed because provenance is SHOULD, and cannot be fabricated by the engine.
 
 ## 11. Placeholder values and runtime bounds

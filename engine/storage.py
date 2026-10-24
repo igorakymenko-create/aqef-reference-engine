@@ -443,6 +443,10 @@ class Storage:
             return Role(name=row["name"], permissions=json.loads(row["permissions_json"]))
 
     def create_principal(self, principal: Principal, token: Optional[str] = None) -> Principal:
+        if principal.kind == PrincipalKind.SERVICE_ACCOUNT:
+            owner = self.get_principal(principal.owner_person_id)
+            if owner is None or owner.kind != PrincipalKind.PERSON:
+                raise StorageConflictError("owner_person_id must name an existing Person")
         with self._get_connection() as conn:
             try:
                 conn.execute(

@@ -8,7 +8,7 @@ References:
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from engine.auth import check_permission
 from engine.models.environment import Environment
 from engine.models.principal import Principal
@@ -19,9 +19,9 @@ def get_environments_router(storage: Storage, get_principal_dep) -> APIRouter:
     router = APIRouter(prefix="/projects/{project}/environments", tags=["Environments"])
 
     @router.get("", response_model=List[Environment])
-    def list_environments(project: str, current_user: Principal = Depends(get_principal_dep)):
+    def list_environments(project: str, offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "read", storage)
-        return storage.list_environments(project)
+        return storage.list_environments(project)[offset:offset + limit]
 
     @router.post("", response_model=Environment, status_code=status.HTTP_201_CREATED)
     def create_environment(

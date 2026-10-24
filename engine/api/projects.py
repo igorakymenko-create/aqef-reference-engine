@@ -26,9 +26,9 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
     router = APIRouter(prefix="/projects", tags=["Projects"])
 
     @router.get("", response_model=List[Project])
-    def list_projects(current_user: Principal = Depends(get_principal_dep)):
+    def list_projects(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "read", storage)
-        return storage.list_projects()
+        return storage.list_projects()[offset:offset + limit]
 
     @router.post("", response_model=Project, status_code=status.HTTP_201_CREATED)
     def create_project(

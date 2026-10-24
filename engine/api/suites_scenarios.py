@@ -8,7 +8,7 @@ References:
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from engine.auth import check_permission, enforce_governed_contract_define
 from engine.models.principal import Principal
 from engine.models.scenario import Scenario
@@ -22,9 +22,9 @@ def get_suites_scenarios_router(storage: Storage, get_principal_dep) -> APIRoute
     # --- Suites ---
 
     @router.get("", response_model=List[Suite])
-    def list_suites(project: str, current_user: Principal = Depends(get_principal_dep)):
+    def list_suites(project: str, offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "read", storage)
-        return storage.list_suites(project)
+        return storage.list_suites(project)[offset:offset + limit]
 
     @router.post("", response_model=Suite, status_code=status.HTTP_201_CREATED)
     def create_suite(
