@@ -1,14 +1,39 @@
 # AQEF Reference Engine
 
-A reference implementation of the **[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF/tree/0.41.5)**, Working Draft 0.41.5.
+A minimal engine that implements the
+**[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF)**,
+Working Draft [0.41.5](https://github.com/igorakymenko-create/AQEF/tree/0.41.5): an open
+specification for testing AI systems, with Quality Contracts, independent Judges,
+Confidence, Seeded Controls, Quality Gates, and governed Release Decisions.
 
-The engine claims **AQEF Conformance at 0.41.5** for Human Review, Multi Judge and
-Seeded Controls, with the core implicit. The [Conformance Statement](docs/CONFORMANCE-STATEMENT.md)
-declares the scope, implementation choices, skipped SHOULDs and owner-reported external
-evidence. The [normative review](docs/CONFORMANCE-REVIEW.md) lists known verification
-work separately; no classification-(a) implementation finding remains.
+**Why it exists.** It shows that the specification can be implemented as written. It is
+a feasibility proof, not a product: one process, SQLite, and a plain HTTP interface for
+the system under test and its Judges ([docs/PROVIDERS.md](docs/PROVIDERS.md)).
 
-OpenAPI is published as API documentation, not as an AQEF JSON Schema artifact.
+**How it was built.** An AI coding agent wrote it from the specification text alone,
+in eleven slices, one tag each (`slice-1` to `slice-11`). The agent never saw the AQEF
+Conformance Test Specification. Every unclear point in the text was recorded in
+[docs/AMBIGUITIES.md](docs/AMBIGUITIES.md), not decided silently. After each slice, the
+project owner ran the Conformance Tests against it. Engine defects came back here; a
+point the specification left unclear went back to the specification, as a new release.
+
+**Conformance.** The engine claims AQEF Conformance at 0.41.5 for the core and for
+`human_review`, `multi_judge`, and `seeded_controls`. See:
+- the [Conformance Statement](docs/CONFORMANCE-STATEMENT.md): its scope, its
+  implementation choices, and the SHOULDs it does not follow;
+- the [normative review](docs/CONFORMANCE-REVIEW.md): rule by rule, where each MUST is
+  met, and the verification work that remains.
+
+The external run of the AQEF Conformance Tests, Working Draft 9, found no failure: 171
+passed, 32 were not applicable to the claimed capabilities, and 9 await manual review.
+The tests are published with the specification, in its `conformance-tests/` folder and
+as a PDF on each release.
+
+OpenAPI ([docs/OPENAPI.json](docs/OPENAPI.json)) is published as API documentation,
+not as an AQEF JSON Schema artifact.
+
+**License.** Apache 2.0 ([LICENSE](LICENSE)). The AQEF specification itself is CC BY
+4.0, in its own repository.
 
 ## Completed Slices
 
