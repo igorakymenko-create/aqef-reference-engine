@@ -1,15 +1,17 @@
 # AQEF Conformance Statement — scope and qualifications
 
-Issued 2026-10-24 for **AQEF Reference Engine, slice-6**, Python 3.12 / FastAPI /
+Issued 2026-10-24 for **AQEF Reference Engine, slice-7**, Python 3.12 / FastAPI /
 SQLite, one self-hosted application process. Specification target: the bundled
-**AQEF Working Draft 0.41.1**. The source is in this repository's `spec/` directory.
-Owner decisions O-1/O-2 are recorded in AMBIGUITIES.md; O-2 was announced for 0.41.2,
-but this implementation does **not** assert conformance to an unseen 0.41.2 release.
+**AQEF Working Draft 0.41.3**. Release source ref is `0.41.3` in the upstream AQEF
+repository; the local ignored `spec/` kit has the updated normative texts. Exact
+retrieved paths and source blob IDs are in [SPECIFICATION-SOURCES.json](SPECIFICATION-SOURCES.json).
+Published 0.41.2 adopts owner decisions O-1/O-2 already implemented here; 0.41.3 adds
+uncomputed-aggregate reasons, dimension Gate coverage and pre-run SHOULD checks.
 
 ```yaml
 aqef_conformance:
-  specification_version: "0.41.1"
-  implementation: "AQEF Reference Engine slice-6"
+  specification_version: "0.41.3"
+  implementation: "AQEF Reference Engine slice-7"
   capabilities:
     - human_review
     - multi_judge
@@ -81,6 +83,7 @@ choice's completeness is disputed or unproven it appears in the review as a find
 | VIII placement/source/confirmation timing | No guarantee a prompt plant survives into subject Evidence; failed confirmations remain invalid. Fixed Evidence source_execution is optional and not verified for recent/same-Environment derivation. Human confirmation may be late, with derived invalidation and fresh Gate evaluation thereafter. |
 | C.6 filtering | Execution and Result filters exist; audit lacks date/Team filters and Baselines lack scenario/environment filters. Small implementation keeps records available through paginated unfiltered reads. G2 pagination was fixed, not waived as a SHOULD. |
 | A/B/C generated artifacts | OpenAPI is generated from actual FastAPI models/operations and published as documentation; no independent complete schema generation from prose or generated SDK/CLI is supplied. Runtime schema completeness remains G3. |
+| III Execution Pipeline (0.41.3) | No pre-invocation requester report for a blocking Project Gate that the requested Suite cannot feed, or for unreachable Judges; no proceed interaction/flag. Synchronous POST has no separate pre-run interaction phase; providers expose only real assessment POSTs, not an availability-only operation. Synthetic Evidence would obtain a real verdict and cannot guarantee reachability for actual Evidence. Global Gate coverage is enforced; later unavailable Results block, but these do not fulfill the recommended checks. This is an explicit skipped SHOULD, not an implemented preflight capability. |
 
 Cheapest-first built-in Validation, pure Custom Validator inputs without clock/random/
 network, controls before ordinary assessments, fail-fast affected Oracle suppression,
@@ -110,8 +113,8 @@ Review finding G2 (older-list pagination) was repaired in slice 6 and is not an 
 This statement cannot provide a passing external conformance result, independent
 certification, verifiable external model ancestry, a complete MUST-coverage proof, or
 assurance about undisclosed provider behavior. None is invented. No AQEF conformance
-test material was accessed. The local whole suite passes **318 tests**, with one
+test material was accessed. The local whole suite passes **386 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
-The statement applies to the source published under tag `slice-6`; it does not assert
+The statement applies to the source published under tag `slice-7`; it does not assert
 that arbitrary deployment settings or later changes preserve these properties.

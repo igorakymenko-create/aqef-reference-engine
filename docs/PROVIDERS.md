@@ -1,4 +1,10 @@
-# HTTP provider interface — slices 2–5
+# HTTP provider interface — slices 2–7, AQEF WD 0.41.3
+
+The wire protocol is unchanged by 0.41.3. Volume III's recommended pre-invocation
+reachability check is deliberately not implemented: no availability-only request exists
+in this protocol, and a synthetic Evidence POST would create an actual Judge verdict.
+No health handshake, new request field or proceed flag is implied. The pre-run SHOULD
+deviations are declared in CONFORMANCE-STATEMENT.md and IMPLEMENTATION_NOTES.md.
 
 ## Startup mapping
 

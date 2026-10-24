@@ -1,5 +1,24 @@
 # Ambiguities Log
 
+Current target: **AQEF WD 0.41.3**. Earlier version numbers below describe historical
+decisions; adopted clarifications and remaining interpretations are identified explicitly.
+
+## 35. Missing current clauses and a not-computed full aggregate (0.41.3)
+- **Section:** I Ch.6 Quality Gates; A.12 reasons; B.3 Aggregate Basis reporting.
+- **Quotation:** “no aggregate could be computed and value is not_computed”; “alongside
+  every other reason that applies”.
+- **Readings:** report a numeric aggregate from the existing subset with insufficient_basis,
+  or treat the complete current-scope aggregate as uncomputable when a required current
+  clause/Scenario has no Result. The new wording explicitly settles zero-actionable basis,
+  but does not expressly define the partial-current-requirements case.
+- **Choice:** conservatively do not display a partial subset as the requested complete
+  aggregate. Set value to not_computed, retain existing usable evidence in Basis, and fail
+  with insufficient_basis plus every applicable other reason. Thus the reason fits A.12's
+  not_computed branch. The zero-actionable question in entry 21 is closed by 0.41.3;
+  the completeness interpretation remains explicit here, not silently attributed to the text.
+  A.12 allows a numeric Map or the top-level not_computed marker; an incompletely
+  computable ThresholdMap uses that marker, never a mixed numeric/string map.
+
 ## 34. D-6 audit scope and global actions
 - **Section:** XII Principals/Audit; C.4/C.8.
 - **Quotation:** “Every action Governance checks”; “Audit records which kind of Principal
@@ -18,7 +37,8 @@
   of every claim and is not listed”; “does not show that the checks pass”.
 - **Readings:** label the implemented surface conformant because its unit suite passes,
   or publish the requested scope with explicit failure to establish full compliance.
-- **Choice:** the statement targets 0.41.1 and lists human_review/multi_judge/
+- **Choice:** the statement initially targeted 0.41.1; slice 7 moves that target to
+  0.41.3 with the same scope and qualifications. It lists human_review/multi_judge/
   seeded_controls, never core as a capability identifier. It explicitly withholds an
   unqualified conformance assertion while review G1–G8/U1 remain. Topology cannot waive
   them. Related happy-path tests do not prove all required-field/type rejection cases;
@@ -162,6 +182,10 @@
   No Evidence gives not_computed and insufficient_basis. Safety Validator failures veto
   independently. Missing applicable current clauses/results are insufficient_basis,
   never a fabricated Result. Regression threshold is maximum regression rate.
+  **0.41.3 resolution:** I Ch.6/A.12/B.3 now explicitly require not_computed plus
+  insufficient_basis when no actionable Result remains. That uncertainty is closed.
+  Missing current clauses now also make the full value not_computed; the remaining
+  conservative completeness interpretation is recorded separately in entry 35.
 
 ## 22. Snapshot versions and Baseline identity
 - **Sections:** A.11/A.13; X Baselines and Snapshot Comparison.
@@ -257,6 +281,8 @@
 
 ## 19. O-2 — Custom Validator expected (decided by the project owner)
 - **Section:** Appendix A §A.5, clarification announced for 0.41.2 by the project owner.
+- **Now normative:** the published 0.41.2 text, retained in 0.41.3 A.5, requires this
+  load-time rejection; it is no longer only an anticipated owner clarification.
 - **Owner decision:** “a structure it does not accept MUST be rejected when the
   configuration is loaded, naming the clause”; “accept expected: {} ... alongside null”.
 - **Earlier choice (superseded):** only null, with unsupported values discovered during
@@ -359,7 +385,7 @@
   accept positive decimal ms/s/m/h; timeout covers the entire Execution including retries
   and all turns, excluding scheduling wait. No new subject invocation after expiration.
 
-This document records points in the AQEF specification (Working Draft 0.41.1) where the text allows more than one reading, following Rule 3 of the Implementer's Brief:
+This document records points in the AQEF specification (current Working Draft 0.41.3) where the text allows more than one reading, following Rule 3 of the Implementer's Brief:
 - Pick the more conservative reading (rejects more, blocks more, records more).
 - Never decide an ambiguity silently.
 - Record: Section, Quotation, Readings seen, Choice and rationale.

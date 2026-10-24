@@ -1,6 +1,6 @@
 # AQEF Reference Engine
 
-A reference implementation of the **[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF)**, Working Draft 0.41.1.
+A reference implementation of the **[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF/tree/0.41.3)**, Working Draft 0.41.3.
 
 The engine implements the core loop and Human Review, Multi Judge and Seeded Controls.
 The [Conformance Statement](docs/CONFORMANCE-STATEMENT.md) declares its offered scope
@@ -34,6 +34,9 @@ Conformance is not asserted while mandatory gaps remain.
 - [x] **Slice 6: Conformance Statement**
   - Specification rule ledger with implementation/test references and explicit findings
   - Scope, implementation choices, deliberate SHOULD deviations and known gaps
+- [x] **Slice 7: Working Draft 0.41.3**
+  - Dimension Gate coverage at load/change and uncomputable aggregate reasons
+  - Schema/Custom Validator clarifications confirmed; pre-run SHOULD deviations documented
 
 ## Installation and Usage
 

@@ -232,6 +232,9 @@ def test_quality_gates_api(client):
         "/projects",
         json={
             "name": "proj_gates",
+            "suites": [{"name":"s", "scenarios":[{"name":"a", "prompt":{"template":"hello"},
+                "contract":{"constraints":[{"validator":"forbidden-content", "target":"response",
+                    "expected":{"patterns":[]}}]}}]}],
             "environments": [
                 {
                     "name": "dev",
@@ -272,8 +275,9 @@ def test_quality_gates_api(client):
     # Verify audit log captures both gate mutations under contract_define
     res = client.get("/projects/proj_gates/audit?action=contract_define", headers=headers)
     assert res.status_code == 200
-    assert len(res.json()) == 2
-    assert all(entry["action"] == "contract_define" for entry in res.json())
+    gate_entries = [entry for entry in res.json() if "/gates" in entry["details"]["target"]]
+    assert len(gate_entries) == 2
+    assert all(entry["action"] == "contract_define" for entry in gate_entries)
 
 
 def test_defect_1_omitted_tool_configuration_rejected(client):

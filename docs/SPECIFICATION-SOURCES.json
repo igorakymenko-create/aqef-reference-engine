@@ -1,0 +1,54 @@
+{
+  "specification_version": "0.41.3",
+  "repository": "https://github.com/igorakymenko-create/AQEF",
+  "ref": "0.41.3",
+  "retrieved_date": "2026-10-24",
+  "scope": "Exact known specification file paths only; local spec kit remains ignored by Git.",
+  "files": [
+    {
+      "path": "front-matter/00-document-status.md",
+      "blob_sha": "1044ba01f0d82523d9ec1ff37aadc214b08a5268",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/front-matter/00-document-status.md"
+    },
+    {
+      "path": "front-matter/01-revision-history.md",
+      "blob_sha": "8f5ae8d23eaaf156e1a459fc9fbb511b00f6ba52",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/front-matter/01-revision-history.md"
+    },
+    {
+      "path": "part-i-foundations/volume-i-architecture-concepts.md",
+      "blob_sha": "5b154c88474ada3623fee593a34817857b53ff16",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/part-i-foundations/volume-i-architecture-concepts.md"
+    },
+    {
+      "path": "part-ii-execution/volume-iii-execution-engine.md",
+      "blob_sha": "9901ea456c728a1d1d8820bab386faa6a9cd6a94",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/part-ii-execution/volume-iii-execution-engine.md"
+    },
+    {
+      "path": "part-ii-execution/volume-v-validator-engine.md",
+      "blob_sha": "a86c8e9b54550e6d9b0cb51fe3ca8fe372454680",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/part-ii-execution/volume-v-validator-engine.md"
+    },
+    {
+      "path": "appendices/appendix-a-yaml-specification.md",
+      "blob_sha": "182760f4048acdca210bd91a1afb9cc8b78aef5e",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/appendices/appendix-a-yaml-specification.md"
+    },
+    {
+      "path": "appendices/appendix-b-json-schema.md",
+      "blob_sha": "a482ebd2c8066ea1bb60be01e8f0529e778117e6",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/appendices/appendix-b-json-schema.md"
+    },
+    {
+      "path": "appendices/appendix-h-reference-examples.md",
+      "blob_sha": "9af43c50a2eac502f28321dddb5e64ddd1ffe9da",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/appendices/appendix-h-reference-examples.md"
+    },
+    {
+      "path": "README.md",
+      "blob_sha": "19b14557b9a2393dc772a2ec19b263692ba732fb",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.3/README.md"
+    }
+  ]
+}

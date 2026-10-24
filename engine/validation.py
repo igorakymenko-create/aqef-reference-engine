@@ -20,6 +20,35 @@ class ConfigurationValidationError(ValueError):
     pass
 
 
+def validate_gate_coverage(project: Project, lookup_contract=None) -> None:
+    """WD 0.41.3 A.10/B.3: dimension Gates need a non-control clause in scope."""
+    dimensions = {"functional", "semantic", "operational", "safety"}
+    if not any(g.aggregate in dimensions for g in project.quality_gates) and not any(
+        g.aggregate in dimensions for suite in project.suites for g in suite.quality_gates
+    ):
+        return
+    covered = {}
+    for suite in project.suites:
+        found = set()
+        for scenario in suite.scenarios:
+            if scenario.seeded_control is not None:
+                continue
+            try:
+                contract = compose_scenario_effective_contract(project.contracts, suite.contracts,
+                    scenario.contract, lookup_contract)
+            except ValueError as exc:
+                raise ConfigurationValidationError(f"Gate coverage: cannot resolve Contract for '{suite.name}/{scenario.name}': {exc}") from exc
+            found.update(clause.dimension.value for clause in [*contract.constraints, *contract.expectations])
+        covered[suite.name] = found
+        for gate in suite.quality_gates:
+            if gate.aggregate in dimensions and gate.aggregate not in found:
+                raise ConfigurationValidationError(f"Quality Gate '{gate.name}' aggregate '{gate.aggregate}' has no non-Seeded-Control clause in Suite '{suite.name}' (A.10/B.3 Gate coverage)")
+    all_dimensions = set().union(*covered.values()) if covered else set()
+    for gate in project.quality_gates:
+        if gate.aggregate in dimensions and gate.aggregate not in all_dimensions:
+            raise ConfigurationValidationError(f"Quality Gate '{gate.name}' aggregate '{gate.aggregate}' has no non-Seeded-Control clause in Project '{project.name}' (A.10/B.3 Gate coverage)")
+
+
 def validate_project_configuration(
     project: Project,
     lookup_reusable_contract: Optional[Callable[[str], Optional[Contract]]] = None,
@@ -126,3 +155,5 @@ def validate_project_configuration(
                                     f"Dataset '{scenario.dataset}' row '{row.id}' lacks required variables {missing} "
                                     f"for Scenario '{scenario.name}' prompt template"
                                 )
+
+    validate_gate_coverage(project, lookup_reusable_contract)

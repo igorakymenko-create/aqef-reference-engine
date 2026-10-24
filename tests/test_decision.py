@@ -181,7 +181,7 @@ def test_unnamed_clause_whole_contract_staleness(harness):
 
 
 def test_override_bound_to_one_evaluation_and_report_freeze(harness):
-    _,client,_=setup(harness,[gate(threshold=1)],checks=[constraint("forbidden-content","response",{"patterns":["bad"]},id="bad")])
+    _,client,_=setup(harness,[gate(threshold=1)],checks=[constraint("forbidden-content","response",{"patterns":["bad"]},id="bad",dimension="functional")])
     batch=run(client)["execution_batch_id"]; evaluation=check(client,batch); before=report(client,batch)
     g=evaluation["gates"]["functional"]
     body={"execution_batch_id":batch,"gate_result_id":g["id"],"justification":"explicit risk acceptance"}
@@ -201,7 +201,7 @@ def test_override_bound_to_one_evaluation_and_report_freeze(harness):
 
 
 def test_advisory_gates_in_release_no_gate_cannot_release(harness):
-    _,client,_=setup(harness,[gate("warn",aggregate="semantic",on_failure="warn")])
+    _,client,_=setup(harness,[gate("warn",aggregate="semantic",on_failure="warn")],expectations=[expectation()])
     batch=run(client)["execution_batch_id"]; r=report(client,batch)
     assert r["gates"]["warn"]["status"]=="fail" and not r["gates"]["warn"]["blocking"]
     post(client,"releases",release_body(batch,r))
@@ -410,7 +410,7 @@ def test_decision_atomic_permissions(harness,method,path,body):
 
 
 def test_gate_specific_override_permission(harness):
-    app,client,_=setup(harness,[gate(override_requires="special-safety")],checks=[constraint("forbidden-content","response",{"patterns":["bad"]},id="bad")])
+    app,client,_=setup(harness,[gate(override_requires="special-safety")],checks=[constraint("forbidden-content","response",{"patterns":["bad"]},id="bad",dimension="functional")])
     app.state.storage.create_role(Role(name="override-only",permissions=["gate_override"]))
     app.state.storage.create_principal(Principal(id="person",name="Person",kind=PrincipalKind.PERSON,roles=["override-only"]),token="person")
     batch=run(client)["execution_batch_id"];g=check(client,batch)["gates"]["functional"]
@@ -452,7 +452,7 @@ def test_d4_c10_low_confidence_includes_zero_inconclusive_denominators(harness,m
 
 
 def test_rejected_service_release_and_no_override_authority(harness):
-    app,client,_=setup(harness,[gate()],checks=[constraint("forbidden-content","response",{"patterns":["bad"]},id="bad")])
+    app,client,_=setup(harness,[gate()],checks=[constraint("forbidden-content","response",{"patterns":["bad"]},id="bad",dimension="functional")])
     automation=bot(app)
     batch=run(client)["execution_batch_id"];r=report(client,batch)
     policy=post(client,"release-policies",{"suites":["s"],"environments":["test"],"service_accounts":["bot"]})

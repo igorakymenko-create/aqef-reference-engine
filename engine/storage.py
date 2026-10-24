@@ -9,6 +9,7 @@ References:
 import json
 import sqlite3
 import uuid
+from inspect import signature
 from threading import RLock
 from functools import wraps
 from datetime import datetime, timezone
@@ -45,11 +46,57 @@ def synchronized(method):
     @wraps(method)
     def locked(self, *args, **kwargs):
         with self.config_lock:
+            self._validate_gate_coverage_change(method.__name__, signature(method).bind(self, *args, **kwargs).arguments)
             return method(self, *args, **kwargs)
     return locked
 
 
 class Storage:
+    def _validate_gate_coverage_change(self, operation, parameters):
+        """Validate staged live definitions before any SQL mutation can take effect."""
+        changes = {"create_project", "update_project", "create_suite", "create_scenario",
+            "update_scenario", "delete_scenario", "create_contract", "update_contract",
+            "create_quality_gate", "update_quality_gate", "create_environment",
+            "update_environment", "delete_environment", "create_dataset"}
+        if operation not in changes:
+            return
+        proposed = parameters.get("project")
+        project_name = proposed.name if proposed is not None else parameters["project_name"]
+        current = proposed if proposed is not None else self.get_project(project_name)
+        if current is None:
+            return  # Preserve the operation's existing not-found response.
+        candidate = current.model_copy(deep=True)
+        registry = {c.name:c for c in self.list_contracts(project_name)}
+        registry.update({c.name:c for c in candidate.contracts if isinstance(c, Contract) and c.name})
+        if operation in ("create_contract", "update_contract"):
+            contract = parameters["contract"]
+            registry[contract.name] = contract
+            candidate.contracts = [contract if isinstance(c, Contract) and c.name == contract.name else c for c in candidate.contracts]
+        elif operation == "create_suite":
+            candidate.suites.append(parameters["suite"])
+        elif operation in ("create_scenario", "update_scenario", "delete_scenario"):
+            suite = next((s for s in candidate.suites if s.name == parameters["suite_name"]), None)
+            if suite is None:
+                return
+            if operation == "create_scenario":
+                suite.scenarios.append(parameters["scenario"])
+            elif operation == "update_scenario":
+                replacement = parameters["scenario"]
+                suite.scenarios = [replacement if sc.name == replacement.name else sc for sc in suite.scenarios]
+            else:
+                suite.scenarios = [sc for sc in suite.scenarios if sc.name != parameters["scenario_name"]]
+                if not suite.scenarios:
+                    return  # Existing Suite cardinality rule rejects removing its last Scenario.
+        elif operation == "create_quality_gate":
+            candidate.quality_gates.append(parameters["gate"])
+        elif operation == "update_quality_gate":
+            gate = parameters["gate"]
+            candidate.quality_gates = [gate if g.name == gate.name else g for g in candidate.quality_gates]
+            for suite in candidate.suites:
+                suite.quality_gates = [gate if g.name == gate.name else g for g in suite.quality_gates]
+        from engine.validation import validate_gate_coverage
+        validate_gate_coverage(candidate, registry.get)
+
     def __init__(self, db_path: str = ":memory:"):
         self.db_path = db_path
         self.config_lock = RLock()
@@ -854,6 +901,7 @@ class Storage:
 
     # ---------------- Datasets (Versioned) ----------------
 
+    @synchronized
     def create_dataset(self, project_name: str, dataset: Dataset) -> Dataset:
         # Appendix B §B.3:
         # "Two configurations referencing the same Dataset name + version MUST resolve to identical rows."
@@ -906,6 +954,7 @@ class Storage:
 
     # ---------------- Reusable Contracts ----------------
 
+    @synchronized
     def create_contract(self, project_name: str, contract: Contract) -> Contract:
         if not contract.name:
             raise ValueError("Reusable Contract must have a 'name'")

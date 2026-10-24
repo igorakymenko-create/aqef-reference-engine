@@ -52,6 +52,7 @@ def test_a4_fixed_evidence_conversation_rejected_at_every_configuration_load(har
     """Appendix A A.4 FixedEvidence: require the stored Execution Conversation form."""
     app, client, calls = harness
     valid = frame([control()])
+    valid["quality_gates"] = []  # A.10 0.41.3: controls alone cannot cover a dimension Gate.
     bad = deepcopy(valid)
     bad["suites"][0]["scenarios"][0]["evidence"]["conversation"] = conversation
     if route != "project_post":

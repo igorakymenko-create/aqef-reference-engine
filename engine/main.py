@@ -25,6 +25,7 @@ from engine.api.assessment import get_assessment_router
 from engine.api.decision import get_decision_router
 from engine.api.scoped import get_scoped_router
 from engine.audit import AuditRequest, active_audit, commit_audit
+from engine.validation import ConfigurationValidationError
 
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
@@ -61,8 +62,8 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     app = FastAPI(
         title="AQEF Reference Engine",
-        version="0.41.1",
-        description="Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.1",
+        version="0.41.3",
+        description="Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.3",
         lifespan=lifespan,
     )
     app.state.storage = storage
@@ -94,6 +95,10 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     async def storage_conflict(request: Request, exc: StorageConflictError):
         return JSONResponse(status_code=409, content={"detail":str(exc)})
 
+    @app.exception_handler(ConfigurationValidationError)
+    async def invalid_configuration(request: Request, exc: ConfigurationValidationError):
+        return JSONResponse(status_code=422, content={"detail":str(exc)})
+
     # Register Routers
     app.include_router(get_governance_router(storage, principal_dep))
     app.include_router(get_projects_router(storage, principal_dep))
@@ -109,7 +114,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     @app.get("/healthz", tags=["System"])
     def health_check():
-        return {"status": "ok", "specification_version": "0.41.1"}
+        return {"status": "ok", "specification_version": "0.41.3"}
 
     return app
 

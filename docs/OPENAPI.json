@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AQEF Reference Engine",
-    "description": "Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.1",
-    "version": "0.41.1"
+    "description": "Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.3",
+    "version": "0.41.3"
   },
   "paths": {
     "/teams": {

@@ -1,5 +1,65 @@
 # Implementation Notes
 
+## Slice 7 — Completed Work (WD 0.41.3)
+
+- Read published revision history for 0.41.2/0.41.3 and changed normative texts through
+  exact GitHub file paths at release ref 0.41.3. SPECIFICATION-SOURCES.json records the
+  nine retrieved paths and blob IDs; the local ignored specification kit and Brief
+  now target 0.41.3. No external test material accessed or added to the repository.
+- Confirmed O-1 via test_o1_volume_v_schema_applies_to_evidence_value (V/A.5); confirmed
+  O-2 via test_owner_o2_invalid_custom_expected_rejected_at_load_naming_clause and
+  test_owner_o2_parameterless_custom_expected_forms (A.5). No Validator behavior changed.
+- Gate coverage validates non-control composed clauses, including defaults, inherited
+  clauses and reusable extends. Project Gates cover every Suite, Suite Gates only their
+  own Suite. Staged validation precedes SQL writes across Project/Gate/Suite/Scenario/
+  Contract changes, including removing the last matching clause by edit or deletion.
+- Zero usable actionable Results produce not_computed plus insufficient_basis and all
+  other reasons. Missing current clauses/Scenarios now produce not_computed rather than
+  a numeric partial aggregate. Entry 21's zero-actionable uncertainty is closed by the
+  specification; entry 35 retains the explicit conservative completeness interpretation.
+- New tests/test_slice_7.py covers seven no-actionable causes, a computable actionable
+  failure, missing clause/Scenario, four dimensions at Project/Suite scope, no Suites/
+  wrong dimension/control-only coverage, every affected mutation path, reusable extends,
+  atomic rejection, removing Gate+clause together, non-dimension exemptions and public
+  version metadata. Earlier fixtures were adjusted to supply valid Gate dimensions or
+  omit unused Gates; their override/advisory/fixed-Evidence assertions remain intact.
+- Whole suite: **386 passed**, one existing Starlette/httpx deprecation warning.
+  All earlier slices included; 37 new slice 7 cases. D-6 and D-7 separately passed 323
+  and 349 tests, committed as 2acb061 / 7591e06; main and slice-6.1 were pushed first.
+- API, PROVIDERS, README, OpenAPI, package/health metadata and Conformance Statement
+  target 0.41.3. The current-release review adds S7-1–S7-8 while retaining the historical
+  base ledger, unchanged capability identifiers and existing G1/G3–G8/U1 qualifications.
+- Deliberate skipped SHOULDs: no pre-run requester report for an unfed Suite dimension
+  Gate or unreachable Judge, no availability probe and no proceed flag. Reasons are in
+  the plan, API, PROVIDERS and statement. These are not claimed fulfilled by later
+  unavailable Results. No other capability or conformance claim was changed.
+
+## Slice 7 — plan (AQEF WD 0.41.3)
+
+- Source: upstream release ref **0.41.3** (the v-prefixed ref was not present), revision
+  history entries 0.41.2/0.41.3 and changed Volumes I/III/V, Appendices A/B/H read from
+  their exact known specification paths only. Local ignored specification kit updated;
+  no repository checkout, directory scan or external test material accessed.
+- Confirm O-1 target-value Schema semantics (V Built-in Validators; A.5) and O-2
+  Custom expected load-time rejection (A.5) with existing tests and current references.
+- I Ch.6 / A.12 / B.3: test no-actionable aggregates retain every reason including
+  insufficient_basis and not_computed. A missing current clause/Scenario makes the
+  complete requested aggregate uncomputable; do not display a partial subset as its
+  numeric value. Record that conservative interpretation in ambiguity 35.
+- A.10 / B.3 Gate coverage: at load/change, resolve composed Contracts and collect
+  dimensions only from non-control Scenarios. Project Gates cover all Suites; Suite
+  Gates only their Suite. Reject uncovered dimension Gates and changes removing the
+  last covering clause. Stage candidate definitions before writes, including reusable
+  Contract edits and subresource deletion, and retain previous data on rejection.
+- III Execution Pipeline pre-invocation SHOULD checks will be deliberately skipped:
+  the synchronous request has no separate pre-run reporting phase, and the provider
+  contract has no availability-only request. A dummy Judge verdict is not a harmless
+  reachability check and would change the stable harness protocol. Global load coverage
+  is still mandatory; runtime unavailable Results still block. These are deviations,
+  not equivalent substitutes; no proceed flag is claimed. Document them in statement/API.
+- Update current specification version everywhere, add release rows to the review,
+  retain the same capability/known-gap claims, run all earlier tests, commit/push/tag.
+
 ## Slice 6.1 — D-7
 
 - Confirmed Appendix B B.3 Governed configuration change: presence of a Contract is

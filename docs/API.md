@@ -1,9 +1,41 @@
-# AQEF Engine API Documentation
+# AQEF Engine API Documentation — Working Draft 0.41.3
 
 This documents the implemented API, including known differences from the specification.
 See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level
 [review](CONFORMANCE-REVIEW.md). Team scoping, schema coverage and the
 synchronous trigger are known gaps; this document does not imply full Conformance.
+
+## Working Draft 0.41.3 changes
+
+A dimension Gate (`functional`, `semantic`, `operational`, `safety`), blocking or
+advisory, needs at least one clause of that resolved dimension on a non-control
+Scenario in its scope. A Project Gate covers all its Suites; a Suite Gate covers only
+that Suite, including inherited Project clauses. Defaults and reusable `extends`
+Contracts count; Seeded Control clauses do not. Project POST/PUT, Gate creation/edit,
+Suite/Scenario creation/edit/deletion and reusable Contract edits validate the proposed
+scope before writes. HTTP 422 names the uncovered Gate and dimension; rejected changes
+leave configuration unchanged. Removing the Gate and its last covering clause together
+is allowed. This rule does not introduce a load-time coverage restriction for `overall`
+or `regression`.
+
+With no usable actionable Results, Gate value is `not_computed` and reasons include
+`insufficient_basis` alongside non-actionable/seeded-control/admission/staleness reasons.
+When a current clause/Scenario has no Result, the full requested aggregate also remains
+not computed rather than reporting a numeric partial subset (ambiguity 35). Existing
+usable Results stay visible in Basis; no absent Result is invented.
+
+The 0.41.2 Schema target-value and Custom expected clarifications are already implemented
+as documented below (Volume V Built-in Validators; A.5). No Judge request/response change.
+
+**Deliberately skipped SHOULD, Volume III Execution Pipeline:** there is no pre-run
+requester report for a Project's blocking Gate that a particular Suite cannot feed, nor
+a Judge reachability probe/prompt to proceed. The endpoint is synchronous and has no
+separate pre-run interaction phase; the HTTP provider has no availability-only operation.
+A synthetic Evidence request would assess invented Evidence and obtain a real verdict,
+not reliably prove future reachability. No proceed flag is accepted or advertised.
+Global dimension coverage at load is enforced; a Project Gate may legitimately be fed
+by another Suite, and an unreachable Judge still creates oracle_unavailable after
+subject collection. Those are existing safeguards, not fulfillment of the skipped checks.
 
 ## Slice 5 — Human Review, panels and Seeded Controls
 
@@ -569,7 +601,7 @@ Names/versions use letters, numbers, underscore, dot or hyphen. A Constraint use
 Custom Constraints require explicit dimension. Their expected accepts **null or {}**
 for these parameterless checks, because the immutable registered rule defines the
 expectation. All other structures are rejected at configuration load (422), naming the
-clause by id or by validator/target if unnamed (owner decision O-2, intended A.5 0.41.2).
+clause by id or by validator/target if unnamed (owner decision O-2, now normative A.5 since 0.41.2).
 Bare name binds only when exactly one version exists.
 Missing/ambiguous registration is unavailable. Definitions are frozen before execution.
 The evaluator receives only selected Evidence and its frozen rule, with no clock,
@@ -746,7 +778,7 @@ field families used by responses whose OpenAPI output schema is unconstrained:
 | Response | Fields and conditions |
 |---|---|
 | Execution batch (POST) | `execution_batch_id` string, `executions` array of Execution metadata; optional `gate_evaluation` when `gates` was supplied. |
-| Execution metadata | `id`, `execution_batch_id`, `project`, `suite`, `scenario`, `environment`; nullable `dataset`/`row_id`; `variables` map; `configuration` with environment/scenario/effective contract/validators/defect_classes/execution settings; `scheduling` with strategy/order/reason/requested_by/requested_at; `status`; created_at/started_at/completed_at (latter two nullable); attempts array; retry_count; conversation nullable; partial_turns array; artifacts array; error nullable; opening_prompt nullable. `duration_ms` exists after worker collection. Fixed Evidence adds nullable source_execution. A batch containing controls adds seeded_control_results to each metadata response. |
+| Execution metadata | `id`, `execution_batch_id`, `project`, `suite`, `scenario`, `environment`, `principal_id`, `principal_kind`; nullable `dataset`/`row_id`; `variables` map; `configuration` with environment/scenario/effective contract/validators/defect_classes/execution settings; `scheduling` with strategy/order/reason/requested_by/requested_at; `status`; created_at/started_at/completed_at (latter two nullable); attempts array; retry_count; conversation nullable; partial_turns array; artifacts array; error nullable; opening_prompt nullable. `duration_ms` exists after worker collection. Fixed Evidence adds nullable source_execution. A batch containing controls adds seeded_control_results to each metadata response. |
 | Attempt | number, started_at, completed_at after completion, nullable error. Artifacts are name/data/turn; measured latency also has attempt. Failed/partial subject text stays in partial_turns. |
 | Result | id/execution/clause/oracle_type/oracle, verdict (pass/fail or null), confidence (finite number or not_applicable), disposition, supporting_evidence map, recorded_at. Optional resolves, panel, assertions are omitted when absent, never emitted as null. Derived invalidated_by appears only when applicable; review_route appears for pending Human Results and contains role, state, required_roles, captures_confidence and timeout duration. Policy and escalate_to remain in supporting_evidence.review. |
 | Gate evaluation | id, snapshot_id, execution_batch_id, gates map, result_ids, evaluated_at, result_state digest, admissions map and control_state digest. Each GateResult has id/status/blocking/threshold/value/basis; fail includes reasons; an overridden copy includes override Approval id; ThresholdMap adds metric_basis. |
@@ -760,8 +792,9 @@ field families used by responses whose OpenAPI output schema is unconstrained:
 | Requalification | id, oracle, defect_class, controls (Result ids), recorded_at, recorded_by; optional diagnosis. |
 | Seeded Control entry (including confirm/invalidate responses) | id/execution_batch_id/suite/scenario/defect_class/kind/confirmed_by/confirmed; assessments and root_assessments Result-id lists; confirmation_details; policy, needs_reference_review, nullable source_execution; recorded_at/evidence_fingerprint; oracles list of oracle/outcome/result_ids; outcome/invalidation_scope/reason. Defect controls add difficulty_prior; actual misses add miss_recorded_at; Human confirmation adds confirmation_record (id/confirmed_by Person/recorded_at/supporting_evidence). |
 
-Date/time fields are ISO strings with timezone. `value` may be numeric, a metric map,
-or `not_computed`; threshold-map values can independently be `not_computed`. Supporting
+Date/time fields are ISO strings with timezone. `value` may be numeric, a numeric metric
+map, or `not_computed`. If any required ThresholdMap aggregate is uncomputable, the
+whole Gate value is `not_computed`; per-metric Basis is still returned. Supporting
 evidence is type-dependent diagnostic data, not another accepted request contract.
 Stored records are append-only except pending Human completion; response decoration
 does not overwrite historical Results. Collection reads return arrays of the same
@@ -848,4 +881,4 @@ Create status is listed per operation; all GET/PUT actions below return 200 unle
 | GET | `/projects/{project}/requalifications` | 200 | no body → dynamic JSON |
 | GET | `/healthz` | 200 | no body → dynamic JSON |
 
-Framework `/docs`, `/docs/oauth2-redirect`, `/redoc` and `/openapi.json` also require a bearer token (401 without one). They are not Reference UI. `/healthz` returns `{"status":"ok","specification_version":"0.41.1"}` with authentication. To view browser documentation, the browser must supply the Authorization header; no login/cookie flow is provided.
+Framework `/docs`, `/docs/oauth2-redirect`, `/redoc` and `/openapi.json` also require a bearer token (401 without one). They are not Reference UI. `/healthz` returns `{"status":"ok","specification_version":"0.41.3"}` with authentication. To view browser documentation, the browser must supply the Authorization header; no login/cookie flow is provided.

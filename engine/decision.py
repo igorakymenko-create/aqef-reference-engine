@@ -269,6 +269,7 @@ class DecisionEngine:
             if name in snapshot.get("seeded_scenarios",[]):continue
             if name not in recorded_scenarios and any(dimension in ("overall", "regression") or c["dimension"] == dimension
                 for kind in ("constraints", "expectations") for c in contract[kind]):
+                expected_missing = True
                 reasons.add("insufficient_basis")
         basis = {"results":len(usable), "not_actionable":len(relevant)-len(usable),
                  "scenarios":len({(e["record"]["suite"], e["record"]["scenario"]) for e in usable}),
@@ -336,7 +337,8 @@ class DecisionEngine:
                     number(bound)
             except ValueError as exc:
                 raise HTTPException(422, str(exc)) from exc
-            value = metric(key)
+            # The requested current-scope aggregate is not a numeric partial subset.
+            value = None if expected_missing else metric(key)
             counted = [e for e in usable if key not in dimensions or e["clause"]["dimension"] == key]
             scoped = [e for e in relevant if key not in dimensions or e["clause"]["dimension"] == key]
             sub_basis = {"results":len(counted), "not_actionable":len(scoped)-len(counted),
@@ -364,7 +366,8 @@ class DecisionEngine:
             reasons.add("threshold")
         result = {"id":identifier(), "status":"fail" if reasons else "pass",
                   "blocking":definition["on_failure"] == "block_release", "threshold":deepcopy(threshold),
-                  "value":values if isinstance(threshold, dict) else values["pass_rate"], "basis":basis}
+                  "value":("not_computed" if any(value == "not_computed" for value in values.values()) else values)
+                      if isinstance(threshold, dict) else values["pass_rate"], "basis":basis}
         if reasons:
             result["reasons"] = sorted(reasons)
         if isinstance(threshold, dict):
