@@ -290,7 +290,8 @@ def test_referential_integrity_environment_deletion_with_baseline():
     # "DELETE on an Environment, Dataset, or Contract still referenced by a Baseline... MUST be rejected"
     storage = Storage(db_path=":memory:")
     env = Environment(name="prod", model_version="gpt-4o", prompt_version="v1", tool_configuration=None, infra_target="cloud")
-    proj = Project(name="proj_test", environments=[env])
+    spare = Environment(name="spare", model_version="other", prompt_version="v1", tool_configuration=None, infra_target="cloud")
+    proj = Project(name="proj_test", environments=[env,spare])
     storage.create_project(proj)
 
     # Simulate a baseline referencing environment "prod"
@@ -316,5 +317,5 @@ def test_deletion_last_scenario_in_suite_rejected():
 
     with pytest.raises(StorageConflictError) as exc:
         storage.delete_scenario("proj_sc", "single_suite", "only_scenario")
-    assert "Suite MUST contain at least one Scenario" in str(exc.value)
+    assert "scenarios" in str(exc.value) and "at least 1 item" in str(exc.value)
 

@@ -1,6 +1,6 @@
-# HTTP provider interface — slices 2–10, AQEF WD 0.41.4
+# HTTP provider interface — slices 2–11, AQEF WD 0.41.5
 
-The wire protocol is unchanged by 0.41.4. Volume III's recommended pre-invocation
+The wire protocol is unchanged by 0.41.5. Volume III's recommended pre-invocation
 reachability check is deliberately not implemented: no availability-only request exists
 in this protocol, and a synthetic Evidence POST would create an actual Judge verdict.
 No health handshake, new request field or proceed flag is implied. The Judge-reachability SHOULD

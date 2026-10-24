@@ -13,9 +13,9 @@ def test_0413_specification_version_is_consistent_on_public_metadata(harness):
     # The metadata follows the current release; the remaining rules were added in 0.41.3.
     from engine import __version__
     app,client,_=harness
-    assert __version__==app.version=="0.41.4"
-    assert client.get("/healthz",headers=HEADERS).json()["specification_version"]=="0.41.4"
-    assert client.get("/openapi.json",headers=HEADERS).json()["info"]["version"]=="0.41.4"
+    assert __version__==app.version=="0.41.5"
+    assert client.get("/healthz",headers=HEADERS).json()["specification_version"]=="0.41.5"
+    assert client.get("/openapi.json",headers=HEADERS).json()["info"]["version"]=="0.41.5"
 
 
 def test_0413_i6_actionable_failure_is_computable_without_minimum_basis(harness,monkeypatch):

@@ -154,13 +154,28 @@ def get_suites_scenarios_router(storage: Storage, get_principal_dep) -> APIRoute
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     @router.delete("/{suite}/scenarios/{scenario}", status_code=status.HTTP_204_NO_CONTENT)
+    @serialized_configuration(storage)
     def delete_scenario(
         project: str,
         suite: str,
         scenario: str,
         current_user: Principal = Depends(get_principal_dep),
+        x_approved_by: Optional[str] = Header(None, alias="X-Approved-By"),
+        x_external_review_ref: Optional[str] = Header(None, alias="X-External-Review-Ref"),
     ):
         check_permission(current_user, "scenario_delete", storage)
+        current = storage.get_scenario(project, suite, scenario)
+        if current is None:
+            raise HTTPException(404, f"Scenario '{scenario}' not found")
+        # Removing the binding removes a contract value from the surviving Project,
+        # just as removing the same Scenario through a full Project PUT does (B.3/C.5).
+        if current.contract is not None:
+            enforce_governed_contract_define(
+                principal=current_user, project_name=project,
+                target_resource=f"/projects/{project}/suites/{suite}/scenarios/{scenario}",
+                storage=storage, approved_by=x_approved_by,
+                external_review_reference=x_external_review_ref,
+                details={"action":"scenario_delete_with_contract"})
         try:
             storage.delete_scenario(project, suite, scenario)
         except StorageNotFoundError as e:

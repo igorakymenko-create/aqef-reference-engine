@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "AQEF Reference Engine",
-    "description": "Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.4",
-    "version": "0.41.4"
+    "description": "Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.5. OpenAPI is API documentation, not an AQEF JSON Schema artifact.",
+    "version": "0.41.5"
   },
   "paths": {
     "/teams": {
@@ -1737,6 +1737,38 @@
             "schema": {
               "type": "string",
               "title": "Scenario"
+            }
+          },
+          {
+            "name": "X-Approved-By",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Approved-By"
+            }
+          },
+          {
+            "name": "X-External-Review-Ref",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-External-Review-Ref"
             }
           },
           {

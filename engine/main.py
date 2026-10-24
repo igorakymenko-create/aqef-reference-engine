@@ -62,8 +62,8 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     app = FastAPI(
         title="AQEF Reference Engine",
-        version="0.41.4",
-        description="Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.4",
+        version="0.41.5",
+        description="Reference Implementation for the AI Quality Engineering Framework (AQEF) specification WD 0.41.5. OpenAPI is API documentation, not an AQEF JSON Schema artifact.",
         lifespan=lifespan,
     )
     app.state.storage = storage
@@ -114,7 +114,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     @app.get("/healthz", tags=["System"])
     def health_check():
-        return {"status": "ok", "specification_version": "0.41.4"}
+        return {"status": "ok", "specification_version": "0.41.5"}
 
     return app
 

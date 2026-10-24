@@ -12,6 +12,7 @@ class AuditRequest:
     project: str | None = None
     permissions: dict = field(default_factory=dict)
     entries: list = field(default_factory=list)
+    approvals: list = field(default_factory=list)
     flushing: bool = False
 
 
@@ -38,6 +39,14 @@ def buffer_entry(storage, entry):
     return True
 
 
+def buffer_approval(storage, approval):
+    session = active_audit.get()
+    if session is None or session.flushing:
+        return False
+    session.approvals.append((storage, approval))
+    return True
+
+
 def commit_audit(session):
     request = session.request
     # D-8: reading a collection (especially this log) cannot append to that collection.
@@ -59,6 +68,8 @@ def commit_audit(session):
             entries.append((storage, AuditLogEntry(id=str(uuid.uuid4()), project=project,
                 action=permission, principal_id=principal.id, principal_kind=principal.kind, details=details)))
     session.flushing = True
+    for storage, approval in session.approvals:
+        storage.create_approval(approval)
     for storage, entry in entries:
         # Preserve the more specific target in governed records, while retaining HTTP context.
         entry = entry.model_copy(update={"details": {**details, **entry.details}})

@@ -57,7 +57,7 @@ class Storage:
         changes = {"create_project", "update_project", "create_suite", "create_scenario",
             "update_scenario", "delete_scenario", "create_contract", "update_contract",
             "create_quality_gate", "update_quality_gate", "create_environment",
-            "update_environment", "delete_environment", "create_dataset"}
+            "update_environment", "delete_environment", "create_dataset", "create_custom_validator"}
         if operation not in changes:
             return
         proposed = parameters.get("project")
@@ -92,8 +92,6 @@ class Storage:
                 suite.scenarios = [replacement if sc.name == replacement.name else sc for sc in suite.scenarios]
             else:
                 suite.scenarios = [sc for sc in suite.scenarios if sc.name != parameters["scenario_name"]]
-                if not suite.scenarios:
-                    return  # Existing Suite cardinality rule rejects removing its last Scenario.
         elif operation == "create_quality_gate":
             candidate.quality_gates.append(parameters["gate"])
         elif operation == "update_quality_gate":
@@ -101,14 +99,24 @@ class Storage:
             candidate.quality_gates = [gate if g.name == gate.name else g for g in candidate.quality_gates]
             for suite in candidate.suites:
                 suite.quality_gates = [gate if g.name == gate.name else g for g in suite.quality_gates]
-        from engine.validation import validate_dataset_references, validate_gate_coverage, validate_oracle_identity, validate_reusable_composition
-        datasets = list(candidate.datasets)
+        from pydantic import ValidationError
+        from engine.validation import ConfigurationValidationError, validate_dataset_references, validate_project_configuration, validate_reusable_composition
+        datasets = {f"{d.name}@{d.version}":d for d in self.list_datasets(project_name)}
+        datasets.update({f"{d.name}@{d.version}":d for d in candidate.datasets})
         if operation == "create_dataset":
-            datasets.append(parameters["dataset"])
-        validate_dataset_references(datasets, lambda name, version:self.get_dataset(project_name, name, version))
+            dataset = parameters["dataset"]
+            datasets[f"{dataset.name}@{dataset.version}"] = dataset
+        lookup_dataset = lambda name, version:datasets.get(f"{name}@{version}")
+        # Property validators must run again: a valid child can make its parent invalid.
+        try:
+            candidate = Project.model_validate_json(candidate.model_dump_json())
+        except ValidationError as exc:
+            if operation in ("delete_scenario", "delete_environment") or "Duplicate" in str(exc) or "collides" in str(exc):
+                raise StorageConflictError(str(exc)) from exc
+            raise ConfigurationValidationError(str(exc)) from exc
+        validate_dataset_references(datasets.values(), lookup_dataset)
         validate_reusable_composition(registry.values(), registry.get)
-        validate_oracle_identity(candidate, registry.get)
-        validate_gate_coverage(candidate, registry.get)
+        validate_project_configuration(candidate, registry.get, lookup_dataset)
 
     def __init__(self, db_path: str = ":memory:"):
         self.db_path = db_path
@@ -124,6 +132,9 @@ class Storage:
             self._shared_conn.row_factory = sqlite3.Row
             self._shared_conn.execute("PRAGMA foreign_keys = ON")
         self._init_db()
+        # B introduction: loading persisted live configuration has the same rules.
+        for project in self.list_projects():
+            self._validate_configuration_change("update_project", {"project": project})
 
     def _get_connection(self) -> sqlite3.Connection:
         if self._shared_conn is not None:
@@ -437,6 +448,7 @@ class Storage:
                 "SELECT data_json FROM assessment_results WHERE project_name = ? AND execution_id = ? ORDER BY rowid",
                 (project_name, execution_id))]
 
+    @synchronized
     def create_custom_validator(self, project_name, definition):
         with self._get_connection() as conn:
             try:
@@ -1088,6 +1100,9 @@ class Storage:
     # ---------------- Approvals & Audit ----------------
 
     def create_approval(self, approval: ApprovalRecord) -> ApprovalRecord:
+        from engine.audit import buffer_approval
+        if approval.action == "contract_define" and buffer_approval(self, approval):
+            return approval
         with self._get_connection() as conn:
             conn.execute(
                 """

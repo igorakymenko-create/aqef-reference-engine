@@ -1,8 +1,46 @@
-# AQEF Engine API Documentation — Working Draft 0.41.4
+# AQEF Engine API Documentation — Working Draft 0.41.5
 
 This documents the implemented API, including known differences from the specification.
 See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level
-[review](CONFORMANCE-REVIEW.md). Concrete implementation gaps and separate verification items are listed in the review; this document does not imply full Conformance.
+[review](CONFORMANCE-REVIEW.md). The engine claims scoped Conformance at 0.41.5; the review separately lists known verification work and skipped SHOULDs.
+
+## Slice 11 — complete resulting configuration validation (0.41.5)
+
+Every offered configuration write stages the **resulting whole Project** under the
+configuration lock and runs the same B.2 property and B.3 cross-type validation as a
+full load before writing. This covers Project POST/PUT, Suite POST, Scenario POST/PUT/
+DELETE, Environment POST/PUT/DELETE, Contract and Gate POST/PUT, Dataset registration/
+version registration and Custom Validator registration. Proposed Contract/Dataset
+registries participate in resolution; a change that repairs a missing reference may
+pass, while an unrelated write cannot preserve an invalid resulting Project.
+
+A Scenario referencing an unresolved dataset or a control naming the tested Judge
+as a reference Oracle is HTTP 422, including when created via a nested Suite/Scenario
+route. Missing fixed Prompt Variables, like missing Dataset-row Variables, are rejected
+at load/change before a run is accepted. Removing the last Environment or Scenario is 409; removing a Gate's last
+covering clause is 422. Error bodies name the violated rule/field; they need not name
+the changed entity. Rejection leaves definitions, frozen history, successful-change
+Audit entries and contract_define Approvals unchanged. Contract approvals, like their
+audit entries, are persisted only on a successful response. Existing actor, Service
+review and atomic Permission rules remain in force.
+
+Deleting a Scenario with its own `contract` (inline or reference) removes that value
+from the surviving Project. It therefore also requires `contract_define`, with a
+Person approval; Service Accounts supply `X-Approved-By` and `X-External-Review-Ref`
+on DELETE, just as on PUT. Without its own binding, only `scenario_delete` applies.
+This matches removing the same binding via a full Project PUT.
+
+Startup validates every persisted live Project through the same guard. Invalid old
+semantic configuration is rejected with its reason rather than run. Frozen history
+is not revalidated as current configuration or rewritten. Whole Project DELETE has
+no resulting live Project to load; its permission/retention/traceability checks remain.
+
+0.41.5 B introduction clarifies that this OpenAPI is **API documentation, not an AQEF
+JSON Schema artifact**. No such artifact is published or claimed. Runtime records
+keep the A/C shapes documented here. VIII assigns the motive/Requirements/Risk
+justification to Project owners; the engine enforces approved, recorded contract_define
+on every Contract definition/change. Service changes name the approving Person and
+external review using the documented headers.
 
 ## Slice 10 — optional fields, null and full replacement
 
@@ -45,10 +83,8 @@ Runtime Execution.configuration/provider snapshots keep the earlier
 complete shape, including internal absent-field markers; they are historical output,
 not configuration PUT bodies. The engine_migrations marker makes repeat startup inert.
 
-The claim review separates incomplete unit coverage from actual source/code gaps;
-it still lists formal type definitions, Requirements/Risk justification and uneven
-Scenario Dataset/reference-Oracle load checks as (a). These are not failures inferred
-from the owner's external test summary.
+The prior formal-artifact, rationale and uneven-validation findings are closed in
+slice 11 under 0.41.5. Known verification work remains separate from the claim.
 
 ## Working Draft 0.41.4 changes
 
@@ -103,8 +139,8 @@ B.2 numeric fields reject Boolean values, numeric strings and nonfinite values, 
 Gate threshold map leaves, Expectation/Consensus thresholds, weights and difficulty
 priors. JSON numbers (including integer-valued numbers for Float fields) remain valid.
 Count fields reject string/Boolean coercion; configuration Boolean flags accept only
-JSON true/false. Optional explicit-null handling is corrected in slice 10. The remaining formal-schema
-limitation is classified separately in the Conformance Statement.
+JSON true/false. Optional explicit-null handling is corrected in slice 10. OpenAPI is documentation and does not claim to be an AQEF JSON Schema artifact,
+as stated in the Conformance Statement.
 
 ## Working Draft 0.41.3 changes
 
@@ -938,7 +974,7 @@ objects, with no envelope or total-count field.
 <!-- CODE_DERIVED_OPERATIONS -->
 ## Registered operation inventory (slice 6)
 
-This inventory is generated from the registered FastAPI operations. Exact typed request bodies, query/header parameters, defaults and response-model properties are in [OPENAPI.json](OPENAPI.json). Dynamic runtime response dictionaries have unconstrained OpenAPI schemas; use the execution, assessment and decision shapes/examples above. This is a documented schema gap (G3), not a promise that `{}` describes their fields.
+This inventory is generated from the registered FastAPI operations. Exact typed request bodies, query/header parameters, defaults and response-model properties are in [OPENAPI.json](OPENAPI.json). Dynamic runtime response dictionaries have unconstrained OpenAPI schemas; use the execution, assessment and decision shapes/examples above. These are documentation schemas, not claimed formal AQEF JSON Schema types; `{}` does not describe all runtime fields. Runtime obligations still apply.
 
 Create status is listed per operation; all GET/PUT actions below return 200 unless an error occurs. HTTP errors use `{"detail": "reason"}`; request-validation errors use `{"detail":[{"loc":["body","field"],"msg":"reason","type":"..."}]}` (additional diagnostic keys may be present).
 
@@ -1016,4 +1052,4 @@ Create status is listed per operation; all GET/PUT actions below return 200 unle
 | GET | `/projects/{project}/requalifications` | 200 | no body → dynamic JSON |
 | GET | `/healthz` | 200 | no body → dynamic JSON |
 
-Framework `/docs`, `/docs/oauth2-redirect`, `/redoc` and `/openapi.json` also require a bearer token (401 without one). They are not Reference UI. `/healthz` returns `{"status":"ok","specification_version":"0.41.4"}` with authentication. To view browser documentation, the browser must supply the Authorization header; no login/cookie flow is provided.
+Framework `/docs`, `/docs/oauth2-redirect`, `/redoc` and `/openapi.json` also require a bearer token (401 without one). They are not Reference UI. `/healthz` returns `{"status":"ok","specification_version":"0.41.5"}` with authentication. To view browser documentation, the browser must supply the Authorization header; no login/cookie flow is provided.

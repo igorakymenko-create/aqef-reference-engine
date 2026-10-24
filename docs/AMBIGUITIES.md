@@ -1,18 +1,17 @@
 # Ambiguities Log
 
-## 37. Requirements/Risk justification versus a generic change approval
+## 37. Requirements/Risk justification — closed by 0.41.5
 - **Section:** VIII Test Maintainability; §10 Conformance / non-person conformance.
 - **Quotation:** “a Contract loosened to stop a Suite from failing MUST be treated as
   a Requirements or Risk Analysis decision ... recorded and justified”.
 - **Readings:** every logged contract_define approval suffices, with intent/rationale
   entirely external; or the engine must preserve a Requirements/Risk justification
   when a Contract is loosened for that purpose, beyond a generic approve action.
-- **Choice:** retain this as a possible implementation gap (a), not a missing-test
-  finding. The update routes allow a lower confidence_threshold with no rationale or
-  external review reference; the generic approval cannot reconstruct the justification.
-  The engine cannot infer the author's motive from free-text criteria. No new mandatory
-  header/body format or semantic intent detector is invented in the final null slice.
-  The conservative reading prevents an unqualified claim while this remains unresolved.
+- **Resolution, project owner / published 0.41.5 VIII:** “That duty is theirs”; an
+  implementation's part is Approval Workflow, with every Contract change approved
+  by a Person and recorded as contract_define. The earlier classification-(a) choice
+  is replaced. Service changes name the approving Person and external review. No
+  motive detector or compulsory Requirements/Risk justification field is required.
 
 ## 36. Policy contribution levels and repeated clause weights (0.41.4)
 - **Section:** VII Contract Composition; A.5 Policies; B.3 composition conflicts.
@@ -30,7 +29,7 @@
   clauses keep separate source weights; extending a Contract never applies the
   child's weight to inherited clauses. This makes the stricter reading explicit.
 
-Current target: **AQEF WD 0.41.4**. Earlier version numbers below describe historical
+Current target: **AQEF WD 0.41.5**. Earlier version numbers below describe historical
 decisions; adopted clarifications and remaining interpretations are identified explicitly.
 
 ## 35. Missing current clauses and a not-computed full aggregate (0.41.3)
@@ -72,8 +71,9 @@ decisions; adopted clarifications and remaining interpretations are identified e
 - **Choice:** the statement initially targeted 0.41.1; slice 7 moves that target to
   0.41.3 with the same scope and qualifications. It lists human_review/multi_judge/
   seeded_controls, never core as a capability identifier. It explicitly withholds an
-  unqualified conformance assertion while concrete implementation findings remain (G1/G5/G6/G7 closed by slice 9);
-  slice 10 separates them from U1 verification rather than treating missing tests as failures. Topology cannot waive
+  unqualified conformance assertion while slice 10 identified concrete findings separately from U1 verification. Slice 11
+  closes them through D-9 and published 0.41.5 clarifications, and makes the scoped
+  Conformance claim without pretending verification matrices are complete. Topology cannot waive
   them. Related happy-path tests do not prove all required-field/type rejection cases;
   untested units remain individual findings rather than fabricated coverage.
 

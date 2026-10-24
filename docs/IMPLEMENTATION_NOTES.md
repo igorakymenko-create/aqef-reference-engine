@@ -1,5 +1,83 @@
 # Implementation Notes
 
+## Slice 11 — completed work (WD 0.41.5)
+
+- Read 0.41.5's revision row, B introduction/B.2/B.3, VIII Test Maintainability and
+  §10. Refreshed ten exact normative source paths at tag 0.41.5 and recorded blob IDs.
+  No upstream directory enumeration or external test material was used.
+- D-9: replaced the partial staged checks with the full resulting Project validation.
+  The existing configuration lock covers staging through SQL writes; B.2 property
+  validators re-run on the complete tree, followed by the same B.3 function as a full
+  load. Proposed Contract/Dataset registries participate before persistence. Unused
+  reusable extends and registered Dataset base references are checked as well.
+- Covers every offered Project/Suite/Scenario/Environment/Contract/Gate/Dataset write,
+  including version registration and Custom Validator registration. Startup validates
+  all persisted live Projects through the same guard. Whole Project deletion leaves
+  no live Project and retains the existing C.8 deletion/retention checks. No history
+  rewritten. Deletes cannot remove the last Environment/Scenario or Gate dimension.
+- Proposed Dataset registration can repair a missing Scenario reference; proposed
+  inline named Contracts resolve within the same document before they are registered.
+  B.3 fixed Variables completeness now rejects missing placeholders at load/change,
+  alongside the existing Dataset-row completeness check, rather than only preflight.
+  Rejected changes leave definition, registry, Approval/audit and frozen-history tables
+  byte-for-byte unchanged. contract_define Approvals now defer persistence until the
+  successful response, like their audit entries; failed changes leave no success record.
+- Deleting a Scenario with its own Contract binding now goes through contract_define
+  as well as scenario_delete: it removes the same configuration value that a full
+  Project PUT would remove (B.3/C.5, through whatever operation). Service DELETE accepts
+  the Person/review headers; a Scenario without its own binding keeps ordinary deletion.
+- New tests/test_slice_11.py: **112 cases**, covering 16 mutation routes against a
+  complete invalid resulting Project, both D-9 cases through containing operations,
+  Dataset repair, startup loading, parent cardinality/coverage, Project deletion,
+  proposed Contract overlays and ten Contract-carrying routes. Governance tests
+  cover missing fixed Variables on all containing routes, Person/Service success,
+  denied contract_define, missing review/approver,
+  non-Person/unknown approver, and named Approval/audit links. Earlier C.8/cardinality
+  tests now isolate the intended invariant rather than relying on error priority.
+- Whole suite: **769 passed**, one existing Starlette/httpx deprecation warning.
+  Earlier slices included. API/PROVIDERS JSON examples and generated OpenAPI checked.
+- G10-LOAD closes by implementation. G3-FORMAL closes by B's artifact clarification:
+  OpenAPI is API documentation, not an AQEF JSON Schema artifact, and no such artifact
+  is published or claimed. G10-RATIONALE and ambiguity 37 close by VIII: Project owners
+  justify their motive; the engine enforces Person-approved, recorded contract_define
+  with Person/review references for Service changes. No new justification mechanism.
+- Reclassification leaves **no (a)** findings. The engine now claims AQEF Conformance
+  at **0.41.5** for human_review, multi_judge and seeded_controls, core implicit. The
+  228 verification-only ledger units remain known verification work; SHOULD deviations
+  (including Judge reachability and JSON Schema artifact generation) remain explicit.
+  These are not blanket qualifications or claims of exhaustive test coverage.
+- Added owner-reported CTS WD9 r261024112524 against slice 10 at 0.41.4: PASS 171,
+  FAIL 0, NOT_RUN 9, NOT_APPLICABLE 32. Retained WD8 evidence with its original counts.
+  No external run against slice 11/0.41.5 is invented. README Completed Slices,
+  statement/review, current version metadata, API/PROVIDERS and provenance updated.
+
+## Slice 11 — plan (WD 0.41.5)
+
+- Read tag 0.41.5's revision row, Appendix B introduction/B.2/B.3, VIII Test
+  Maintainability and §10 using exact normative paths only. No external test material.
+- D-9 / B introduction: stage the complete resulting Project for every configuration
+  write under the existing lock, revalidate its B.2 model tree and run the same full
+  B.3 validator used by Project load. Overlay proposed Contract/Dataset registries,
+  validate unused reusable extends and registered Dataset base references too.
+  Removing the last Environment/Scenario or last Gate dimension must be rejected.
+  Whole-Project deletion has no resulting live Project; C.8 retention still applies.
+- Include Custom Validator registration in the configuration guard. Defer successful
+  contract_define Approvals like their audit entries until a successful response,
+  so rejected changes persist neither definitions nor success/approval records.
+- Add a route-specific regression for every offered mutation endpoint, both D-9
+  counterexamples, registry repair/forward resolution, resulting-state cardinality
+  and byte-preservation on rejection. Confirm every Contract-carrying route requires
+  contract_define, a Person approval, and for Service Accounts a Person/review reference.
+- G3-FORMAL closes by the 0.41.5 artifact clarification: OpenAPI is documentation,
+  not a published AQEF JSON Schema artifact. G10-RATIONALE/ambiguity 37 closes: the
+  engine's obligation is the existing Approval Workflow, not an intent/rationale detector.
+- Reclassify all (a) rows against the new text and implemented guard; retain (b)
+  verification work and deliberate SHOULD deviations. If none remain, claim Conformance
+  at 0.41.5 for the unchanged human_review/multi_judge/seeded_controls scope.
+- Add only the owner's supplied CTS WD9 r261024112524 summary: 171 PASS, 0 FAIL,
+  9 NOT_RUN, 32 NOT_APPLICABLE, alongside earlier owner-reported evidence. Update current
+  version metadata/docs, run the whole suite, commit and push main and slice-11.
+
 ## Slice 10 — completed work (WD 0.41.4)
 
 - B.1/B.2 and A MAY: all typed configuration models reject explicit null at input

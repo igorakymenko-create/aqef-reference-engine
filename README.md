@@ -1,16 +1,14 @@
 # AQEF Reference Engine
 
-A reference implementation of the **[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF/tree/0.41.4)**, Working Draft 0.41.4.
+A reference implementation of the **[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF/tree/0.41.5)**, Working Draft 0.41.5.
 
-The engine implements the core loop and Human Review, Multi Judge and Seeded Controls.
-The [Conformance Statement](docs/CONFORMANCE-STATEMENT.md) declares its offered scope
-and the [normative review](docs/CONFORMANCE-REVIEW.md) records known gaps. Full AQEF
-Conformance remains qualified by concrete implementation gaps; verification-only gaps
-are listed separately. The owner-reported external run is documented in the statement.
+The engine claims **AQEF Conformance at 0.41.5** for Human Review, Multi Judge and
+Seeded Controls, with the core implicit. The [Conformance Statement](docs/CONFORMANCE-STATEMENT.md)
+declares the scope, implementation choices, skipped SHOULDs and owner-reported external
+evidence. The [normative review](docs/CONFORMANCE-REVIEW.md) lists known verification
+work separately; no classification-(a) implementation finding remains.
 
-Slice 8 corrects mutation-only audit history, resolves base Dataset references, and
-returns pre-run Suite/Gate warnings. The review closes G4/G8 under the explicit
-identifier and Execution-stage rules; remaining gaps are declared in the statement.
+OpenAPI is published as API documentation, not as an AQEF JSON Schema artifact.
 
 ## Completed Slices
 
@@ -55,6 +53,11 @@ identifier and Execution-stage rules; remaining gaps are declared in the stateme
   - Reject typed optional nulls and unknown governance keys; migrate live definitions
   - Preserve free JSON/frozen history; document full PUT omission form
   - Separate implementation gaps from verification and cite owner-reported external evidence
+
+- [x] **Slice 11: Working Draft 0.41.5 and Conformance claim**
+  - Validate the complete resulting Project on every configuration route and startup
+  - Confirm approved Contract changes; close artifact/rationale findings under 0.41.5
+  - Claim scoped Conformance with external evidence, verification work and skipped SHOULDs
 
 ## Installation and Usage
 

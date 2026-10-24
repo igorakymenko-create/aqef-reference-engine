@@ -107,6 +107,9 @@ def validate_project_configuration(
     lookup_dataset: Optional[Callable[[str, str], Optional[Dataset]]] = None,
 ) -> None:
     """Validate a complete Project configuration against all Appendix B §B.3 rules."""
+    registered_lookup = lookup_reusable_contract
+    declared_contracts = {c.name:c for c in project.contracts if isinstance(c, Contract) and c.name}
+    lookup_reusable_contract = lambda name:declared_contracts.get(name) or (registered_lookup(name) if registered_lookup else None)
     # 1. Dataset Index: map "name@version" -> Dataset
     datasets_map: Dict[str, Dataset] = {}
     for ds in project.datasets:
@@ -193,5 +196,10 @@ def validate_project_configuration(
                                     f"Dataset '{scenario.dataset}' row '{row.id}' lacks required variables {missing} "
                                     f"for Scenario '{scenario.name}' prompt template"
                                 )
+            elif scenario.prompt:
+                missing = scenario.prompt.extract_variables() - set((scenario.variables or {}).keys())
+                if missing:
+                    raise ConfigurationValidationError(
+                        f"Scenario '{scenario.name}' variables lack required variables {missing} for prompt template")
 
     validate_gate_coverage(project, lookup_reusable_contract)

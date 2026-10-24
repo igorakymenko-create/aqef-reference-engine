@@ -1,54 +1,59 @@
 {
-  "specification_version": "0.41.4",
+  "specification_version": "0.41.5",
   "repository": "https://github.com/igorakymenko-create/AQEF",
-  "ref": "0.41.4",
+  "ref": "0.41.5",
   "retrieved_date": "2026-10-24",
-  "scope": "Exact known normative specification paths only; no repository/test directory enumeration. Files refreshed for slice 9; unchanged local Volumes retain prior content.",
+  "scope": "Exact known normative paths only; no external test material or test directory access. Changed rules and previous source references refreshed at 0.41.5.",
   "files": [
     {
       "path": "front-matter/00-document-status.md",
-      "blob_sha": "a5b43393a03462051b0f2b4d290536bafc31a097",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/front-matter/00-document-status.md"
+      "blob_sha": "baefe2589bb182159d62cbab44088d9b620b7c1e",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/front-matter/00-document-status.md"
     },
     {
       "path": "front-matter/01-revision-history.md",
-      "blob_sha": "9f6f4bc914d304f0e0fac11b76fac82d02ed2f64",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/front-matter/01-revision-history.md"
+      "blob_sha": "9f2c21e21508670601769592f4bddb98e50b23d7",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/front-matter/01-revision-history.md"
     },
     {
       "path": "front-matter/10-conformance.md",
       "blob_sha": "a062bb8878285948fc4ecf81882ecac9d360a852",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/front-matter/10-conformance.md"
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/front-matter/10-conformance.md"
+    },
+    {
+      "path": "appendices/appendix-b-json-schema.md",
+      "blob_sha": "4804550958c985c03579c61209c08036f562d932",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/appendices/appendix-b-json-schema.md"
+    },
+    {
+      "path": "part-iii-testing-methodology/volume-viii-test-design.md",
+      "blob_sha": "1a96bd92025cab0db9dad1738e480ea9216cd9cc",
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/part-iii-testing-methodology/volume-viii-test-design.md"
     },
     {
       "path": "part-iv-enterprise-architecture/volume-xii-governance.md",
       "blob_sha": "7f5501b54ff0c3395fe40fccf794fab15a2a00b8",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/part-iv-enterprise-architecture/volume-xii-governance.md"
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/part-iv-enterprise-architecture/volume-xii-governance.md"
     },
     {
       "path": "part-ii-execution/volume-iv-dataset-engine.md",
       "blob_sha": "0b4eb4bd6b248e04cf9a5cf6878a3ae6a0f43252",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/part-ii-execution/volume-iv-dataset-engine.md"
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/part-ii-execution/volume-iv-dataset-engine.md"
     },
     {
       "path": "appendices/appendix-a-yaml-specification.md",
       "blob_sha": "ca362862355988bbe4c43afefe855293f0cab47a",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/appendices/appendix-a-yaml-specification.md"
-    },
-    {
-      "path": "appendices/appendix-b-json-schema.md",
-      "blob_sha": "a040acb57bf2484b880d64a18b038a61c4e5de6e",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/appendices/appendix-b-json-schema.md"
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/appendices/appendix-a-yaml-specification.md"
     },
     {
       "path": "appendices/appendix-c-rest-api-specification.md",
       "blob_sha": "e1197f3417e687882b5d52efed0a1d190128bf19",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/appendices/appendix-c-rest-api-specification.md"
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/appendices/appendix-c-rest-api-specification.md"
     },
     {
       "path": "part-iii-testing-methodology/volume-vii-quality-contracts.md",
       "blob_sha": "a95e7825535f94454f54fd3e7bd049f39dc012fe",
-      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.4/part-iii-testing-methodology/volume-vii-quality-contracts.md"
+      "url": "https://github.com/igorakymenko-create/AQEF/blob/0.41.5/part-iii-testing-methodology/volume-vii-quality-contracts.md"
     }
   ]
 }
