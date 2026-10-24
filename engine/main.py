@@ -24,6 +24,7 @@ from engine.api.executions import get_executions_router
 from engine.api.assessment import get_assessment_router
 from engine.api.decision import get_decision_router
 from engine.api.scoped import get_scoped_router
+from engine.audit import AuditRequest, active_audit, commit_audit
 
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
@@ -66,6 +67,18 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     )
     app.state.storage = storage
     app.state.provider = provider
+
+    @app.middleware("http")
+    async def audit_successful_actions(request: Request, call_next):
+        session = AuditRequest(request)
+        token = active_audit.set(session)
+        try:
+            response = await call_next(request)
+            if 200 <= response.status_code < 300:
+                commit_audit(session)
+            return response
+        finally:
+            active_audit.reset(token)
 
     @app.middleware("http")
     async def authenticate_system_routes(request: Request, call_next):

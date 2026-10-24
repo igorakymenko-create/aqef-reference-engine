@@ -14,6 +14,7 @@ from engine.models.principal import Principal
 from engine.models.project import Project
 from engine.storage import Storage, StorageConflictError, StorageNotFoundError
 from engine.validation import ConfigurationValidationError, validate_project_configuration
+from engine.audit import bind_project
 
 
 def has_governed_definitions(project):
@@ -38,6 +39,7 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
         x_external_review_ref: Optional[str] = Header(None, alias="X-External-Review-Ref"),
     ):
         check_permission(current_user, "project_create", storage)
+        bind_project(project.name)
 
         # Validate complete configuration
         try:

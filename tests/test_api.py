@@ -97,7 +97,7 @@ def test_project_crud_lifecycle(client):
     assert "project_apollo" in names
 
     # Delete Project
-    res = client.delete("/projects/project_apollo", headers=headers)
+    res = client.delete("/projects/project_apollo?retain_history=true", headers=headers)
     assert res.status_code == 204
 
     # Verify 404 after deletion
@@ -160,7 +160,7 @@ def test_reusable_contracts_and_governance_approval(client):
     assert approvals[0]["approved_by"] == "admin"
 
     # Check that Audit log entry was generated
-    res = client.get("/projects/proj_contracts/audit", headers=headers)
+    res = client.get("/projects/proj_contracts/audit?action=contract_define", headers=headers)
     assert res.status_code == 200
     logs = res.json()
     assert len(logs) == 1
@@ -270,7 +270,7 @@ def test_quality_gates_api(client):
     assert res.json()["threshold"] == 0.99
 
     # Verify audit log captures both gate mutations under contract_define
-    res = client.get("/projects/proj_gates/audit", headers=headers)
+    res = client.get("/projects/proj_gates/audit?action=contract_define", headers=headers)
     assert res.status_code == 200
     assert len(res.json()) == 2
     assert all(entry["action"] == "contract_define" for entry in res.json())

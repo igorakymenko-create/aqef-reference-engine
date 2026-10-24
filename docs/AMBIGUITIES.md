@@ -1,5 +1,17 @@
 # Ambiguities Log
 
+## 34. D-6 audit scope and global actions
+- **Section:** XII Principals/Audit; C.4/C.8.
+- **Quotation:** “Every action Governance checks”; “Audit records which kind of Principal
+  acted”; “MUST be able to distinguish which one a request is actually asking for”.
+- **Readings:** audit only Approval-Workflow mutations, or all successful permission-
+  checked actions including read operations; global actions have no named Project.
+- **Choice:** audit every successful checked permission, including reads, retaining
+  existing more specific governed records without duplicating the same permission.
+  Global actions use __global__ in the existing audit namespace; reads are logged after
+  their returned snapshot. A failed request is not a successful-action record. Deletion
+  records explicitly name retention/deletion intent. No history-purge feature added.
+
 ## 30. Scope declaration while mandatory gaps remain
 - **Section:** Front Matter §10 Conformance Statement / non-negotiable core; BRIEF §3.
 - **Quotation:** “satisfies every applicable MUST-level requirement”; “core ... is part

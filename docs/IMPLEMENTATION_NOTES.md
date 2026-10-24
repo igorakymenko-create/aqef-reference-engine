@@ -1,5 +1,17 @@
 # Implementation Notes
 
+## Slice 6.1 — D-6
+
+- Confirmed XII Principals/Audit and C.8 require comprehensive action provenance.
+  Added request-local auditing of successful permission checks and existing semantic
+  events, Principal id/kind on Executions, and explicit deletion intent. Retained-history
+  URLs and global/read-action audit semantics are documented in API and ambiguity 34.
+- Regression tests name XII/C.8 and cover Person/Service triggers, denied preflight,
+  retained deletion and historical reads, global/read actions, Human Review, control
+  confirmation/invalidation and Scenario deletion. Prior audit tests select their
+  governed action rather than assuming that no other actions are recorded.
+- Whole suite: **323 passed**, one existing Starlette/httpx deprecation warning.
+
 ## Slice 6 — Completed Work
 
 - Published CONFORMANCE-REVIEW.md: 402 normative source units (paragraphs, mandatory

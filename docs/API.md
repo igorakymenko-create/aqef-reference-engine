@@ -635,6 +635,43 @@ uvicorn engine.main:app --host 127.0.0.1 --port 8000
 
 ## Authentication & Authorization
 
+### Audit and retained history (D-6, XII Principals/Audit; C.8)
+
+Every successful permission-checked HTTP action, including reads, records the actor's
+`principal_id`, `principal_kind`, atomic permission as `action`, timestamp and
+`details.target`/`details.method`. Existing governed-action records retain their Approval
+link and specific target; the same permission is not logged twice for that request.
+Failed requests do not produce a successful-action record. Human Review/confirmation/
+invalidation are included. Audit reads are recorded after constructing their response,
+so the current read appears on the next query. Global operations use audit project
+`__global__`, readable through `/projects/__global__/audit` with `audit_read`.
+
+Each new Execution additionally stores top-level `principal_id` and `principal_kind`
+for its trigger; scheduling.requested_by is preserved. These fields do not retroactively
+invent an actor kind for an older Execution.
+
+`DELETE /projects/p?retain_history=true` removes live configuration and records
+`details.deletion_kind: configuration_only_history_retained` and `retain_history: true`.
+Without that option the requested kind is `configuration_and_history`, and deletion
+is rejected if protected history exists: no separate history-purge API is offered.
+Subresource deletions retain runtime history and record the configuration-only kind.
+Creation itself is audited, so an API-created Project normally needs explicit retention.
+
+After deletion, `GET /projects/p` is 404, but historical URLs still work with their
+normal permissions:
+
+```http
+GET /projects/p/audit?action=project_delete
+Authorization: Bearer <auditor-token>
+```
+
+Response 200 is a paginated array of AuditLogEntry objects, including the deletion
+actor/kind and requested deletion kind. `/projects/p/approvals`, `/projects/p/executions`,
+`/projects/p/executions/{id}` and its conversation/artifacts/results subresources, and
+saved reports/snapshots/baselines/releases/release-policies remain readable. Access
+still requires audit_read for audit/approvals or read for runtime/decision history;
+live Project existence is not required for those retained records.
+
 All requests to the REST API must include a valid Bearer token in the `Authorization` header:
 
 ```http

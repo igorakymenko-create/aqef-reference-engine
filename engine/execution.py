@@ -132,6 +132,7 @@ class ExecutionEngine:
                     records.append({
                         "id": str(uuid.uuid4()), "execution_batch_id": batch,
                         "project": project_name, "suite": suite.name, "scenario": scenario.name,
+                        "principal_id": principal.id, "principal_kind": principal.kind.value,
                         "environment": env.name, "dataset": scenario.dataset, "row_id": row_id,
                         "variables": deepcopy(variables), "configuration": {
                             "environment": env.model_dump(mode="json"),

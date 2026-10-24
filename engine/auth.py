@@ -17,6 +17,7 @@ from engine.models.principal import (
     PrincipalKind,
 )
 from engine.storage import Storage
+from engine.audit import checked_permission
 
 
 def get_current_principal_dependency(storage_getter: Callable[[], Storage]):
@@ -70,12 +71,14 @@ def check_permission(principal: Principal, permission: str, storage: Storage) ->
     """Check that the principal holds the required atomic permission."""
     perms = get_principal_permissions(principal, storage)
     if "admin" in perms:
+        checked_permission(principal, permission, storage)
         return
     if permission not in perms:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Principal '{principal.id}' lacks required permission: '{permission}'",
         )
+    checked_permission(principal, permission, storage)
 
 
 def enforce_governed_contract_define(

@@ -47,10 +47,14 @@ def test_c6_older_collections_use_same_bounded_offset_limit(harness, path):
     payload["datasets"]=[{"name":"d", "version":"1", "source":"static", "rows":[]}]
     payload["quality_gates"]=[gate()]
     assert client.post("/projects",json=payload,headers=HEADERS).status_code == 201
+    if path.endswith("/audit"):
+        # D-6 now audits reads too; select stable mutation history while checking pages.
+        path += "?action=contract_define"
+    separator = "&" if "?" in path else "?"
     all_rows=client.get(path,headers=HEADERS).json()
     assert all_rows
-    assert client.get(path+"?limit=1",headers=HEADERS).json() == all_rows[:1]
-    assert client.get(path+"?offset=1&limit=1",headers=HEADERS).json() == all_rows[1:2]
-    assert client.get(path+"?offset=1000",headers=HEADERS).json() == []
+    assert client.get(path+separator+"limit=1",headers=HEADERS).json() == all_rows[:1]
+    assert client.get(path+separator+"offset=1&limit=1",headers=HEADERS).json() == all_rows[1:2]
+    assert client.get(path+separator+"offset=1000",headers=HEADERS).json() == []
     for bad in ("offset=-1", "limit=0", "limit=1001"):
-        assert client.get(path+"?"+bad,headers=HEADERS).status_code == 422
+        assert client.get(path+separator+bad,headers=HEADERS).status_code == 422

@@ -1061,6 +1061,9 @@ class Storage:
             return res
 
     def create_audit_entry(self, entry: AuditLogEntry) -> AuditLogEntry:
+        from engine.audit import buffer_entry
+        if buffer_entry(self, entry):
+            return entry
         with self._get_connection() as conn:
             conn.execute(
                 """
