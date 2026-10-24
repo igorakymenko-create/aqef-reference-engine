@@ -282,6 +282,12 @@ def test_permissions_pagination_filters_and_errors(harness):
 def test_invalid_runtime_settings_rejected_before_calls(harness, config):
     p = project()
     p["execution"] = config
+    if config.get("timeout", "absent") is None:
+        _,client,calls=harness
+        response=client.post("/projects",json=p,headers=HEADERS)
+        assert response.status_code==422 and "timeout" in response.text
+        assert not calls
+        return
     _, client, calls = configure(harness, p)
     assert client.post(BASE, json={"suite": "s", "environment": "test"}, headers=HEADERS).status_code == 422
     assert not calls

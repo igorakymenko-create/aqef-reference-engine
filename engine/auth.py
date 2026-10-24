@@ -43,7 +43,7 @@ def governed_values(resource):
         for key in ("suites", "scenarios"):
             for child in data.get(key, []):
                 collect(child, path + (key, child["name"]))
-    collect(resource.model_dump(mode="json"), ())
+    collect(resource.model_dump(mode="json", context={"include_absent":True}), ())
     return values
 
 

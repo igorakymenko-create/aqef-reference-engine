@@ -9,7 +9,7 @@ References:
 from enum import Enum
 from typing import Optional
 from pydantic import Field, field_validator, model_serializer
-from engine.models.base import AQEFBaseModel, JSONInteger
+from engine.models.base import ConfigurationModel as AQEFBaseModel, JSONInteger
 
 
 class SeededControlMissPolicy(str, Enum):
@@ -33,6 +33,9 @@ class RetryConfig(AQEFBaseModel):
 
 
 class ExecutionConfig(AQEFBaseModel):
+    # This model already serialized only supplied fields before slice 10. A stored
+    # null here is explicitly supplied, not an old omitted-field placeholder.
+    legacy_null_defaults = False
     timeout: Optional[str] = None
     retry: Optional[RetryConfig] = None
     scheduling: Optional[str] = None

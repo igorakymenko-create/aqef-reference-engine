@@ -180,7 +180,7 @@ def test_gate_min_basis_rules():
     # Appendix A §A.10, Appendix B §B.2 MinBasis:
     # "At least one of the two MUST be present."
     with pytest.raises(ValidationError) as exc:
-        MinBasis(results=None, scenarios=None)
+        MinBasis()
     assert "requires at least one of 'results' or 'scenarios'" in str(exc.value)
 
 

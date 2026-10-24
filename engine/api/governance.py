@@ -19,9 +19,18 @@ from engine.models.principal import (
     Team,
 )
 from engine.storage import Storage, StorageConflictError, StorageNotFoundError
+from engine.models.base import ConfigurationModel
 
 
-class PrincipalCreateRequest(Principal):
+class TeamCreateRequest(Team, ConfigurationModel):
+    pass
+
+
+class RoleCreateRequest(Role, ConfigurationModel):
+    pass
+
+
+class PrincipalCreateRequest(Principal, ConfigurationModel):
     id: str = Field(..., min_length=1)
     kind: PrincipalKind
     name: str = Field(..., min_length=1)
@@ -43,7 +52,7 @@ def get_governance_router(storage: Storage, get_principal_dep) -> APIRouter:
         return storage.list_teams()[offset:offset + limit]
 
     @router.post("/teams", response_model=Team, status_code=status.HTTP_201_CREATED)
-    def create_team(team: Team, current_user: Principal = Depends(get_principal_dep)):
+    def create_team(team: TeamCreateRequest, current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "team_admin", storage)
         try:
             return storage.create_team(team)
@@ -58,7 +67,7 @@ def get_governance_router(storage: Storage, get_principal_dep) -> APIRouter:
         return storage.list_roles()[offset:offset + limit]
 
     @router.post("/roles", response_model=Role, status_code=status.HTTP_201_CREATED)
-    def create_role(role: Role, current_user: Principal = Depends(get_principal_dep)):
+    def create_role(role: RoleCreateRequest, current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "role_admin", storage)
         try:
             return storage.create_role(role)

@@ -54,7 +54,7 @@ def test_d3_c3_subresource_changes_appear_in_project_and_later_runs(harness):
     assert client.put("/projects/p", json=p, headers=HEADERS).status_code == 200
     record = run(client)["executions"][0]
     assert record["opening_prompt"] == "Changed world"
-    assert record["configuration"]["environment"] == env
+    assert record["configuration"]["environment"] == env | {"action_boundary":None}
     assert {r["clause"] for r in results(client, record)} == {"shape", "added"}
 
 
@@ -115,7 +115,7 @@ def test_d3_c3_project_put_updates_environment_and_dataset_registry_atomically(h
     p = client.get("/projects/p", headers=HEADERS).json()
     p["datasets"] = [{"name":"inputs", "version":"v1", "source":"static", "rows":[{"id":"row", "variables":{"who":"new"}}]}]
     sc = p["suites"][0]["scenarios"][0]
-    sc["variables"] = None
+    sc.pop("variables")
     sc["dataset"] = "inputs@v1"
     p["environments"][0]["prompt_version"] = "updated"
     assert client.put("/projects/p", json=p, headers=HEADERS).status_code == 200
@@ -158,7 +158,7 @@ def test_d3_nested_contract_changes_still_require_governance(harness):
     suite = p["suites"][0] | {"name":"new-suite"}
     assert client.post("/projects/p/suites", json=suite, headers=editor).status_code == 403
     sc = client.get("/projects/p/suites/s/scenarios/a", headers=HEADERS).json()
-    sc["contract"] = None
+    sc.pop("contract")
     assert client.put("/projects/p/suites/s/scenarios/a", json=sc, headers=editor).status_code == 403
 
 

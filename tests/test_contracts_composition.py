@@ -48,7 +48,6 @@ def test_expectation_confidence_threshold_required_for_judge():
         Expectation(
             criteria="Helpful response",
             judge=JudgeConfig(model="claude-3-5-sonnet", confidence_source=ConfidenceSource.SELF_RATING),
-            confidence_threshold=None,
         )
     assert "confidence_threshold is REQUIRED" in str(exc.value)
 
@@ -65,7 +64,6 @@ def test_expectation_escalate_to_required_only_on_escalate():
             judge=judge,
             confidence_threshold=0.8,
             on_timeout=TimeoutAction.ESCALATE,
-            escalate_to=None,
         )
     assert "'escalate_to' is REQUIRED" in str(exc.value)
 

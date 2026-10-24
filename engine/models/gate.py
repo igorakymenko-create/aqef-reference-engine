@@ -9,7 +9,7 @@ References:
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 from pydantic import Field, StrictBool, field_validator, model_validator
-from engine.models.base import AQEFBaseModel, JSONNumber, JSONInteger
+from engine.models.base import ConfigurationModel as AQEFBaseModel, JSONNumber, JSONInteger
 
 
 class GateFailureAction(str, Enum):

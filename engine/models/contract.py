@@ -11,7 +11,7 @@ References:
 from enum import Enum
 from typing import Any, List, Optional, Union
 from pydantic import Field, PrivateAttr, StrictBool, model_validator
-from engine.models.base import AQEFBaseModel, JSONNumber, JSONInteger
+from engine.models.base import ConfigurationModel as AQEFBaseModel, JSONNumber, JSONInteger
 
 
 class QualityDimension(str, Enum):
@@ -33,6 +33,7 @@ BUILTIN_VALIDATOR_DIMENSIONS = {
 
 
 class Constraint(AQEFBaseModel):
+    nullable_fields = frozenset({"expected"})  # A.5 Any; documented Custom expected:null.
     validator: str = Field(..., min_length=1)
     target: str = Field(..., min_length=1)
     expected: Any = Field(...)

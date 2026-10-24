@@ -2,7 +2,53 @@
 
 This documents the implemented API, including known differences from the specification.
 See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level
-[review](CONFORMANCE-REVIEW.md). Formal schema/coverage gaps remain; this document does not imply full Conformance.
+[review](CONFORMANCE-REVIEW.md). Concrete implementation gaps and separate verification items are listed in the review; this document does not imply full Conformance.
+
+## Slice 10 — optional fields, null and full replacement
+
+Appendix A MAY / B.1/B.2: an optional typed field is omitted, or present with a value
+of its type. An explicit null is HTTP 422 at configuration load/change, naming the
+field (including nested Policies.weight, Expectation.review_timeout and subresources).
+Principal/Team/Role creation rejects unknown keys; their typed optional request fields
+also reject explicit null. Server-owned runtime nulls such as Result.verdict while
+awaiting review retain their documented meaning.
+
+Configuration GET responses now omit absent optional fields instead of returning null
+placeholders. For full PUT send the GET configuration as returned, preserving omitted
+fields; to remove an optional value, omit its key. Do not replace it with null. The
+same applies to replacing a Scenario, Contract, Environment or Gate.
+
+Allowed nulls remain: Environment.tool_configuration (A.2), Constraint.expected (A.5
+Any, including the documented parameterless Custom Validator form), and null data
+inside free JSON such as Variables, expected schemas and Artifacts. Do not recursively
+delete nulls from arbitrary JSON: a Variables property named weight is still data.
+For example, this Contract request is valid and omits Policies.weight/review_timeout:
+
+```json
+{"name":"tone","expectations":[{"criteria":"Answer helpfully","judge":{"model":"judge-v1","confidence_source":"self_rating"},"confidence_threshold":0.7}],"policies":{"validator_composition":"AND"}}
+```
+
+This request is rejected with 422 naming weight:
+
+```json
+{"name":"tone","expectations":[{"criteria":"Answer helpfully","judge":{"model":"judge-v1","confidence_source":"self_rating"},"confidence_threshold":0.7}],"policies":{"weight":null}}
+```
+
+At startup, a one-time transactional migration normalizes legacy live Project,
+Environment, Suite, Scenario, Dataset, Contract and Gate rows, removing only typed
+absent-field null placeholders. It preserves allowed nulls and free JSON. Frozen
+Executions, Results, Snapshots, Reports, decisions, approvals and audit records are
+not rewritten. ExecutionConfig already serialized only supplied fields in earlier
+releases: a stored null there is known to be explicit, so startup rejects it naming
+the field and rolls the migration back, rather than silently turning it into a default.
+Runtime Execution.configuration/provider snapshots keep the earlier
+complete shape, including internal absent-field markers; they are historical output,
+not configuration PUT bodies. The engine_migrations marker makes repeat startup inert.
+
+The claim review separates incomplete unit coverage from actual source/code gaps;
+it still lists formal type definitions, Requirements/Risk justification and uneven
+Scenario Dataset/reference-Oracle load checks as (a). These are not failures inferred
+from the owner's external test summary.
 
 ## Working Draft 0.41.4 changes
 
@@ -57,8 +103,8 @@ B.2 numeric fields reject Boolean values, numeric strings and nonfinite values, 
 Gate threshold map leaves, Expectation/Consensus thresholds, weights and difficulty
 priors. JSON numbers (including integer-valued numbers for Float fields) remain valid.
 Count fields reject string/Boolean coercion; configuration Boolean flags accept only
-JSON true/false. Optional explicit-null and formal runtime schema limitations remain
-G3, detailed in the Conformance Statement.
+JSON true/false. Optional explicit-null handling is corrected in slice 10. The remaining formal-schema
+limitation is classified separately in the Conformance Statement.
 
 ## Working Draft 0.41.3 changes
 
@@ -825,8 +871,7 @@ Governance (Volume XII; Appendix C §C.4) requires every request to resolve to a
     Omitted/empty token falls back to the Principal id. Token is not returned.
     Role/Team references are stored as supplied; Projects/Suites bind to no Teams,
     and every Principal scope is every Project (XII/§10, the declared choice). Tokens/Principal ids must be unique (409).
-    Principal/Team/Role DTOs currently ignore extra input keys, unlike strict AQEF
-    configuration DTOs. Actor kind, Human Role, policy and currency checks still apply;
+    Principal/Team/Role requests reject extra input keys, like AQEF configuration DTOs. Actor kind, Human Role, policy and currency checks still apply;
     no Role name or admin Permission bypasses an atomic Permission check.
 
 ## HTTP Status Codes
@@ -855,9 +900,9 @@ parameters for every operation are in the code-derived inventory artifact below.
 
 `AQEF_ADMIN_TOKEN` is consumed only when creating the initial admin Principal in a
 database; changing it later does not rotate an already stored token. Generated
-response configuration includes defaulted/null fields rather than necessarily echoing
-only supplied fields. Most AQEF configuration models reject unknown keys; governance
-models are the exception described above. A 422 reason is not guaranteed to be a string:
+response configuration includes default values but omits absent optional null placeholders;
+runtime history keeps its earlier complete representation. AQEF configuration and
+Principal/Team/Role request models reject unknown keys. A 422 reason is not guaranteed to be a string:
 request errors use FastAPI's field-path list.
 
 ## Dynamic runtime response contracts
@@ -900,9 +945,9 @@ Create status is listed per operation; all GET/PUT actions below return 200 unle
 | Method | Path | Success | Request / response contract |
 |---|---|---|---|
 | GET | `/teams` | 200 | no body → list of Team |
-| POST | `/teams` | 201 | Team → Team |
+| POST | `/teams` | 201 | TeamCreateRequest → Team |
 | GET | `/roles` | 200 | no body → list of Role |
-| POST | `/roles` | 201 | Role → Role |
+| POST | `/roles` | 201 | RoleCreateRequest → Role |
 | POST | `/principals` | 201 | PrincipalCreateRequest → Principal |
 | GET | `/projects/{project}/audit` | 200 | no body → list of AuditLogEntry |
 | GET | `/projects/{project}/approvals` | 200 | no body → list of ApprovalRecord |

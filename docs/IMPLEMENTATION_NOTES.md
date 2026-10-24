@@ -1,5 +1,73 @@
 # Implementation Notes
 
+## Slice 10 — completed work (WD 0.41.4)
+
+- B.1/B.2 and A MAY: all typed configuration models reject explicit null at input
+  unless expressly nullable. Constraint.expected and Environment.tool_configuration
+  retain their null forms, as does null data inside free JSON. HTTP 422 names the
+  offending field. A shared serializer omits absent optionals from configuration
+  GET/live persistence, so clients can send the GET form on full PUT, removing a key
+  to remove a value. Internal frozen/provider dumps explicitly retain the old shape.
+  OpenAPI optional fields no longer advertise null/default:null as valid input.
+- Principal, Team and Role requests now reject unknown keys; their typed optional
+  request fields reject null. Existing stored profiles/actor rules remain unchanged.
+- One-time transactional migration covers all seven live definition tables. It removes
+  old implicit-null placeholders by model type, preserving free JSON and allowed null.
+  Histories are not rewritten; stored-byte comparisons and Snapshot currency were
+  checked. Known-explicit legacy ExecutionConfig nulls are rejected with rollback,
+  because that model already retained only supplied fields before this slice.
+- New tests/test_slice_10.py adds 116 specification-derived cases: 96 Project load/
+  replacement null cases, subresource changes, FixedEvidence, allowed/free nulls,
+  GET/full-PUT round trips, unknown governance keys, schema input types and migration
+  preservation/idempotence/rollback. Earlier tests remove values by omission and
+  distinguish definition output from the unchanged frozen runtime representation.
+- Final whole suite: **657 passed**, one existing Starlette/httpx warning, all earlier
+  slices included. JSON examples, generated OpenAPI and review accounting checked.
+- Re-examined 241 former PARTIAL/UNTESTED ledger units individually: 18 classification
+  (a) source units identify concrete/formal or possibly unmet obligations; 221 are
+  implementation-backed verification items (b); one old CLI item is unoffered and one
+  defect-class item is SHOULD-only. These counts are not a Conformance score.
+  U1 is verification, not blanket non-conformance. Generic semantic-authoring and
+  missing test matrices are no longer treated as demonstrated engine violations.
+- Qualification remains solely for G3-FORMAL (six required runtime schema types),
+  G10-RATIONALE (possible VIII justification obligation, ambiguity 37), and G10-LOAD
+  (Scenario Dataset and reference-Oracle semantic checks on subresource writes).
+  The latter two route cases were checked by our own small prose-derived requests,
+  each returning 201 while full-Project validation contains the required rejection.
+  They are reported rather than silently assigned (b); fixing them is not part of
+  the requested null correction, and the claim task permits remaining (a) findings.
+- The engine does not yet claim AQEF Conformance for its offered human_review,
+  multi_judge and seeded_controls scope at 0.41.4. Missing unit coverage alone does
+  not withhold the claim; the listed implementation mismatches do. No new capability.
+- Recorded only the owner's CTS WD8 run r261024104303 summary against slice 9:
+  PASS 162, FAIL 2 (owner identifies test-text findings, not engine defects), NOT_RUN
+  11, NOT_APPLICABLE 30. No CTS/test material accessed, no independent new run claimed.
+  README Completed Slices, API/PROVIDERS, statement/review and OpenAPI are updated.
+
+## Slice 10 — plan (WD 0.41.4)
+
+- B.1/B.2 and A Required/MAY: reject explicit null for non-nullable configuration
+  fields, recursively through typed models, on load/change. Retain tool_configuration
+  null and Constraint.expected null (A.5 Any and the documented Custom form). Preserve
+  null inside free JSON Variables, schemas, Artifacts and declarative rule payloads.
+- Separate input omission from internal defaults: configuration GET responses and
+  persisted live definitions omit absent fields; frozen runtime/provider dictionaries
+  retain their existing complete shape. Full PUT uses the GET form with omissions.
+  A one-time transactional migration normalizes legacy live rows only; no frozen
+  Execution/Result/Snapshot/Report/approval/audit history is rewritten.
+- Principal/Team/Role creation rejects unknown keys; typed optional request fields
+  reject explicit null too. Keep stored Principal profiles and actor behavior intact.
+- Re-read §10 and each remaining PARTIAL/UNTESTED unit against its actual source and
+  module. Classify each as (a) an unmet/possibly unmet implementation obligation or
+  (b) implementation evidence with missing independent regression coverage; distinguish
+  conditional/unoffered/SHOULD-only obligations. Do not infer failure from test absence.
+- Cite only the owner's aggregate external evidence: CTS WD8 / AQEF 0.41.4,
+  r261024104303: PASS 162, FAIL 2 (test-text findings per owner), NOT_RUN 11,
+  NOT_APPLICABLE 30. Neither fetch nor inspect any CTS material.
+- Add null/omission/allowed-null/free-JSON/governance/migration regressions; run all
+  earlier tests, update API/provider/README/statement/review, then commit and push
+  main and slice-10. Claim Conformance only if no concrete (a) remains after review.
+
 ## Slice 9 — completed work (WD 0.41.4)
 
 - Added the missing Slice 8 Completed Slices entry, in the README's existing form.

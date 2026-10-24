@@ -11,7 +11,7 @@ References:
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import Field, StrictBool, model_validator
-from engine.models.base import AQEFBaseModel
+from engine.models.base import ConfigurationModel as AQEFBaseModel
 
 
 class BoundaryEntryKind(str, Enum):
@@ -49,6 +49,7 @@ class ToolConfig(AQEFBaseModel):
 
 
 class Environment(AQEFBaseModel):
+    nullable_fields = frozenset({"tool_configuration"})  # A.2 explicitly allows null.
     name: str = Field(..., min_length=1)
     model_version: str = Field(..., min_length=1)
     prompt_version: str = Field(..., min_length=1)

@@ -10,7 +10,7 @@ References:
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import Field, model_validator
-from engine.models.base import AQEFBaseModel
+from engine.models.base import ConfigurationModel as AQEFBaseModel
 
 
 class DatasetSource(str, Enum):

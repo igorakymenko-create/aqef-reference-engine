@@ -123,15 +123,15 @@ class DecisionEngine:
                     raise HTTPException(409, f"Reusable Contract '{value}' cannot be resolved")
                 if value in snapshot["contracts"]:
                     return
-                snapshot["contracts"][value] = digest(contract.model_dump(mode="json"))
-                snapshot["contract_contents"][value] = contract.model_dump(mode="json")
+                snapshot["contracts"][value] = digest(contract.model_dump(mode="json", context={"include_absent":True}))
+                snapshot["contract_contents"][value] = contract.model_dump(mode="json", context={"include_absent":True})
             else:
                 contract = value
                 if contract.name:
-                    snapshot["contracts"][contract.name] = digest(contract.model_dump(mode="json"))
-                    snapshot["contract_contents"][contract.name] = contract.model_dump(mode="json")
+                    snapshot["contracts"][contract.name] = digest(contract.model_dump(mode="json", context={"include_absent":True}))
+                    snapshot["contract_contents"][contract.name] = contract.model_dump(mode="json", context={"include_absent":True})
                 else:
-                    snapshot["inline_contracts"].setdefault(attachment, []).append(contract.model_dump(mode="json"))
+                    snapshot["inline_contracts"].setdefault(attachment, []).append(contract.model_dump(mode="json", context={"include_absent":True}))
             for name in contract.extends:
                 collect(name, attachment)
 
@@ -139,15 +139,15 @@ class DecisionEngine:
             config = self.store.get_environment(project, env)
             if config is None:
                 raise HTTPException(409, "Scoped Environment no longer exists")
-            snapshot["environments"][env] = config.model_dump(mode="json")
+            snapshot["environments"][env] = config.model_dump(mode="json", context={"include_absent":True})
         for contract in proj.contracts:
             collect(contract, "project")
-        snapshot["quality_gates"] = [g.model_dump(mode="json") for g in proj.quality_gates]
+        snapshot["quality_gates"] = [g.model_dump(mode="json", context={"include_absent":True}) for g in proj.quality_gates]
         for name in snapshot["suites"]:
             suite = self.store.get_suite(project, name)
             if suite is None:
                 raise HTTPException(409, "Scoped Suite no longer exists")
-            snapshot["quality_gates"].extend(g.model_dump(mode="json") for g in suite.quality_gates)
+            snapshot["quality_gates"].extend(g.model_dump(mode="json", context={"include_absent":True}) for g in suite.quality_gates)
             for contract in suite.contracts:
                 collect(contract, "suite:" + name)
             for scenario in suite.scenarios:

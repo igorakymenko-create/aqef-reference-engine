@@ -311,6 +311,22 @@ class Storage:
                     generated_at TEXT NOT NULL
                 )
             """)
+            # Only live configuration is normalized; frozen history keeps its exact bytes.
+            from engine.models.base import normalize_legacy_configuration
+            conn.execute("CREATE TABLE IF NOT EXISTS engine_migrations (name TEXT PRIMARY KEY)")
+            pending = conn.execute("SELECT 1 FROM engine_migrations WHERE name='optional_nulls_slice_10'").fetchone() is None
+            tables = (("projects", Project), ("environments", Environment),
+                                 ("suites", Suite), ("scenarios", Scenario), ("datasets", Dataset),
+                                 ("contracts", Contract), ("quality_gates", QualityGate)) if pending else ()
+            for table, model in tables:
+                for row in conn.execute(f"SELECT rowid, data_json FROM {table}").fetchall():
+                    original = json.loads(row["data_json"])
+                    normalized = normalize_legacy_configuration(model, original)
+                    model.model_validate(normalized)
+                    if normalized != original:
+                        conn.execute(f"UPDATE {table} SET data_json=? WHERE rowid=?",
+                                     (json.dumps(normalized, ensure_ascii=False), row["rowid"]))
+            conn.execute("INSERT OR IGNORE INTO engine_migrations VALUES ('optional_nulls_slice_10')")
 
     def save_executions(self, records, batch=None):
         with self._get_connection() as conn:

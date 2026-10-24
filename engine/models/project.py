@@ -8,7 +8,7 @@ References:
 
 from typing import List, Optional, Union
 from pydantic import Field, model_validator
-from engine.models.base import AQEFBaseModel, JSONNumber, JSONInteger
+from engine.models.base import ConfigurationModel as AQEFBaseModel, JSONNumber, JSONInteger
 from engine.models.contract import Contract, JudgeConfig
 from engine.models.dataset import Dataset
 from engine.models.environment import Environment

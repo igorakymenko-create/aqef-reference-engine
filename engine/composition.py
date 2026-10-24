@@ -174,7 +174,7 @@ def compose_contracts(
 
 def effective_contract_data(contract):
     """Frozen runtime Contract, with aligned source-weight arrays (VII/A.5/B.3)."""
-    return {**contract.model_dump(mode="json"), "clause_weights":contract._clause_weights}
+    return {**contract.model_dump(mode="json", context={"include_absent":True}), "clause_weights":contract._clause_weights}
 
 
 def compose_scenario_effective_contract(

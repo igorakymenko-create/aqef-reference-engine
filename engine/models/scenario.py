@@ -12,7 +12,7 @@ import re
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 from pydantic import Field, model_validator
-from engine.models.base import AQEFBaseModel, JSONNumber, JSONInteger
+from engine.models.base import ConfigurationModel as AQEFBaseModel, JSONNumber, JSONInteger
 from engine.models.contract import Constraint, Contract, JudgeConfig
 from engine.models.evidence import Conversation
 

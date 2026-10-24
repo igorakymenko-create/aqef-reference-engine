@@ -56,7 +56,7 @@ def settings(project, suite):
     result = {"timeout": "30s", "scheduling": "sequential", "parallelization": 1, "retry": None}
     for config in (project.execution, suite.execution):
         if config:
-            for key, value in config.model_dump(mode="json", exclude_unset=True).items():
+            for key, value in config.model_dump(mode="json", context={"include_absent":True}, exclude_unset=True).items():
                 if value is None:
                     raise ValueError(f"Execution setting '{key}' cannot be explicitly null")
                 result[key] = value
@@ -139,11 +139,11 @@ class ExecutionEngine:
                         "principal_id": principal.id, "principal_kind": principal.kind.value,
                         "environment": env.name, "dataset": scenario.dataset, "row_id": row_id,
                         "variables": deepcopy(variables), "configuration": {
-                            "environment": env.model_dump(mode="json"),
-                            "scenario": scenario.model_dump(mode="json"),
+                            "environment": env.model_dump(mode="json", context={"include_absent":True}),
+                            "scenario": scenario.model_dump(mode="json", context={"include_absent":True}),
                             "contract": effective_contract_data(effective),
                             "validators": deepcopy(frozen_validators),
-                            "defect_classes":[c.model_dump(mode="json") for c in project.defect_classes],
+                            "defect_classes":[c.model_dump(mode="json", context={"include_absent":True}) for c in project.defect_classes],
                             "execution": deepcopy(config)},
                         "scheduling": {"strategy": config["scheduling"], "order": len(records),
                                        "reason": "on_demand Suite × Environment; declaration order",

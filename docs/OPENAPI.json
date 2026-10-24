@@ -110,7 +110,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Team"
+                "$ref": "#/components/schemas/TeamCreateRequest"
               }
             }
           }
@@ -243,7 +243,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Role"
+                "$ref": "#/components/schemas/RoleCreateRequest"
               }
             }
           }
@@ -5961,24 +5961,14 @@
               },
               {
                 "type": "number"
-              },
-              {
-                "type": "null"
               }
             ],
             "title": "Threshold"
           },
           "min_agreement": {
-            "anyOf": [
-              {
-                "type": "number",
-                "maximum": 1.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
             "title": "Min Agreement"
           },
           "on_disagreement": {
@@ -5986,15 +5976,8 @@
             "default": "human_review"
           },
           "min_qualified": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Min Qualified"
           }
         },
@@ -6026,39 +6009,18 @@
             "default": false
           },
           "id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "minLength": 1,
             "title": "Id"
           },
           "dimension": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/QualityDimension"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/QualityDimension"
           },
           "defect_classes": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
             "title": "Defect Classes"
           }
         },
@@ -6074,14 +6036,7 @@
       "Contract": {
         "properties": {
           "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Name"
           },
           "constraints": {
@@ -6099,14 +6054,7 @@
             "title": "Expectations"
           },
           "policies": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Policies"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/Policies"
           },
           "extends": {
             "items": {
@@ -6183,43 +6131,22 @@
             "$ref": "#/components/schemas/DatasetSource"
           },
           "rows": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Row"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/Row"
+            },
+            "type": "array",
             "title": "Rows"
           },
           "base_dataset": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^.+@.+$"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "pattern": "^.+@.+$",
             "title": "Base Dataset"
           },
           "mechanisms": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/MechanismConfig"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/MechanismConfig"
+            },
+            "type": "array",
             "title": "Mechanisms"
           }
         },
@@ -6256,48 +6183,24 @@
               },
               {
                 "type": "number"
-              },
-              {
-                "type": "null"
               }
             ],
             "title": "Difficulty Prior"
           },
           "prior_basis": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Prior Basis"
           },
           "prior_source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Prior Source"
           },
           "reference_oracles": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/JudgeConfig"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/JudgeConfig"
+            },
+            "type": "array",
             "title": "Reference Oracles"
           }
         },
@@ -6344,14 +6247,7 @@
             ]
           },
           "action_boundary": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ActionBoundary"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/ActionBoundary"
           },
           "infra_target": {
             "type": "string",
@@ -6373,47 +6269,19 @@
       "ExecutionConfig": {
         "properties": {
           "timeout": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Timeout"
           },
           "retry": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RetryConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/RetryConfig"
           },
           "scheduling": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Scheduling"
           },
           "parallelization": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Parallelization"
           },
           "on_seeded_control_miss": {
@@ -6468,57 +6336,22 @@
             "title": "Criteria"
           },
           "judge": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/JudgeConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/JudgeConfig"
           },
           "multi_judge": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MultiJudgeConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/MultiJudgeConfig"
           },
           "human_reviewer": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/HumanReviewerConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/HumanReviewerConfig"
           },
           "confidence_threshold": {
-            "anyOf": [
-              {
-                "type": "number",
-                "maximum": 1.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
             "title": "Confidence Threshold"
           },
           "review_timeout": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Review Timeout"
           },
           "on_timeout": {
@@ -6526,27 +6359,13 @@
             "default": "block"
           },
           "escalate_to": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "minLength": 1,
             "title": "Escalate To"
           },
           "id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "minLength": 1,
             "title": "Id"
           },
           "dimension": {
@@ -6554,17 +6373,10 @@
             "default": "semantic"
           },
           "defect_classes": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
             "title": "Defect Classes"
           }
         },
@@ -6581,27 +6393,13 @@
             "$ref": "#/components/schemas/Conversation"
           },
           "artifacts": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Artifacts"
           },
           "source_execution": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "minLength": 1,
             "title": "Source Execution"
           }
         },
@@ -6693,33 +6491,19 @@
             "$ref": "#/components/schemas/MechanismType"
           },
           "transforms": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
             "title": "Transforms"
           },
           "perturbations": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
             "title": "Perturbations"
           }
         },
@@ -6743,27 +6527,13 @@
       "MinBasis": {
         "properties": {
           "results": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Results"
           },
           "scenarios": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Scenarios"
           }
         },
@@ -6777,39 +6547,18 @@
             "$ref": "#/components/schemas/MultiJudgePurpose"
           },
           "judges": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/JudgeConfig"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/JudgeConfig"
+            },
+            "type": "array",
             "title": "Judges"
           },
           "judge": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/JudgeConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/JudgeConfig"
           },
           "samples": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 2.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 2.0,
             "title": "Samples"
           },
           "consensus": {
@@ -6867,15 +6616,8 @@
             "default": "AND"
           },
           "weight": {
-            "anyOf": [
-              {
-                "type": "number",
-                "exclusiveMinimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
+            "exclusiveMinimum": 0.0,
             "title": "Weight"
           }
         },
@@ -6971,6 +6713,7 @@
             "title": "Owner Person Id"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -6995,14 +6738,7 @@
             "title": "Name"
           },
           "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Email"
           },
           "team_ids": {
@@ -7020,28 +6756,15 @@
             "title": "Roles"
           },
           "owner_person_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Owner Person Id"
           },
           "token": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Token"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -7081,14 +6804,7 @@
             "title": "Suites"
           },
           "execution": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ExecutionConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/ExecutionConfig"
           },
           "datasets": {
             "items": {
@@ -7184,38 +6900,17 @@
             "title": "Threshold"
           },
           "compare_against": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Compare Against"
           },
           "min_basis": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/MinBasis"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/MinBasis"
           },
           "on_failure": {
             "$ref": "#/components/schemas/GateFailureAction"
           },
           "override_requires": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Override Requires"
           },
           "require_admitted_judges": {
@@ -7415,11 +7110,34 @@
             "title": "Permissions"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name"
         ],
         "title": "Role"
+      },
+      "RoleCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Permissions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "RoleCreateRequest"
       },
       "Row": {
         "properties": {
@@ -7456,66 +7174,28 @@
               },
               {
                 "type": "string"
-              },
-              {
-                "type": "null"
               }
             ],
             "title": "Contract"
           },
           "prompt": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PromptDef"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/PromptDef"
           },
           "dataset": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^.+@.+$"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "pattern": "^.+@.+$",
             "title": "Dataset"
           },
           "variables": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "additionalProperties": true,
+            "type": "object",
             "title": "Variables"
           },
           "seeded_control": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SeededControlConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/SeededControlConfig"
           },
           "evidence": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FixedEvidence"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/FixedEvidence"
           }
         },
         "additionalProperties": false,
@@ -7543,81 +7223,37 @@
               },
               {
                 "type": "number"
-              },
-              {
-                "type": "null"
               }
             ],
             "title": "Difficulty Prior"
           },
           "planted_defect": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
             "title": "Planted Defect"
           },
           "confirmed_by": {
             "$ref": "#/components/schemas/SeededControlConfirmation"
           },
           "confirmation": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Constraint"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/Constraint"
           },
           "generator": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Generator"
           },
           "prior_basis": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "integer",
+            "minimum": 1.0,
             "title": "Prior Basis"
           },
           "prior_source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Prior Source"
           },
           "reference_oracles": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/JudgeConfig"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/JudgeConfig"
+            },
+            "type": "array",
             "title": "Reference Oracles"
           }
         },
@@ -7743,14 +7379,7 @@
             "title": "Quality Gates"
           },
           "execution": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ExecutionConfig"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/ExecutionConfig"
           }
         },
         "additionalProperties": false,
@@ -7785,12 +7414,38 @@
             "title": "Description"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
           "name"
         ],
         "title": "Team"
+      },
+      "TeamCreateRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TeamCreateRequest"
       },
       "TimeoutAction": {
         "type": "string",

@@ -135,7 +135,7 @@ def test_d7_b3_project_nested_governed_values_added_removed_or_changed_require_g
     key="contracts" if level.endswith("contracts") else "quality_gates"
     if level=="scenario_contract":
         owner=owner["scenarios"][0];key="contract"
-        if change=="remove":owner[key]=None
+        if change=="remove":owner.pop(key)
         else:owner[key]["constraints"].append(constraint(id="new-clause"))
     elif change=="remove":owner[key]=[]
     elif change=="add":owner[key].append(gate("new-gate") if key=="quality_gates" else {"constraints":[constraint(id="new-clause")]})
@@ -156,7 +156,7 @@ def test_d7_b3_scenario_contract_add_remove_change_requires_governance(harness,c
     path="/projects/p/suites/s/scenarios/a"
     before=client.get(path,headers=HEADERS).json()
     body=deepcopy(before)
-    if change=="remove":body["contract"]=None
+    if change=="remove":body.pop("contract")
     elif change=="add":body["contract"]={"constraints":[constraint(id="new-clause")]}
     else:body["contract"]["constraints"][0]["expected"]={"type":"string","minLength":1}
     assert client.put(path,json=body,headers=headers).status_code==403

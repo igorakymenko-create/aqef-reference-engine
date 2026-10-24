@@ -5,7 +5,8 @@ A reference implementation of the **[AI Quality Engineering Framework (AQEF)](ht
 The engine implements the core loop and Human Review, Multi Judge and Seeded Controls.
 The [Conformance Statement](docs/CONFORMANCE-STATEMENT.md) declares its offered scope
 and the [normative review](docs/CONFORMANCE-REVIEW.md) records known gaps. Full AQEF
-Conformance is not asserted while mandatory gaps remain.
+Conformance remains qualified by concrete implementation gaps; verification-only gaps
+are listed separately. The owner-reported external run is documented in the statement.
 
 Slice 8 corrects mutation-only audit history, resolves base Dataset references, and
 returns pre-run Suite/Gate warnings. The review closes G4/G8 under the explicit
@@ -49,6 +50,11 @@ identifier and Execution-stage rules; remaining gaps are declared in the stateme
   - Explicit atomic administrative Permissions; no Project/Suite Team bindings
   - Strict policy composition, source clause weights and rejection of unoffered mechanisms
   - Synchronous triggering and audit clarified; primitive schemas tightened
+
+- [x] **Slice 10: Input schemas and final claim review**
+  - Reject typed optional nulls and unknown governance keys; migrate live definitions
+  - Preserve free JSON/frozen history; document full PUT omission form
+  - Separate implementation gaps from verification and cite owner-reported external evidence
 
 ## Installation and Usage
 

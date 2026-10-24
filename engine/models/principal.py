@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, model_validator
+from engine.models.base import AQEFBaseModel
 
 
 class PrincipalKind(str, Enum):
@@ -17,18 +18,18 @@ class PrincipalKind(str, Enum):
     SERVICE_ACCOUNT = "service_account"
 
 
-class Team(BaseModel):
+class Team(AQEFBaseModel):
     id: str = Field(..., min_length=1)
     name: str = Field(..., min_length=1)
     description: Optional[str] = None
 
 
-class Role(BaseModel):
+class Role(AQEFBaseModel):
     name: str = Field(..., min_length=1)
     permissions: List[str] = Field(default_factory=list)
 
 
-class Principal(BaseModel):
+class Principal(AQEFBaseModel):
     id: str = Field(..., min_length=1)
     kind: PrincipalKind
     name: str = Field(..., min_length=1)

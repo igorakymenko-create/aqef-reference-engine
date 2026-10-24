@@ -1,5 +1,19 @@
 # Ambiguities Log
 
+## 37. Requirements/Risk justification versus a generic change approval
+- **Section:** VIII Test Maintainability; §10 Conformance / non-person conformance.
+- **Quotation:** “a Contract loosened to stop a Suite from failing MUST be treated as
+  a Requirements or Risk Analysis decision ... recorded and justified”.
+- **Readings:** every logged contract_define approval suffices, with intent/rationale
+  entirely external; or the engine must preserve a Requirements/Risk justification
+  when a Contract is loosened for that purpose, beyond a generic approve action.
+- **Choice:** retain this as a possible implementation gap (a), not a missing-test
+  finding. The update routes allow a lower confidence_threshold with no rationale or
+  external review reference; the generic approval cannot reconstruct the justification.
+  The engine cannot infer the author's motive from free-text criteria. No new mandatory
+  header/body format or semantic intent detector is invented in the final null slice.
+  The conservative reading prevents an unqualified claim while this remains unresolved.
+
 ## 36. Policy contribution levels and repeated clause weights (0.41.4)
 - **Section:** VII Contract Composition; A.5 Policies; B.3 composition conflicts.
 - **Quotation:** “strictest one contributed”; “a lower level ... looser value ... is a
@@ -58,7 +72,8 @@ decisions; adopted clarifications and remaining interpretations are identified e
 - **Choice:** the statement initially targeted 0.41.1; slice 7 moves that target to
   0.41.3 with the same scope and qualifications. It lists human_review/multi_judge/
   seeded_controls, never core as a capability identifier. It explicitly withholds an
-  unqualified conformance assertion while review G3/U1 remain (G1/G5/G6/G7 closed by slice 9). Topology cannot waive
+  unqualified conformance assertion while concrete implementation findings remain (G1/G5/G6/G7 closed by slice 9);
+  slice 10 separates them from U1 verification rather than treating missing tests as failures. Topology cannot waive
   them. Related happy-path tests do not prove all required-field/type rejection cases;
   untested units remain individual findings rather than fabricated coverage.
 
