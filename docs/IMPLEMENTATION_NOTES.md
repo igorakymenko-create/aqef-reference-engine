@@ -1,5 +1,133 @@
 # Implementation Notes
 
+## Slice 3 — plan
+
+### Entities and operations
+- Validator Engine: built-in schema, structural, forbidden-content, latency and cost
+  checks; deterministic project-scoped Custom Validators; target evidence selection.
+  Tool-call and boundary checks apply only to the excluded action_boundary capability
+  (Volume V Architecture, Built-ins, Custom Validators, SDK; A.5).
+- Judge Engine: one HTTP Single Judge per Expectation, explicit criteria and source of
+  Confidence, assertions disclosure and unavailable outcomes (VI Architecture, Single
+  Judge, Confidence; C.7). Uses the existing startup provider URL mapping.
+- Result: append-only C.7 records, automatic after successful Execution only; paginated,
+  filterable execution Results resource. Recorded Evidence/configuration remain frozen.
+- Admission: Person-only POST and read/list API, strict C.3 consistency validation,
+  generated recording fields, append-only acceptance order and latest-status lookup.
+
+### Rules and references
+1. Completed Evidence alone enters assessment; all Constraints are checked before any
+   Judge. Run cheap built-ins before expensive schema/structural/custom checks, preserving
+   declaration order for ties. Record every applied clause's Result, including errors;
+   failed/unavailable validation short-circuits Judges as dictated by composition (V
+   Execution Order, Composition, Pipeline; I Chapter 3). No placeholder Judge Results
+   are fabricated for short-circuited Expectations (C.7 closed dispositions).
+2. Validators depend only on selected frozen Evidence and versioned configuration,
+   never live time/network/randomness. Verdicts have confidence `not_applicable` and
+   sufficient supporting evidence. Missing target/configuration or crashed checks are
+   oracle_unavailable, not fail; completed mismatches are fail (V Architecture, SDK).
+   AND requires all; OR requires one; veto failure always blocks, and unavailable
+   validation blocks even if another OR operand passes (V Composition; C.7).
+3. Built-in targets/expected formats are explicitly documented; schema uses local-only
+   JSON Schema, forbidden-content literal/regex patterns, structural ordered required
+   steps, latency recorded execution duration and cost recorded usage/resources (V
+   Built-ins, A.5). Never fetch remote schemas. Unsupported shapes yield unavailable.
+4. Custom registration exposes only a restricted declarative deterministic check,
+   bound to a Project and immutable name/version/configuration. No arbitrary Python,
+   model or HTTP check runs as a Validator. Registration requires contract_define and
+   its existing Approval Workflow; public API and examples in API.md. Version/config
+   are frozen at preflight (V Custom Validators, SDK; C.4; ambiguity 14).
+5. Single Judge receives frozen Conversation/Artifacts and literal criteria; no Judge
+   runs as its own subject. Stable Oracle identity covers model, confidence_source,
+   criteria and protocol version; stable clause references use id or frozen contract
+   hash/index when absent. Single sources self_rating/token_probability are supported;
+   agreement needs multi_judge and is rejected for Single Judge (VI; A.6; I Chapter 3).
+6. Judge verdict pass/fail plus finite numeric Confidence [0,1] is actionable at/above
+   threshold, inconclusive below. Missing/invalid Confidence or protocol, transport
+   failure, timeout or unmapped model yields oracle_unavailable; preserve raw response
+   and any seen verdict in supporting evidence. One bounded call per assessment, no
+   automatic re-attempts (permitted, not required). Multiple assertions require an
+   assertions count >1 from the provider, otherwise an explicit atomic declaration
+   (VI Single Judge, Confidence; C.7). No resolution/review/panel behavior in this slice.
+7. Result records always include required C.7 fields, no null Confidence; optional
+   panel/assertions/resolves/invalidated_by are absent unless applicable. Immutable
+   history survives restart/live deletion; no API can overwrite a Result (C.7–C.8).
+8. Admission validates all C.3 fields, versioned Reference Set, reviewer list, positive
+   items, closed verdict keys/nonnegative totals, raw agreement, finite chance measure
+   and threshold consistency. Only a Person with review records it; read is separate.
+   Generated id/time/actor are rejected as input; latest accepted record determines
+   admission, including withdrawal and not_computed=false (VI Admission; C.3–C.4).
+
+### Unclear points
+AMBIGUITIES entries 12–17 describe target/expected formats, composition, Custom
+Validator registration, identity/assertions, malformed Judge outputs and Admission.
+Tests cover every numbered rule, including earlier-slice behavior and real HTTP Judge.
+
+## Slice 3 — Completed Work
+
+### What was built
+- `engine/validators.py`: pure built-in checks over selected frozen Evidence, explicit
+  target/expected formats, local-only JSON Schema and a restricted declarative Custom
+  Validator evaluator. Schema validation uses pinned jsonschema 4.23.0.
+- `engine/assessment.py`: automatic Validation-before-Evaluation pipeline, cheapest-first
+  Constraint evaluation, AND/OR/hard-veto handling, unavailable short-circuiting, Single
+  Judge HTTP calls, Confidence-qualified dispositions, assertion-count disclosure and
+  stable Oracle/clause identities.
+- `engine/models/assessment.py`: consistent C.7 Result shape and strict C.3 Admission
+  input validation. Confidence is numeric or not_applicable, never null.
+- SQLite append-only Result/Admission stores and immutable project-local Custom
+  Validator definitions; versioned rules are frozen before calls. Latest Admission is
+  determined by acceptance order and later nonadmission withdraws earlier admission.
+- Authenticated Admission and Custom Validator API, paginated/filterable Results,
+  complete Judge protocol/startup URL mapping and documented registration examples.
+
+### Required changes to earlier behavior
+- Successful Execution POST now waits for assessment and its Results endpoint returns
+  actual Results, as Volume V and C.7 require. Execution status/duration still describe
+  Evidence collection; failed collection is never assessed. Historical slice-2 Executions
+  are not automatically replayed or modified. One slice-2 test's empty-Results assertion
+  was updated to check the now-required unavailable Result for its old invalid structural
+  placeholder rule; all remaining earlier tests were retained.
+- Preflight now rejects unsupported composition, Single Judge agreement Confidence,
+  identical subject/Judge model, and execution of Human Review/Multi Judge Expectations
+  (deferred to slice 5). Definition schemas for future capabilities are unchanged.
+- New `configuration.validators` freezes registered rule bindings with runtime Evidence.
+  Provider transport, subject wire protocol and recorded Execution immutability are unchanged.
+
+### Tests and results
+- `python -m pytest -q`: **168 passed**, Python 3.12.1; all 73 earlier cases (one required
+  assertion update above), plus 95 new cases in `tests/test_assessment.py`.
+- Tests cover all eight planned rules: pure built-ins and targets; malformed/missing
+  checks; recorded latency/cost and cheapest-first order; composition/veto/unavailable
+  blocking; Custom registration, governance, immutable/frozen version bindings; correct
+  Judge request and self-rating/token probability Confidence; low/boundary/high Confidence;
+  assertions; malformed/absent Confidence and protocol fields; transport/429/redirect/
+  timeout/invalid JSON; no retries; immutable Results and Admission history; identity;
+  strict Admission required/generated fields, consistency, permissions, Person-only
+  action, acceptance order/withdrawal; real loopback HTTP Judge and SQLite restart.
+- `git diff --check` passes. One existing Starlette/httpx deprecation warning remains.
+- New ambiguities: **12–17** (formats, composition, registration, identity/assertions,
+  unavailable Judge output, Admission). No external/conformance test material accessed.
+
+### Deliberate limits, SHOULDs and deferred work
+- Tool-call and Boundary Validators require action_boundary, explicitly excluded by
+  BRIEF §3; applying them is unavailable rather than a silent pass.
+- Multi Judge, Human Review, resolution/reassess, Gate/Release enforcement and control
+  confirmation/invalidation stay in their designated later slices. Low Confidence is
+  stored as inconclusive; no later-slice routing or verdict is invented.
+- Custom registration implements a pure declarative interface, not arbitrary executable
+  plugins or a public language SDK. Its evaluator has only target Evidence and frozen
+  configuration inputs, satisfying the SDK's input-isolation SHOULDs.
+- Cheapest-first uses fixed built-in cost classes and declaration order within ties;
+  custom checks run last. No empirical timing/clock affects Validator ordering.
+- Oracle transport re-attempts are MAY, deliberately not used: one bounded attempt is
+  recorded. Malformed/unavailable output remains auditable without a replacement call.
+- Reference Set scoring/provenance is supplied by the recording Person; Admission does
+  not run an automatic scoring workflow. Human independence, blind labels, excluded
+  alignment/exposed items, arbitration reasoning and multiple sources are documented
+  authoring SHOULDs that the engine cannot verify from the C.3 aggregate record. A
+  versioned reference_set is required. No known in-scope MUST is deliberately skipped.
+
 ## Slice 2 — plan
 
 ### Entities and operations

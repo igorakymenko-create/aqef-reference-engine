@@ -1,4 +1,4 @@
-"""Appendix C execution resources; assessment belongs to subsequent slices."""
+"""Appendix C execution and immutable assessment resources."""
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -61,9 +61,12 @@ def get_executions_router(storage, principal_dep, provider):
 
     @router.get("/{execution}/results")
     def results(project: str, execution: str, offset: int = Query(0, ge=0),
-                limit: int = Query(100, ge=1, le=1000), principal=Depends(principal_dep)):
+                limit: int = Query(100, ge=1, le=1000), oracle_type: str | None = None,
+                verdict: str | None = None, principal=Depends(principal_dep)):
         check_permission(principal, "read", storage)
         get_record(project, execution)
-        return []
+        rows = storage.list_results(project, execution)
+        return [r for r in rows if (oracle_type is None or r["oracle_type"] == oracle_type)
+                and (verdict is None or r["verdict"] == verdict)][offset:offset + limit]
 
     return router

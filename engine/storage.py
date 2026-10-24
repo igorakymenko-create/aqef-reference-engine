@@ -68,6 +68,15 @@ class Storage:
             conn.execute("""CREATE TABLE IF NOT EXISTS executions (
                 id TEXT PRIMARY KEY, project_name TEXT NOT NULL, data_json TEXT NOT NULL
             )""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS assessment_results (
+                id TEXT PRIMARY KEY, project_name TEXT NOT NULL, execution_id TEXT NOT NULL,
+                data_json TEXT NOT NULL)""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS custom_validators (
+                project_name TEXT NOT NULL, name TEXT NOT NULL, version TEXT NOT NULL,
+                data_json TEXT NOT NULL, PRIMARY KEY (project_name, name, version))""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS admissions (
+                id TEXT PRIMARY KEY, project_name TEXT NOT NULL, oracle TEXT NOT NULL,
+                data_json TEXT NOT NULL)""")
             # Teams, Roles, Principals, Auth Tokens
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS teams (
@@ -249,6 +258,58 @@ class Storage:
         with self._get_connection() as conn:
             return [json.loads(row["data_json"]) for row in conn.execute(
                 "SELECT data_json FROM executions WHERE project_name = ? ORDER BY rowid", (project_name,))]
+
+    def append_result(self, project_name, result):
+        from engine.models.assessment import Result
+        validated = Result.model_validate(result)
+        data = validated.model_dump(mode="json")
+        if data["assertions"] is None:
+            del data["assertions"]
+        with self._get_connection() as conn:
+            try:
+                conn.execute("INSERT INTO assessment_results VALUES (?, ?, ?, ?)",
+                             (data["id"], project_name, data["execution"], json.dumps(data)))
+            except sqlite3.IntegrityError as exc:
+                raise StorageConflictError("Result is immutable") from exc
+        return data
+
+    def list_results(self, project_name, execution_id):
+        with self._get_connection() as conn:
+            return [json.loads(row[0]) for row in conn.execute(
+                "SELECT data_json FROM assessment_results WHERE project_name = ? AND execution_id = ? ORDER BY rowid",
+                (project_name, execution_id))]
+
+    def create_custom_validator(self, project_name, definition):
+        with self._get_connection() as conn:
+            try:
+                conn.execute("INSERT INTO custom_validators VALUES (?, ?, ?, ?)",
+                             (project_name, definition["name"], definition["version"], json.dumps(definition)))
+            except sqlite3.IntegrityError as exc:
+                raise StorageConflictError("Custom Validator name@version is immutable") from exc
+        return definition
+
+    def list_custom_validators(self, project_name):
+        with self._get_connection() as conn:
+            return [json.loads(row[0]) for row in conn.execute(
+                "SELECT data_json FROM custom_validators WHERE project_name = ? ORDER BY rowid", (project_name,))]
+
+    def append_admission(self, project_name, data):
+        with self._get_connection() as conn:
+            try:
+                conn.execute("INSERT INTO admissions VALUES (?, ?, ?, ?)",
+                             (data["id"], project_name, data["oracle"], json.dumps(data)))
+            except sqlite3.IntegrityError as exc:
+                raise StorageConflictError("Admission is immutable") from exc
+        return data
+
+    def list_admissions(self, project_name):
+        with self._get_connection() as conn:
+            return [json.loads(row[0]) for row in conn.execute(
+                "SELECT data_json FROM admissions WHERE project_name = ? ORDER BY rowid", (project_name,))]
+
+    def is_admitted(self, project_name, oracle):
+        records = [r for r in self.list_admissions(project_name) if r["oracle"] == oracle]
+        return bool(records and records[-1]["admitted"])
 
     # ---------------- Principals, Teams, Roles ----------------
 

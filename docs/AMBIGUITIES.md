@@ -1,5 +1,80 @@
 # Ambiguities Log
 
+## 12. Built-in Validator target and expected formats
+- **Section:** Volume V Built-in Validators; Appendix A §A.5.
+- **Quotation:** “Structure varies by validator type”; “response, conversation, artifacts.*, or a specific path”.
+- **Readings:** infer arbitrary formats, or publish precise supported deterministic formats.
+- **Choice:** publish formats in API.md. Response is the last turn's response; conversation
+  is the full object; artifacts.* is the complete list; artifacts.NAME selects matching
+  data (one value or a list), with dotted paths/indexes supported. Missing evidence is
+  unavailable. Schema accepts a JSON Schema object or `json` (any valid JSON); structural
+  accepts a required_steps list (or `{required_steps:[...]}`), matched in order; latency
+  accepts a duration or numeric milliseconds; cost a numeric maximum or metric/max map;
+  forbidden-content accepts `{patterns:[string or {regex:string}]}`. Unsupported rules
+  are unavailable rather than guessed passes. Schemas are local-only; remote refs rejected.
+
+## 13. Composition and short-circuit granularity
+- **Section:** Volume V Execution Order, Composition, Validator SDK; Appendix A §A.5.
+- **Quotation:** “AND”, “OR”, “hard veto”; “Validation has then not passed”.
+- **Readings:** any individual fail immediately stops all checking; or finish Constraints
+  and apply declared composition before deciding whether to invoke Judges.
+- **Choice:** record all Constraint outcomes, cheapest-first, then apply policy. OR needs
+  a passing Constraint; AND and hard-veto require all. A failed veto or any unavailable
+  Constraint blocks regardless of OR. Empty Constraints pass vacuously. No fake skipped
+  Judge Result uses not_assessed (C.7 reserves that for controls/quorum). Policies cannot
+  silently bypass an unavailable check. hard-veto's undeclared base is conservatively AND.
+
+## 14. Custom Validator registration
+- **Section:** Volume V Custom Validators, Validator SDK; Appendix C §C.4.
+- **Quotation:** “A Project MAY define Custom Validators”; “only inputs”; “not ... network access”.
+- **Readings:** load arbitrary executable functions, or register restricted pure declarative
+  rules. No registration path or permission is specified.
+- **Choice:** project-local POST /validators (contract_define with existing governance),
+  GET /validators (read). Immutable `{name,version,rule}` rules use a bounded declarative
+  equality, pattern, schema or range evaluator; no code/clock/random/network access.
+  Constraints bind `name@version` (bare name only if exactly one version exists). Built-in
+  names cannot be shadowed. Registration is configuration, not a plugin or language SDK.
+  A Custom Result's Oracle identity includes the rule; no silent version replacement.
+  A Custom Constraint's required expected field must be null, since its registered
+  rule already defines the expectation; non-null expected is unavailable, never ignored.
+
+## 15. Oracle and clause identity, assertions and agreement Confidence
+- **Section:** VI Single Judge, Confidence, Admission; C.7; A.6.
+- **Quotation:** “changed model, prompt, or criteria is a different Judge”; “assertions”.
+- **Readings:** model name alone; or canonical model/source/criteria/protocol identity.
+- **Choice:** canonical JSON Oracle string includes all Judge configuration and criteria,
+  plus wire version. No hidden criteria prompt is added. Unnamed clause references include
+  hash of frozen effective Contract, kind and index. Built-ins/custom identity includes
+  version and expected rule. Judge response must declare integer assertions >=1; 1 is
+  omitted from Result, >1 copied. The engine cannot infer semantic assertion count from
+  free text; the provider must report it honestly. Single Judge agreement is rejected
+  at preflight, since panel agreement cannot replace its own Confidence (VI Confidence).
+
+## 16. Unavailable and malformed Judge responses
+- **Section:** VI Judge Architecture, Confidence; C.7.
+- **Quotation:** “MUST carry a Confidence value”; “Once any response carrying a verdict arrives, it stands”.
+- **Readings:** invent Confidence, accept malformed output, or retain output as diagnostic
+  evidence while recording no usable assessment.
+- **Choice:** exact pass/fail, finite numeric [0,1] confidence, declared assertions and
+  supporting explanation are required. Any invalid/missing field yields unavailable
+  with null Result verdict and not_applicable Confidence; raw received verdict remains
+  in supporting_evidence. One attempt only, bounded by the configured timeout as an
+  assessment budget separate from the completed subject runtime. No second chance can
+  replace an unfavorable/invalid response. Unknown Judge fields are rejected.
+
+## 17. Admission input, acceptance order and reference provenance
+- **Section:** VI Admission; C.3 Admission.
+- **Quotation:** “Every other field is required except arbitrations”; “accepted last”.
+- **Readings:** accept arbitrary verdict labels/provenance or restrict to pass/fail and
+  identified Persons; constrain every named agreement measure to the same numeric range.
+- **Choice:** verdict_distribution keys are pass/fail only (missing zero-count key allowed),
+  labelled_by resolves to at least one existing Person; no role named reviewer is invented.
+  Nonempty names/reference strings, finite numeric agreement/threshold; measures are
+  Project-defined, so chance values/thresholds have no invented universal [0,1] range.
+  Raw agreement is [0,1]. Most recent means SQLite insertion order, never client time.
+  Preserve absent arbitrations versus empty. The API records supplied comparison evidence,
+  not an automatic reference-set scoring service; provenance SHOULDs are documented.
+
 ## 7. Execution defaults and retry count
 - **Section:** Appendix A §A.9; Volume III Timeouts, Retry.
 - **Quotation:** “overridden at the Suite level field by field”; “Maximum retry count.”

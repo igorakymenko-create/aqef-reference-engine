@@ -1,4 +1,4 @@
-# HTTP provider interface — slice 2
+# HTTP provider interface — slices 2–3
 
 ## Startup mapping
 
@@ -20,8 +20,8 @@ python -m uvicorn engine.main:app --host 127.0.0.1 --port 8000
 ```
 
 Environment `model_version: subject-v1` resolves to the first URL. Judge `model:
-judge-v1` uses the same namespace; Judge invocation and its wire contract belong to
-slice 3 and are not implemented by this slice. `infra_target` does not select the URL.
+judge-v1` uses the same namespace and resolves to the second endpoint; the Judge
+protocol is specified below. `infra_target` does not select the URL.
 `prompt_version` identifies configuration; the literal opening prompt comes from
 `Scenario.prompt.template`, without an implicit external prompt store.
 
@@ -132,5 +132,80 @@ artifacts map with turn null, retains source_execution, and invokes no subject.
 Confirmation and invalidation belong to slice 5.
 
 GET `.../{id}/artifacts` returns a paginated list of `{name, data, turn}`.
-GET `.../{id}/results` returns `[]` in slice 2. No Validators or Judges run.
+GET `.../{id}/results` returns immutable Validator and Single Judge Results in slice 3.
 All resources require authentication and atomic read/execute permission.
+
+## Judge request (http-judge-v1)
+
+After Validation passes, each Single Judge Expectation sends one JSON POST to the exact
+URL mapped from `judge.model`. The startup setting is the same `AQEF_PROVIDER_URLS`
+shown above, read once at app construction. No endpoint suffix, hidden prompt, generation
+settings, redirects or custom authentication headers are added. All request fields:
+
+```json
+{
+  "model": "judge-v1",
+  "criteria": "The answer is factually correct.",
+  "confidence_source": "self_rating",
+  "evidence": {
+    "conversation": {"turns":[{"prompt":"What is 2+2?","response":"4"}]},
+    "artifacts": [{"name":"latency_ms","data":12.5,"turn":1,"attempt":1}]
+  }
+}
+```
+
+Criteria is the exact Contract clause text. Evidence is the entire frozen Conversation
+and Artifacts list, in the same format the execution resources return. No subject call
+is made during assessment. `confidence_source` is `self_rating` or `token_probability`.
+For self_rating the provider must obtain the Judge's own explicit Confidence in the
+verdict; for token_probability it must return the model's probability for that verdict.
+Both are returned in the same numeric `confidence` field. The engine does not reinterpret
+Confidence as importance, a quality score or a panel vote count. Single Judge with
+`agreement` is rejected at execution preflight; Multi Judge belongs to slice 5.
+
+## Judge response
+
+Return 2xx with this JSON object (all four keys required; no extra keys):
+
+```json
+{
+  "verdict": "pass",
+  "confidence": 0.93,
+  "explanation": "The response states the correct sum.",
+  "assertions": 1
+}
+```
+
+`verdict` is exactly `pass` or `fail`; `confidence` is a finite JSON number in [0,1],
+never a string, Boolean or null. `explanation` is a string supporting the verdict.
+`assertions` is an integer >=1: the provider explicitly declares the number of
+independent assertions its assessment aggregates. The engine cannot infer that count
+from free-form criteria. Count 1 is omitted from the resulting C.7 Result; a larger
+count is copied to the Result's `assertions`. No `panel` field appears for Single Judge.
+
+At or above the clause's confidence_threshold, the Result is `actionable`, including
+a fail verdict. Below it, the verdict and Confidence are retained with `inconclusive`.
+Human routing and Result resolution are deferred to later slices; no low score is retried.
+
+An unavailable Judge includes an unmapped model, non-2xx (429 and redirects included),
+connection/read failure, timeout, invalid JSON, wrong/missing fields, nonfinite/out-of-range
+Confidence, invalid verdict, or invalid assertions. Result disposition is
+`oracle_unavailable`, verdict null and Confidence `not_applicable`. Received JSON,
+including any verdict in an invalid envelope, is retained in supporting_evidence;
+no usable Confidence is invented. Results are never silently treated as passes.
+
+Exactly one attempt is made per Expectation. It has the configured ExecutionConfig
+timeout as a fresh assessment budget after subject completion (default 30s), independent
+of the subject's runtime deadline. The permitted optional Oracle transport re-attempt
+is not used. Attempts, times, error and raw provider JSON or explanation are recorded
+in supporting_evidence. Neither successful nor unavailable Results can be overwritten.
+
+The Result's `oracle` is a canonical compact sorted-key JSON string, for example:
+
+```json
+{"confidence_source":"self_rating","criteria":"The answer is factually correct.","model":"judge-v1","type":"judge","version":"http-judge-v1"}
+```
+
+That exact string identifies this Judge configuration in Admission records. Different
+models, confidence sources, criteria or protocol versions have different identities;
+thresholds consume Confidence and do not change the Oracle that produced it.

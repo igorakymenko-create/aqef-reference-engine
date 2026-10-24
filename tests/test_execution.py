@@ -73,7 +73,12 @@ def test_single_turn_evidence_and_frozen_runtime(harness):
     assert [a["name"] for a in artifacts] == ["latency_ms", "log", "usage"]
     assert artifacts[0]["data"] >= 0
     assert client.get(path + "/artifacts?offset=1&limit=1", headers=HEADERS).json() == artifacts[1:2]
-    assert client.get(path + "/results", headers=HEADERS).json() == []
+    # Slice 3 now assesses completed Evidence; the old placeholder format is not a
+    # valid structural rule, so its missing check yields an unavailable Validator.
+    results = client.get(path + "/results", headers=HEADERS).json()
+    assert len(results) == 1
+    assert results[0]["confidence"] == "not_applicable"
+    assert results[0]["disposition"] == "oracle_unavailable"
     with pytest.raises(StorageConflictError):
         app.state.storage.update_execution(r)
     assert client.delete("/projects/p?retain_history=true", headers=HEADERS).status_code == 204

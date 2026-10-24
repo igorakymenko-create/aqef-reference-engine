@@ -88,6 +88,21 @@ class ExecutionEngine:
                 effective = compose_scenario_effective_contract(
                     project.contracts, suite.contracts, scenario.contract,
                     lambda name: store.get_contract(project_name, name))
+                if effective.policies and effective.policies.validator_composition not in ("AND", "OR", "hard-veto"):
+                    raise ValueError("Unsupported validator_composition")
+                for expectation in effective.expectations:
+                    if expectation.judge is None:
+                        raise ValueError("Human Review and Multi Judge execution are deferred to slice 5")
+                    if expectation.judge.confidence_source.value == "agreement":
+                        raise ValueError("Single Judge cannot use panel agreement as its Confidence")
+                    if expectation.judge.model.strip().lower() == env.model_version.strip().lower():
+                        raise ValueError("Independent Oracle violation: Judge and subject models must differ")
+                definitions = store.list_custom_validators(project_name)
+                frozen_validators = {}
+                for constraint in effective.constraints:
+                    matching = [d for d in definitions if constraint.validator in (d["name"], d["name"] + "@" + d["version"])]
+                    if len(matching) == 1:
+                        frozen_validators[constraint.validator] = matching[0]
                 rows = [(None, scenario.variables or {})]
                 if scenario.dataset:
                     name, version = scenario.dataset.split("@", 1)
@@ -109,6 +124,7 @@ class ExecutionEngine:
                             "environment": env.model_dump(mode="json"),
                             "scenario": scenario.model_dump(mode="json"),
                             "contract": effective.model_dump(mode="json"),
+                            "validators": deepcopy(frozen_validators),
                             "execution": deepcopy(config)},
                         "scheduling": {"strategy": config["scheduling"], "order": len(records),
                                        "reason": "on_demand Suite × Environment; declaration order",
@@ -201,5 +217,7 @@ class ExecutionEngine:
             async def worker(record):
                 async with pool:
                     await self.execute(record)
+                    from engine.assessment import AssessmentEngine
+                    await AssessmentEngine(self.storage, self.provider).assess(record)
             await asyncio.gather(*(worker(record) for record in records))
         return {"execution_batch_id": batch, "executions": records}

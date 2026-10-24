@@ -21,6 +21,7 @@ from engine.models.principal import Principal, PrincipalKind, Role, Team
 from engine.storage import Storage
 from engine.providers import HTTPProvider, load_provider_urls
 from engine.api.executions import get_executions_router
+from engine.api.assessment import get_assessment_router
 
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
@@ -73,6 +74,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     app.include_router(get_datasets_router(storage, principal_dep))
     app.include_router(get_gates_router(storage, principal_dep))
     app.include_router(get_executions_router(storage, principal_dep, provider))
+    app.include_router(get_assessment_router(storage, principal_dep))
 
     @app.get("/healthz", tags=["System"])
     def health_check():

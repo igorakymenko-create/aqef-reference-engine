@@ -18,7 +18,9 @@ The engine's purpose is to demonstrate that the AQEF specification can be implem
   - Deterministic Variables/Context, multi-turn Conversations, captured Artifacts
   - Infrastructure retries, whole-execution timeouts, durable frozen Evidence
   - HTTP subject provider; startup mapping and wire contract in [docs/PROVIDERS.md](docs/PROVIDERS.md)
-- [ ] **Slice 3: Assessment**
+- [x] **Slice 3: Assessment**
+  - Deterministic built-in and registered Custom Validators with composition/veto
+  - HTTP Single Judge, Confidence, immutable Results and Admission records
 - [ ] **Slice 4: Decision and Release**
 - [ ] **Slice 5: Scoped Capabilities**
 - [ ] **Slice 6: Conformance Statement**

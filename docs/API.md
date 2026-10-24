@@ -17,11 +17,132 @@ Authenticated `read` endpoints:
 - `GET .../executions/{id}`: persisted metadata and frozen runtime configuration.
 - `GET .../executions/{id}/conversation`: one completed transcript, or 409 if none.
 - `GET .../executions/{id}/artifacts`: list with the same offset/limit convention.
-- `GET .../executions/{id}/results`: empty list until assessment is implemented.
+- `GET .../executions/{id}/results`: immutable C.7 Results; optional oracle_type/verdict
+  filters and the same offset/limit pagination.
 
 Missing/invalid authentication returns 401, missing permission 403, missing Execution
 404, invalid request fields 422. Finished records cannot be updated or deleted. Their
 frozen configuration and Evidence remain readable even after live configuration deletion.
+
+## Slice 3 assessment
+
+Successful executions are automatically assessed before POST returns. All Constraints
+run first, cheapest-first, and each produces a Result. Default AND and `hard-veto`
+require all to pass; OR requires at least one. Any failed `veto: true` Constraint, or any
+unavailable Constraint, prevents Judges from running. Empty Constraints pass vacuously.
+Each Single Judge then produces one Result using the [HTTP contract](PROVIDERS.md).
+Failed executions have no Results; skipped Judges have no fabricated Result.
+Execution `completed` describes Evidence collection, independently of assessment quality.
+
+Validators return verdict pass/fail, Confidence `not_applicable` and disposition actionable.
+A broken/unsupported check or missing evidence produces oracle_unavailable with null
+verdict, never fail/pass. Supporting evidence contains the frozen clause, selected
+target, observed/expected facts and any error. Unnamed clause references are
+`sha256:<frozen-contract-hash>/<constraints-or-expectations>/<zero-based-index>`;
+declared ids are used directly. Oracle identity is canonical JSON with version/configuration.
+
+Targets are deterministic dotted paths: `response` (last response), `conversation`
+(full object), `conversation.turns.0.response`, `response.some_json_key`, `artifacts.*`
+(all Artifact records), `artifacts.NAME` (matching data: scalar for one, list for several),
+`artifacts.usage.0.total_tokens`, and `duration_ms` (recorded execution duration).
+Missing paths are unavailable. A string is parsed as JSON when traversing into it.
+
+Built-in expected formats:
+
+| validator | target example | expected example / meaning |
+|---|---|---|
+| schema | response | JSON Schema object/Boolean, or `"json"` for any valid JSON; last response text is decoded as JSON |
+| forbidden-content | response | `{"patterns":["literal",{"regex":"(?i)unsafe"}]}`; pass iff none match |
+| structural | conversation | `{"required_steps":["retrieve","answer"]}` or the list directly; substrings must occur in order in prompt/response transcript text |
+| latency | duration_ms | `"500ms"` or numeric milliseconds; recorded duration <= maximum |
+| cost | artifacts.usage | number (maximum total_tokens), or `{"metric":"cost","max":0.05}`; sum across target entries <= maximum |
+
+Schema uses jsonschema 4.23.0, the schema's declared draft or the library default
+(2020-12), with built-in format checks; only local fragment references are allowed.
+No remote schema/resource retrieval occurs. Malformed JSON data is a completed fail;
+invalid schemas are unavailable. Patterns use Python regex syntax; strings are literal,
+case-sensitive substrings. Nontext forbidden-content targets use canonical JSON text.
+Structural matching is literal and case-sensitive, across newline-joined prompt/response
+turns or list items. Numeric latency lists are summed. Missing usage/metrics are unavailable.
+Tool-call/Boundary Validators require the excluded acting-tools capability; attempts to
+apply them produce unavailable and block validation.
+
+### Custom Validator registration
+
+`POST /projects/{project}/validators` requires `contract_define` and the existing
+Approval Workflow (Service Accounts need X-Approved-By and X-External-Review-Ref).
+It returns 201; duplicate name/version returns 409. Invalid rules return 422.
+`GET /projects/{project}/validators` requires read and supports offset/limit.
+No modification/deletion endpoint or arbitrary executable loading is provided.
+
+```json
+{
+  "name": "domain-status",
+  "version": "1",
+  "rule": {"operation":"equals","expected":"approved"}
+}
+```
+
+The complete rule language is:
+- `{"operation":"equals","expected":<any JSON>}`: canonical JSON equality (true differs from 1).
+- `{"operation":"range","minimum":0,"maximum":10}`: inclusive finite numeric bounds.
+- `{"operation":"schema","expected":<schema or "json">}`.
+- `{"operation":"forbidden-content","expected":{"patterns":[...]}}`.
+- `{"operation":"structural","expected":{"required_steps":[...]}}`.
+
+Unknown fields/operations, invalid rules, or built-in name shadowing are rejected.
+Names/versions use letters, numbers, underscore, dot or hyphen. A Constraint uses:
+
+```json
+{"validator":"domain-status@1","target":"response.status","expected":null,"dimension":"functional"}
+```
+
+Custom Constraints require explicit dimension. Their expected is null because the
+immutable registered rule defines the expectation; a non-null value is unavailable
+rather than silently ignored. Bare name binds only when exactly one version exists.
+Missing/ambiguous registration is unavailable. Definitions are frozen before execution.
+The evaluator receives only selected Evidence and its frozen rule, with no clock,
+randomness, network, filesystem, imports or user code. This declarative registration
+implements Volume V's Custom Validator interface without a plugin or language SDK.
+
+### Admission
+
+`POST /projects/{project}/admissions` requires a **Person** with `review` permission.
+`GET /projects/{project}/admissions` requires read, supports offset/limit and optional
+oracle filter, and lists records in acceptance order, oldest first. Example POST:
+
+```json
+{
+  "oracle":"<exact Judge Result oracle string>",
+  "reference_set":"reference@1",
+  "items":10,
+  "verdict_distribution":{"pass":7,"fail":3},
+  "raw_agreement":0.8,
+  "measure":"cohen_kappa",
+  "chance_corrected_agreement":0.7,
+  "threshold":0.7,
+  "admitted":true,
+  "labelled_by":["reviewer-person-id"],
+  "arbitrations":[]
+}
+```
+
+All fields except arbitrations are required. The engine generates id, recorded_at and
+recorded_by; supplying any of them is rejected (422), as are unknown keys. Counts must
+be nonnegative integers summing to positive integer items, with only pass/fail keys.
+raw_agreement must be [0,1]. Chance agreement and threshold are finite numbers for the
+Project's named measure; admitted must exactly equal chance agreement >= threshold.
+`"not_computed"` is allowed for chance agreement only with admitted false. No nulls,
+numeric strings or Boolean substitutes for numbers are accepted. labelled_by must name
+at least one existing Person. An absent arbitrations field is preserved as absent;
+empty means there was no disagreement. Admission is append-only; no PUT/PATCH/DELETE.
+The last accepted record for the exact Oracle determines admission and may withdraw it.
+It does not suppress diagnostic Judge calls; admission-dependent Gates belong to slice 4.
+
+The API records supplied agreement evidence; it does not invent reviewer independence
+or automatically score a Reference Set. Reviewers should be independent of Judge tuners,
+label items blind, exclude alignment/exposed items, record arbitration reasoning, draw
+from multiple sources and version their Reference Set (Volume VI Admission SHOULDs).
 
 ## Running the Engine
 
