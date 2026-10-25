@@ -1,7 +1,7 @@
-# Specification review — through slice 11
+# Specification review — through slice 12
 
-Review date: 2026-10-24. Current target: the engine delivered as `slice-11`, based on
-AQEF Working Draft **0.41.5**. The baseline ledger below was recorded in slice 6
+Review date: 2026-10-24. Current target: `slice-12`, with unchanged slice-11 engine code, based on
+AQEF Candidate Recommendation **1.0-CR1**. The baseline ledger below was recorded in slice 6
 against 0.41.1; the following current-release rows supersede affected source units.
 Baseline source links are pinned to that historical version, not shifted line numbers
 in the refreshed local kit. Intended scope remains the implicit
@@ -9,13 +9,29 @@ core plus `human_review`, `multi_judge`, `seeded_controls`. This is a specificat
 review with the implementation's own tests, not the AQEF Conformance Test
 Specification, a certification, or evidence that every normative check passes.
 
-## Current release review — through 0.41.5
+## Slice 12 — 1.0-CR1 applicable rules
+
+| ID / source | Rule and implementation evidence | Outcome |
+|---|---|---|
+| S12-1 — [A.8](https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1/appendices/appendix-a-yaml-specification.md#a8--dataset), IV, §0 | Reserved source synthetic MUST be rejected on configuration load. engine/models/dataset.py:Dataset.validate_dataset rejects every non-static source. storage._validate_configuration_change reparses the whole Project model on configuration changes; startup uses the same guard. test_slice_11.py::test_0415_b_every_configuration_route_validates_whole_result_before_any_write traces the common guard; it is not a dedicated synthetic regression. Owner-reported CTS 1.0-CR1 run r261024202325 confirms rejection. | MET by inspected code and external outcome; no code change. Dedicated local synthetic-route matrix remains verification work (b). Supersedes historical optional-source treatment in R161/R256. |
+| S12-2 — A.8 mechanisms; IV; §0/§10 | Every Dataset naming any mechanisms type MUST be rejected, regardless of claimed capabilities. Dataset.validate_dataset rejects all nonempty lists; MechanismType rejects unknown types. tests/test_slice_9.py::test_0414_iv_a8_unoffered_mechanisms_rejected_at_every_loader and ::test_0414_iv_a8_empty_mechanisms_is_no_capability cover the four types/loaders and empty list. | MET unchanged. All four identifiers are reserved, not optional implementation omissions. Supersedes S9-5's earlier scoped interpretation. |
+| S12-3 — [§10](https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1/front-matter/10-conformance.md); [IX](https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1/part-iii-testing-methodology/volume-ix-test-types.md) | Test Types are Suite purposes built from core entities, not conformance capability identifiers; Volume IX adds no requirement. Statement removes the former identifier language and keeps only valid scoped identifiers. | DOCUMENTED; no engine behavior change. |
+| S12-4 — §0/revision row; III/A.2, IV, XVI, XIII | New boundary/pattern/tool-schema, failed generation, Plugin input and Pipeline override rules apply to unclaimed capabilities. | OUT OF SCOPE. No change to claim scope or skipped SHOULDs. |
+
+No classification-(a) finding is introduced. The scoped claim carries over to 1.0-CR1;
+verification-only ledger work remains explicit. Owner-reported external run
+r261024202325 (CTS 1.0-CR1 against slice-11): PASS 189, FAIL 0, NOT_RUN 0,
+NOT_APPLICABLE 36 (unclaimed capabilities, Team binding and reserved capabilities).
+Only this supplied summary was used. Runtime version strings and generated OpenAPI
+remain the unchanged engine build's 0.41.5 metadata, not this claim's specification target.
+
+## Current release review — through 1.0-CR1
 
 Current whole suite: **769 passed**, one existing Starlette/httpx deprecation warning.
 The 318-test result later in this file is the historical slice 6 baseline.
 
-Upstream ref is `0.41.5`. The 0.41.5 revision-history row and changed
-normative files were retrieved by their exact known paths; source blob IDs are recorded
+Current upstream ref is `1.0-CR1`. Document Status, the revision-history row, §10,
+A.8, Volume IV and Volume IX were read at that tag; source blob IDs are recorded
 in SPECIFICATION-SOURCES.json. No test directories or external test material were used.
 Capability scope is unchanged. Null/unknown-key handling is repaired; all prior (a) findings close under 0.41.5; known verification work (b) remains separate. G1/G5/G6/G7 close in slice 9; G4/G8 were clarified in slice 8. Original source units are retained as history; updated dispositions are not a fresh whole-spec coverage proof.
 

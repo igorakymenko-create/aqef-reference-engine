@@ -1,9 +1,9 @@
 # AQEF Conformance Statement
 
-Issued 2026-10-24 for **AQEF Reference Engine, slice-11**, Python 3.12 / FastAPI /
-SQLite, one self-hosted application process. Specification target: the bundled
-**AQEF Working Draft 0.41.5**. Release source ref is `0.41.5` in the upstream AQEF
-repository; the local ignored `spec/` kit has the updated normative texts. Exact
+Issued 2026-10-24 for **AQEF Reference Engine, slice-12**, Python 3.12 / FastAPI /
+SQLite, one self-hosted application process. Specification target:
+**AQEF Candidate Recommendation 1.0-CR1**. Release source ref is `1.0-CR1` in the upstream AQEF
+repository. The exact current normative sources were read directly from that tag. Exact
 retrieved paths and source blob IDs are in [SPECIFICATION-SOURCES.json](SPECIFICATION-SOURCES.json).
 Published 0.41.2 adopted O-1/O-2; 0.41.3 added Gate reasons/coverage and pre-run SHOULDs.
 0.41.4 settles synchronous triggering, audit, Team binding, policy composition and
@@ -13,18 +13,20 @@ full B.2/B.3 validation on every configuration change, implemented in slice 11.
 
 ```yaml
 aqef_conformance:
-  specification_version: "0.41.5"
-  implementation: "AQEF Reference Engine slice-11"
+  specification_version: "1.0-CR1"
+  implementation: "AQEF Reference Engine slice-12"
   capabilities:
     - human_review
     - multi_judge
     - seeded_controls
   not_offered:
+    # Reserved by 1.0-CR1; cannot be claimed, not an implementation opt-out.
     - dataset_mechanism:data_mutation
     - dataset_mechanism:fuzzing
     - dataset_mechanism:edge_cases
     - dataset_mechanism:adversarial
     - dataset:synthetic
+    # Specified capabilities deliberately not offered.
     - dataset:generated
     - dataset:production_replay
     - action_boundary
@@ -36,9 +38,9 @@ aqef_conformance:
     - plugins:report
 ```
 
-No `test_type:<name>`, `ci_cd:<platform>` or `sdk:<language>` capability is claimed
-for any name/platform/language. General Scenarios can express different Contracts;
-this is not a claim to ship Volume IX's named test-type implementations. Custom
+Test Types name Suite purposes built from the core, and are not conformance
+capabilities (§10; Volume IX). No `ci_cd:<platform>` or `sdk:<language>` capability
+is claimed for any platform/language. Custom
 Validators use the documented pure declarative registration interface (Volume V),
 not executable Validator Plugins (Volume XVI) or a language SDK (Volume XIV).
 
@@ -47,8 +49,8 @@ Datasets are part of that core. Definition, Execution, Evidence, Assessment and
 Decision are implemented; ordinary Results pass through Confidence handling before
 aggregation. Topology is a deployment choice and removes no normative obligations.
 
-**Conformance claim:** AQEF Reference Engine, tag **slice-11**, claims **AQEF
-Conformance to Working Draft 0.41.5** for `human_review`, `multi_judge` and
+**Conformance claim:** AQEF Reference Engine, tag **slice-12**, claims **AQEF
+Conformance to Candidate Recommendation 1.0-CR1** for `human_review`, `multi_judge` and
 `seeded_controls`, with the non-negotiable core implicit. The prior classification-(a)
 findings are closed by the implementation and the 0.41.5 clarifications documented
 below. Known verification work (b) is not an assertion of an unmet MUST; deliberate
@@ -178,14 +180,41 @@ The owner also supplied **CTS WD9, AQEF 0.41.4, run `r261024112524`** against
 | NOT_RUN | 9 | Eight Inspection/Declaration items and one crashing Custom Validator case the engine could not be driven to. |
 | NOT_APPLICABLE | 32 | Unclaimed capabilities and Team binding, which this engine does not have. |
 
-Both runs are owner-reported evidence against earlier releases at 0.41.4, not a new
-external run against slice 11/0.41.5 or independent certification. Only the supplied
-summaries were used; no CTS material was requested, fetched, inspected or used.
+Those two runs concern earlier releases at 0.41.4. The owner additionally reports
+**CTS 1.0-CR1, run `r261024202325`, against `slice-11`**:
+
+| Result | Cases | Owner's supplied detail |
+|---|---:|---|
+| PASS | 189 | No failures found. |
+| FAIL | 0 | None. |
+| NOT_RUN | 0 | None. |
+| NOT_APPLICABLE | 36 | Unclaimed capabilities, Team binding, and reserved capabilities. |
+
+The slice-12 source changes documentation only, so that run exercises the same
+engine code. These are owner-reported outcomes, not independent certification.
+Only supplied summaries were used; no CTS material was requested or inspected.
 
 This statement cannot provide independent certification, verifiable external model
 ancestry, a complete MUST-coverage proof, or assurance about undisclosed provider behavior. None is invented. No AQEF conformance
 test material was accessed. The local whole suite passes **769 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
-The statement applies to the source published under tag `slice-11`; it does not assert
+The statement applies to the source published under tag `slice-12`; it does not assert
 that arbitrary deployment settings or later changes preserve these properties.
+
+## 1.0-CR1 claim review
+
+Read §0 Document Status, the 1.0-CR1 revision row, §10, Volume IV, Volume IX and
+[A.8](https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1/appendices/appendix-a-yaml-specification.md#a8--dataset).
+Dataset.validate_dataset rejects source synthetic and every nonempty mechanisms list;
+B.2 reparsing at all configuration writes and startup preserves these rejections.
+The existing behavior meets the now-unconditional reserved-feature MUSTs. Empty
+mechanisms names no type. Unknown mechanism types also fail enum validation.
+The remaining normative changes concern unclaimed Action Boundary, generated Datasets,
+Plugins and CI/CD. Volume IX adds no requirements. Scope, Team binding, implementation
+choices and skipped SHOULDs remain unchanged; no unmet applicable MUST was identified.
+Known verification work (b) remains verification work, not a qualification of the claim.
+
+Runtime package/API version metadata remains 0.41.5, identifying the unchanged engine
+build. It is not the specification target of this statement; no engine code or generated
+OpenAPI snapshot is changed in this documentation-only slice.

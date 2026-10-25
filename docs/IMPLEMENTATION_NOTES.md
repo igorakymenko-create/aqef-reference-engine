@@ -1,5 +1,31 @@
 # Implementation Notes
 
+## Slice 12 — Candidate Recommendation 1.0-CR1
+
+- Read the 1.0-CR1 revision row and full §0 Document Status, §10, Volume IV,
+  Volume IX and Appendix A §A.8 at the release tag. Only normative paths were
+  fetched; no external test material was accessed. Source blob IDs are recorded.
+- A.8/IV/§0: reserved synthetic source already rejected by Dataset.validate_dataset
+  (all non-static sources rejected); every nonempty mechanisms list also rejected.
+  Unknown mechanism types fail enum validation. The common resulting-configuration
+  guard reparses these models before every write and on startup. No code fix needed.
+- §10/IX: Test Types are Suite-purpose taxonomy, not capability identifiers. Removed
+  the obsolete identifier wording. Marked synthetic and all four mechanisms reserved
+  in not_offered, separately from optional capabilities the engine does not implement.
+- Other normative changes concern unclaimed Action Boundary, generation, Plugins or
+  CI/CD. Scoped core/human_review/multi_judge/seeded_controls Conformance carries over
+  to 1.0-CR1 with no new (a) findings, ambiguity entries or SHOULD deviations.
+- Owner-reported CTS 1.0-CR1 r261024202325 against slice-11: PASS 189, FAIL 0,
+  NOT_RUN 0, NOT_APPLICABLE 36. Only aggregate evidence supplied by the owner was used.
+- Updated README, statement/review and source provenance. Historical slice versions
+  remain historical. Runtime package/API metadata and generated OpenAPI remain 0.41.5
+  because the engine code is unchanged, as requested; the statement targets 1.0-CR1.
+- Full local suite: **769 passed**, one existing Starlette/httpx deprecation warning.
+  Dedicated local synthetic route-matrix
+  coverage remains verification work (b); code inspection and the supplied external
+  result support the mandatory rejection. No claim of exhaustive local coverage.
+
+
 ## Slice 11 — completed work (WD 0.41.5)
 
 - Read 0.41.5's revision row, B introduction/B.2/B.3, VIII Test Maintainability and

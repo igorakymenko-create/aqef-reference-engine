@@ -1,8 +1,13 @@
-# AQEF Engine API Documentation — Working Draft 0.41.5
+# AQEF Engine API Documentation — Candidate Recommendation 1.0-CR1
 
 This documents the implemented API, including known differences from the specification.
 See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level
-[review](CONFORMANCE-REVIEW.md). The engine claims scoped Conformance at 0.41.5; the review separately lists known verification work and skipped SHOULDs.
+[review](CONFORMANCE-REVIEW.md). The engine claims scoped Conformance at 1.0-CR1; the review separately lists known verification work and skipped SHOULDs.
+
+The slice-12 Conformance update changes no API behavior. Runtime metadata and the
+published OpenAPI snapshot retain the unchanged engine build version 0.41.5.
+A.8 reserves synthetic Datasets and all Dataset mechanisms: they are rejected at load
+and on changes, regardless of capability claims; empty mechanisms names no type.
 
 ## Slice 11 — complete resulting configuration validation (0.41.5)
 
@@ -131,7 +136,7 @@ the last attached Contract's weight; the effective policies.weight is null when 
 are mixed. A source-weight edit makes its named clause's old Result stale. Earlier
 frozen records lacking this metadata retain their recorded common weight.
 
-IV/A.8: no dataset_mechanism capability is offered. Any nonempty mechanisms list,
+1.0-CR1 IV/A.8: Dataset mechanisms are reserved and cannot be claimed. Any nonempty mechanisms list,
 including data_mutation/fuzzing/edge_cases/adversarial, returns 422 naming mechanisms
 on Project POST/PUT, Dataset POST and version registration. An empty list is accepted.
 

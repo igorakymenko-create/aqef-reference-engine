@@ -2,7 +2,7 @@
 
 A minimal engine that implements the
 **[AI Quality Engineering Framework (AQEF)](https://github.com/igorakymenko-create/AQEF)**,
-Working Draft [0.41.5](https://github.com/igorakymenko-create/AQEF/tree/0.41.5): an open
+Candidate Recommendation [1.0-CR1](https://github.com/igorakymenko-create/AQEF/tree/1.0-CR1): an open
 specification for testing AI systems, with Quality Contracts, independent Judges,
 Confidence, Seeded Controls, Quality Gates, and governed Release Decisions.
 
@@ -17,15 +17,17 @@ Conformance Test Specification. Every unclear point in the text was recorded in
 project owner ran the Conformance Tests against it. Engine defects came back here; a
 point the specification left unclear went back to the specification, as a new release.
 
-**Conformance.** The engine claims AQEF Conformance at 0.41.5 for the core and for
+**Conformance.** The engine claims AQEF Conformance at 1.0-CR1 for the core and for
 `human_review`, `multi_judge`, and `seeded_controls`. See:
 - the [Conformance Statement](docs/CONFORMANCE-STATEMENT.md): its scope, its
   implementation choices, and the SHOULDs it does not follow;
 - the [normative review](docs/CONFORMANCE-REVIEW.md): rule by rule, where each MUST is
   met, and the verification work that remains.
 
-The external run of the AQEF Conformance Tests, Working Draft 9, found no failure: 171
-passed, 32 were not applicable to the claimed capabilities, and 9 await manual review.
+The project owner's external run of the AQEF Conformance Tests 1.0-CR1 against
+`slice-11`, run `r261024202325`, found no failure: 189 passed, 0 failed, 0 were not
+run, and 36 were not applicable (unclaimed capabilities, Team binding, and reserved
+capabilities).
 The tests are published with the specification, in its `conformance-tests/` folder and
 as a PDF on each release.
 
@@ -83,6 +85,10 @@ not as an AQEF JSON Schema artifact.
   - Validate the complete resulting Project on every configuration route and startup
   - Confirm approved Contract changes; close artifact/rationale findings under 0.41.5
   - Claim scoped Conformance with external evidence, verification work and skipped SHOULDs
+
+- [x] **Slice 12: Candidate Recommendation 1.0-CR1**
+  - Confirm reserved Dataset source/mechanism rejection; no engine change
+  - Refresh Conformance scope, Test Types terminology and external evidence
 
 ## Installation and Usage
 
