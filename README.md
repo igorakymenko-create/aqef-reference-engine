@@ -28,8 +28,14 @@ The project owner's external run of the AQEF Conformance Tests 1.0-CR1 against
 `slice-11`, run `r261024202325`, found no failure: 189 passed, 0 failed, 0 were not
 run, and 36 were not applicable (unclaimed capabilities, Team binding, and reserved
 capabilities).
-The tests are published with the specification, in its `conformance-tests/` folder and
-as a PDF on each release.
+
+The earlier final Working Draft 9 run found no failure: 178 passed, 33 were not
+applicable to the claimed capabilities or offered features, and one could not be
+driven on this engine (a crashing Validator). Its eight Inspection and Declaration
+tests were decided by a named external reviewer. The tests are published with the
+specification, in its `conformance-tests/` folder and as a PDF on each release.
+The harness, final run evidence, and review records are in
+[aqef-cts-harness](https://github.com/igorakymenko-create/aqef-cts-harness).
 
 OpenAPI ([docs/OPENAPI.json](docs/OPENAPI.json)) is published as API documentation,
 not as an AQEF JSON Schema artifact.
