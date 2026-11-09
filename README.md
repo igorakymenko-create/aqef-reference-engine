@@ -100,6 +100,12 @@ not as an AQEF JSON Schema artifact.
   - Thin REST clients covering all published engine operations
   - Shell exit codes, raw response output and governed-header forwarding
 
+- [x] **Slice 14: Generated and Production Replay Datasets**
+  - Immutable materialized versions with provenance and pinned Scenario replay
+  - Capture policy and access controls for replay data and derived history
+
+See [Dataset sources](docs/DATASETS.md) for provider, capture and privacy setup.
+
 ## CLI and Python SDK
 
 Install with `python -m pip install ./client`. Set `AQEF_URL` and `AQEF_TOKEN`,

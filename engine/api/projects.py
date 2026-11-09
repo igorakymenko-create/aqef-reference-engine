@@ -9,7 +9,8 @@ References:
 
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from engine.auth import check_permission, enforce_governed_contract_define, governed_values, serialized_configuration
+from engine.auth import check_permission, enforce_governed_contract_define, get_principal_permissions, governed_values, serialized_configuration
+from engine.dataset_sources import REPLAY_PERMISSION
 from engine.models.principal import Principal
 from engine.models.project import Project
 from engine.storage import Storage, StorageConflictError, StorageNotFoundError
@@ -27,7 +28,10 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
     @router.get("", response_model=List[Project])
     def list_projects(offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=1000), current_user: Principal = Depends(get_principal_dep)):
         check_permission(current_user, "read", storage)
-        return storage.list_projects()[offset:offset + limit]
+        projects = storage.list_projects()
+        if REPLAY_PERMISSION not in get_principal_permissions(current_user, storage):
+            projects = [project for project in projects if not storage.replay_protected(project.name)]
+        return projects[offset:offset + limit]
 
     @router.post("", response_model=Project, status_code=status.HTTP_201_CREATED)
     def create_project(
@@ -37,6 +41,8 @@ def get_projects_router(storage: Storage, get_principal_dep) -> APIRouter:
         x_external_review_ref: Optional[str] = Header(None, alias="X-External-Review-Ref"),
     ):
         check_permission(current_user, "project_create", storage)
+        if storage.replay_protected(project.name):
+            check_permission(current_user, REPLAY_PERMISSION, storage)
         bind_project(project.name)
 
         # Validate complete configuration

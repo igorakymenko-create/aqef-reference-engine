@@ -16,13 +16,13 @@ class SubjectReply(AQEFBaseModel):
     usage: dict = Field(default_factory=dict)
 
 
-def load_provider_urls():
+def load_provider_urls(variable="AQEF_PROVIDER_URLS"):
     try:
-        value = json.loads(os.environ.get("AQEF_PROVIDER_URLS", "{}"))
+        value = json.loads(os.environ.get(variable, "{}"))
     except ValueError as exc:
-        raise ValueError("AQEF_PROVIDER_URLS must be a JSON object") from exc
+        raise ValueError(f"{variable} must be a JSON object") from exc
     if not isinstance(value, dict):
-        raise ValueError("AQEF_PROVIDER_URLS must be an identifier-to-URL object")
+        raise ValueError(f"{variable} must be an identifier-to-URL object")
     for key, url in value.items():
         if not isinstance(key, str) or not key or not isinstance(url, str):
             raise ValueError("Provider identifiers and URLs must be nonempty strings")
@@ -36,9 +36,22 @@ class HTTPProvider:
     def __init__(self, urls):
         self.urls = dict(urls)
 
-    async def call(self, model, payload, timeout):
+    async def call(self, model, payload, timeout, *, strict_json=False):
         # No redirects or HTTP-level retries: a redirect may repeat a real invocation.
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
             reply = await client.post(self.urls[model], json=payload)
             reply.raise_for_status()
+            if strict_json:
+                return reply.json(object_pairs_hook=unique_object, parse_constant=invalid_constant)
             return reply.json()
+
+
+def unique_object(pairs):
+    result = dict(pairs)
+    if len(result) != len(pairs):
+        raise ValueError("Duplicate JSON object key")
+    return result
+
+
+def invalid_constant(value):
+    raise ValueError("Non-finite JSON number")

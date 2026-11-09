@@ -1,13 +1,61 @@
-# AQEF Engine API Documentation — Candidate Recommendation 1.0-CR1
+# AQEF Engine API Documentation — Candidate Recommendation 1.0-CR1.2
 
 This documents the implemented API, including known differences from the specification.
 See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level
-[review](CONFORMANCE-REVIEW.md). The engine claims scoped Conformance at 1.0-CR1; the review separately lists known verification work and skipped SHOULDs.
+[review](CONFORMANCE-REVIEW.md). The engine documents its scoped claim at 1.0-CR1.2. The review lists pending verification and skipped SHOULDs.
 
 The slice-12 Conformance update changes no API behavior. Runtime metadata and the
 published OpenAPI snapshot retain the unchanged engine build version 0.41.5.
 A.8 reserves synthetic Datasets and all Dataset mechanisms: they are rejected at load
 and on changes, regardless of capability claims; empty mechanisms names no type.
+
+## Slice 14 — Dataset versions
+
+`POST /projects/{project}/datasets` and
+`POST /projects/{project}/datasets/{dataset}/versions` accept a DatasetInput
+and return HTTP 201 with the stored Dataset. The version route requires the
+body's `name` to match the path. Static request and response fields retain their
+existing behavior. Use these routes to register non-static versions before
+binding them in Project, Suite or Scenario configuration.
+
+Generated example:
+
+```json
+{"name":"greetings","version":"1","source":"generated","generator":{"model":"generator-v1","instruction":"Generate names","seed":11}}
+```
+
+The response includes the supplied fields, `rows` (for example
+`[{"id":"r1","variables":{"who":"Ava"}}]`) and a UTC `generated_at`.
+Production Replay example:
+
+```json
+{"name":"support-replay","version":"1","source":"production_replay","capture":{"source":"support-logs","date_range":["2026-10-01","2026-10-31"],"sampling":"random","sample_size":1,"anonymization":true}}
+```
+
+Its response adds `captured_at` and `rows`. A replay Row has an `id` and
+`variables.conversation` in the same `{"turns":[{"prompt":"...","response":"..."}]}`
+shape as an Execution Conversation. The provider and capture protocols and
+privacy controls are documented in [DATASETS.md](DATASETS.md).
+
+A replay Scenario uses `{"name":"replay-smoke","dataset":"support-replay@1"}`
+and its inherited or explicit Contract. Omit `prompt` for Replay. Other Dataset
+sources require the Scenario's `prompt`. Replay executes the frozen prompts
+in order. Its Execution record includes `replay_prompts` and the new
+Conversation. The old replies are available in the pinned Dataset Row.
+
+Dataset listing, retrieval and paginated rows use their existing GET paths.
+`?version=1` retrieves a specific version. Omitting `version` on retrieval
+selects the latest registered version. Successful registration audits the
+`dataset_create` action with `dataset`, `version` and `source`.
+
+The request rejects caller-supplied rows or provenance for a generated or
+replay version. HTTP 400 denotes a version-path/name mismatch. HTTP 403
+denotes missing Permissions, including `production_replay_read` where
+applicable. HTTP 404 denotes a missing Project or version. HTTP 409 denotes
+an existing immutable version. HTTP 422 covers invalid configuration,
+unconfigured sources and policy rejection. HTTP 502 reports transport,
+provider, malformed data or anonymization-attestation failure. A failed
+generation or capture creates no version or successful registration entry.
 
 ## Slice 11 — complete resulting configuration validation (0.41.5)
 
@@ -1014,10 +1062,10 @@ Create status is listed per operation; all GET/PUT actions below return 200 unle
 | GET | `/projects/{project}/contracts/{contract}` | 200 | no body → Contract |
 | PUT | `/projects/{project}/contracts/{contract}` | 200 | Contract → Contract |
 | GET | `/projects/{project}/datasets` | 200 | no body → list of Dataset |
-| POST | `/projects/{project}/datasets` | 201 | Dataset → Dataset |
+| POST | `/projects/{project}/datasets` | 201 | DatasetInput → Dataset |
 | GET | `/projects/{project}/datasets/{dataset}` | 200 | no body → Dataset |
 | GET | `/projects/{project}/datasets/{dataset}/rows` | 200 | no body → list of Row |
-| POST | `/projects/{project}/datasets/{dataset}/versions` | 201 | Dataset → Dataset |
+| POST | `/projects/{project}/datasets/{dataset}/versions` | 201 | DatasetInput → Dataset |
 | GET | `/projects/{project}/gates` | 200 | no body → list of QualityGate |
 | POST | `/projects/{project}/gates` | 201 | QualityGate → QualityGate |
 | PUT | `/projects/{project}/gates/{gate}` | 200 | QualityGate → QualityGate |

@@ -1,13 +1,26 @@
-# Specification review — through slice 13
+# Specification review — through slice 14
 
-Review date: 2026-10-24. Current target: `slice-13`, with unchanged slice-11 engine code, based on
-AQEF Candidate Recommendation **1.0-CR1**. The baseline ledger below was recorded in slice 6
+Current target: `slice-14`, AQEF Candidate Recommendation **1.0-CR1.2**. The baseline ledger below was recorded in slice 6
 against 0.41.1; the following current-release rows supersede affected source units.
 Baseline source links are pinned to that historical version, not shifted line numbers
 in the refreshed local kit. Intended scope remains the implicit
 core plus `human_review`, `multi_judge`, `seeded_controls`. This is a specification
 review with the implementation's own tests, not the AQEF Conformance Test
 Specification, a certification, or evidence that every normative check passes.
+
+## Slice 14 — Generated and Production Replay Datasets
+
+| Source | Implementation | Local verification |
+|---|---|---|
+| IV Generated Datasets and A.8 GeneratorConfig/Row. Failed or malformed generation MUST produce no version. | `dataset_sources.materialize` sends model, instruction and optional seed through the configured HTTP provider. It validates the entire array and preserves its content and order. Registration stores the config and generation time only after validation. | `test_iv_generated_versions_provenance_and_pinned_reruns` and `test_iv_failed_generation_leaves_no_version`. |
+| IV and I Ch.3 generator independence SHOULD. | `check_generator_independence` rejects equal model identifiers against the Project's Environments. Deployments choose independent families. | `test_iv_independence_and_reserved_or_forged_configs_fail_before_call`. |
+| IV Production Replay and A.8 CaptureConfig. | `dataset_sources.materialize` sends the capture policy to a configured adapter. It accepts only the requested number of valid Conversations with matching anonymization attestations. Each becomes a stored Row. | Capture success, source failure, malformed transcripts and failed attestations in `test_slice_14.py`. |
+| A.4 and IV Versioning. | `validation.validate_project_configuration` resolves the pinned Dataset and validates prompt presence by source. `ExecutionEngine` reads the stored rows and sends the captured prompts in order. `Storage.create_dataset` prohibits replacing versions. | Pinned reruns after restart, exact prompt/context checks and version conflict tests in `test_slice_14.py`. |
+| XII Compliance, Permissions and Audit. | `production_replay_read` protects capture and scoped routes. A persisted Project marker protects derived and retained records. Raw capture is opt-in by trusted source. Dataset creation audits the version and source. | `test_iv_xii_replay_uses_frozen_prompts_and_protects_derived_history` and `test_xii_raw_capture_requires_deployment_allowlist`. |
+| A.8 reserved features. | The Dataset definition rejects synthetic and any named mechanism before a source call. | `test_iv_independence_and_reserved_or_forged_configs_fail_before_call` and prior mechanism tests. |
+
+See [DATASETS.md](DATASETS.md) and [ambiguities 39–41](AMBIGUITIES.md).
+All 887 local tests passed. External confirmation for the two Dataset capabilities is pending.
 
 ## Slice 13 — CLI and Python SDK
 
@@ -20,7 +33,8 @@ Specification, a certification, or evidence that every normative check passes.
 
 The 1.0-CR1.1 revision-history row declares editorial changes only. The
 1.0-CR1 Volume XIV rules and Appendix C introduction govern this review.
-External confirmation of the new capabilities is pending.
+The owner reports external confirmation for the CLI and Python SDK in run
+`r261109125722` against 1.0-CR1.2. See the Conformance Statement.
 The slice-13 suite passed all 870 tests with the installed CLI entry point.
 
 ## Slice 12 — 1.0-CR1 applicable rules

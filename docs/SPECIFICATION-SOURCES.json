@@ -113,5 +113,45 @@
         "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.1/front-matter/01-revision-history.md"
       }
     ]
+  },
+  "slice_14": {
+    "ref": "main (1.0-CR1.2)",
+    "files": [
+      {
+        "path": "front-matter/01-revision-history.md",
+        "blob_sha": "0cf68d6efa2d9f0736ce72b831d9513bb7f15492",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/main/front-matter/01-revision-history.md"
+      },
+      {
+        "path": "front-matter/10-conformance.md",
+        "blob_sha": "da7786d4bfa0c8cbe09038d838ec51d9bec861dc",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/main/front-matter/10-conformance.md"
+      },
+      {
+        "path": "part-ii-execution/volume-iv-dataset-engine.md",
+        "blob_sha": "bfcd755c5e99f00ac1203fd0cc93a26d3036c968",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/main/part-ii-execution/volume-iv-dataset-engine.md"
+      },
+      {
+        "path": "part-i-foundations/volume-i-architecture-concepts.md",
+        "blob_sha": "5b154c88474ada3623fee593a34817857b53ff16",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/main/part-i-foundations/volume-i-architecture-concepts.md"
+      },
+      {
+        "path": "appendices/appendix-a-yaml-specification.md",
+        "blob_sha": "a209751294756869133741fe57a4fbd76c18e2df",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/main/appendices/appendix-a-yaml-specification.md"
+      },
+      {
+        "path": "appendices/appendix-c-rest-api-specification.md",
+        "blob_sha": "e1197f3417e687882b5d52efed0a1d190128bf19",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/main/appendices/appendix-c-rest-api-specification.md"
+      },
+      {
+        "path": "part-iv-enterprise-architecture/volume-xii-governance.md",
+        "blob_sha": "7f5501b54ff0c3395fe40fccf794fab15a2a00b8",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/main/part-iv-enterprise-architecture/volume-xii-governance.md"
+      }
+    ]
   }
 }

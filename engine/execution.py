@@ -11,7 +11,10 @@ from fastapi import HTTPException
 from pydantic import Field
 
 from engine.composition import compose_scenario_effective_contract, effective_contract_data
+from engine.auth import check_permission
+from engine.dataset_sources import REPLAY_PERMISSION
 from engine.models.base import AQEFBaseModel
+from engine.models.dataset import DatasetSource
 from engine.models.evidence import Conversation, Turn
 from engine.providers import SubjectReply
 
@@ -120,20 +123,32 @@ class ExecutionEngine:
                     matching = [d for d in definitions if constraint.validator in (d["name"], d["name"] + "@" + d["version"])]
                     if len(matching) == 1:
                         frozen_validators[constraint.validator] = matching[0]
-                rows = [(None, scenario.variables or {})]
+                rows = [(None, scenario.variables or {}, None)]
                 if scenario.dataset:
                     name, version = scenario.dataset.split("@", 1)
                     dataset = store.get_dataset(project_name, name, version)
                     if dataset is None:
                         raise ValueError(f"Dataset '{scenario.dataset}' not found")
-                    rows = [(row.id, row.variables) for row in dataset.rows]
+                    if dataset.source == DatasetSource.PRODUCTION_REPLAY:
+                        check_permission(principal, REPLAY_PERMISSION, store)
+                        rows = [
+                            (row.id, {}, [turn.prompt for turn in Conversation.model_validate(
+                                row.variables["conversation"]).turns])
+                            for row in dataset.rows
+                        ]
+                    else:
+                        rows = [(row.id, row.variables, None) for row in dataset.rows]
                 if scenario.evidence:
                     Conversation.model_validate(scenario.evidence.conversation)
                 elif env.model_version not in self.provider.urls:
                     raise ValueError(f"No provider URL configured for model '{env.model_version}'")
-                for row_id, variables in rows:
-                    prompt = None if scenario.evidence else render(scenario.prompt.template, variables)
-                    records.append({
+                for row_id, variables, replay_prompts in rows:
+                    prompt = None
+                    if replay_prompts is not None:
+                        prompt = replay_prompts[0]
+                    elif not scenario.evidence:
+                        prompt = render(scenario.prompt.template, variables)
+                    record = {
                         "id": str(uuid.uuid4()), "execution_batch_id": batch,
                         "project": project_name, "suite": suite.name, "scenario": scenario.name,
                         "principal_id": principal.id, "principal_kind": principal.kind.value,
@@ -152,7 +167,10 @@ class ExecutionEngine:
                         "completed_at": None, "attempts": [], "retry_count": 0,
                         "conversation": None, "partial_turns": [], "artifacts": [],
                         "error": None, "opening_prompt": prompt,
-                    })
+                    }
+                    if replay_prompts is not None:
+                        record["replay_prompts"] = replay_prompts
+                    records.append(record)
         except (ValueError, TypeError) as exc:
             raise HTTPException(422, str(exc)) from exc
         # All batch inputs are validated before recording or invoking any subject.
@@ -168,6 +186,7 @@ class ExecutionEngine:
         config = record["configuration"]["execution"]
         env = record["configuration"]["environment"]
         fixed = record["configuration"]["scenario"]["evidence"]
+        replay_prompts = record.get("replay_prompts")
         record["status"] = "running"
         record["started_at"] = now()
         self.storage.update_execution(record)
@@ -191,7 +210,10 @@ class ExecutionEngine:
                         remaining = deadline - time.monotonic()
                         if remaining <= 0:
                             raise TimeoutError("Execution deadline exceeded")
-                        prompt = record["opening_prompt"] if not turns else "Continue."
+                        if replay_prompts is not None:
+                            prompt = replay_prompts[len(turns)]
+                        else:
+                            prompt = record["opening_prompt"] if not turns else "Continue."
                         payload = {"model": env["model_version"], "prompt": prompt,
                                    "environment": deepcopy(env), "variables": deepcopy(record["variables"]),
                                    "context": {"turns": deepcopy(turns)}}
@@ -213,7 +235,9 @@ class ExecutionEngine:
                             record["artifacts"].append({"name": name, "data": deepcopy(data), "turn": len(turns)})
                         if reply.usage:
                             record["artifacts"].append({"name": "usage", "data": reply.usage, "turn": len(turns)})
-                        if reply.complete:
+                        complete = (len(turns) == len(replay_prompts)
+                                    if replay_prompts is not None else reply.complete)
+                        if complete:
                             record["conversation"] = {"turns": turns}
                             record["status"] = "completed"
                             break

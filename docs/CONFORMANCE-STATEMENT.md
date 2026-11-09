@@ -1,9 +1,9 @@
 # AQEF Conformance Statement
 
-Updated 2026-11-09 for **AQEF Reference Engine, slice-13**, Python 3.12 / FastAPI /
+Updated 2026-11-09 for **AQEF Reference Engine, slice-14**, Python 3.12 / FastAPI /
 SQLite, one self-hosted application process. Specification target:
-**AQEF Candidate Recommendation 1.0-CR1**. Release source ref is `1.0-CR1` in the upstream AQEF
-repository. The exact current normative sources were read directly from that tag. Exact
+**AQEF Candidate Recommendation 1.0-CR1.2**. The upstream revision history records no
+new implementation requirements in 1.0-CR1.1 or 1.0-CR1.2. Exact
 retrieved paths and source blob IDs are in [SPECIFICATION-SOURCES.json](SPECIFICATION-SOURCES.json).
 Published 0.41.2 adopted O-1/O-2; 0.41.3 added Gate reasons/coverage and pre-run SHOULDs.
 0.41.4 settles synchronous triggering, audit, Team binding, policy composition and
@@ -13,14 +13,16 @@ full B.2/B.3 validation on every configuration change, implemented in slice 11.
 
 ```yaml
 aqef_conformance:
-  specification_version: "1.0-CR1"
-  implementation: "AQEF Reference Engine slice-13"
+  specification_version: "1.0-CR1.2"
+  implementation: "AQEF Reference Engine slice-14"
   capabilities:
     - human_review
     - multi_judge
     - seeded_controls
     - cli  # Slice 13. CTS 1.0-CR1.2: CT-SDK-001 PASS (harness run r261109125722).
     - sdk:python  # Slice 13. CTS 1.0-CR1.2: CT-SDK-002 PASS (harness run r261109125722).
+    - dataset:generated  # Implemented in slice 14, external confirmation pending.
+    - dataset:production_replay  # Implemented in slice 14, external confirmation pending.
   not_offered:
     # Reserved by 1.0-CR1; cannot be claimed, not an implementation opt-out.
     - dataset_mechanism:data_mutation
@@ -29,8 +31,6 @@ aqef_conformance:
     - dataset_mechanism:adversarial
     - dataset:synthetic
     # Specified capabilities deliberately not offered.
-    - dataset:generated
-    - dataset:production_replay
     - action_boundary
     - sdk:java
     - sdk:csharp
@@ -90,6 +90,7 @@ applicable MUST. No additional capability is claimed.
 | Pagination/filtering (C.6) | All collection lists use offset=0, limit=100, range 1–1000, plain JSON arrays. Filters limited to documented query fields. G2 was closed during this review. | API operation schemas/inventory, review G2 correction |
 | Gate formula/thresholds (I Ch.6, A.10/A.12) | Positive source-Contract clause weights on actionable Boolean verdicts, dimension means; supported dimension/resource/overall/regression thresholds and min/max maps declared. Empty basis never silently passes. | API Gate examples, ambiguities 20/21 |
 | Identity and historical scope (C.7/C.8; X) | Canonical JSON Oracle identity; SHA256 clause/Contract content references; scope freezes full inline Contracts. Explicit Baseline Result ID. Resolution append-only except pending Human completion retaining recorded_at. | API, ambiguities 15/22/23/28 |
+| Dataset sources (IV, A.4/A.8, XII) | Generation uses the configured provider and checks exact model identifiers. Family independence is operator-managed. Capture uses a trusted adapter with per-record anonymization attestations. Replay access requires production_replay_read, including retained history. | [DATASETS.md](DATASETS.md), ambiguities 39–41 |
 | Deletion (C.8) | Reject referenced Environment deletion; Project deletion with history requires explicit retain_history=true, keeps frozen Execution/decision/governance records. No history-purge API. | API status/retention notes; ambiguity 4; storage/history tests |
 | Report format (XI, C.10) | Frozen batch Reports, six always-present signal lists, full low_confidence denominators, nested panel member evidence; no dashboard/KPI front end. | API Report examples, ambiguity 20, review U1 |
 
@@ -115,8 +116,7 @@ Cheapest-first built-in Validation, pure Custom Validator inputs without clock/r
 network, controls before ordinary assessments, fail-fast affected Oracle suppression,
 zero-reference-prior Human confirmation, and finite Human routing timeouts are
 implemented. These are not claimed as skipped SHOULDs. SHOULDs conditional on an
-unoffered capability (such as Production Replay privacy, generated-source independence
-or Boundary hard vetoes) do not describe an offered implementation feature.
+unoffered capability (such as Action Boundary hard vetoes) do not describe an offered implementation feature.
 
 ## Clarified rules met in slices 8–9
 
@@ -201,7 +201,7 @@ Only supplied summaries were used; no CTS material was requested or inspected.
 
 This statement cannot provide independent certification, verifiable external model
 ancestry, a complete MUST-coverage proof, or assurance about undisclosed provider behavior. None is invented. No AQEF conformance
-test material was accessed. The local whole suite passes **870 tests**, with one
+test material was accessed. The local whole suite passes **887 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
 The owner-reported 1.0-CR1 evidence applies to the existing engine capabilities.
@@ -217,7 +217,10 @@ Run, review records and attestation:
 See [the client review](CONFORMANCE-REVIEW.md#slice-13--cli-and-python-sdk)
 for the local evidence.
 
-## 1.0-CR1 claim review
+Slice 14 implements `dataset:generated` and `dataset:production_replay`. The
+claim for these capabilities is to be confirmed by the owner's external run.
+
+## Historical 1.0-CR1 claim review (slice 12)
 
 Read §0 Document Status, the 1.0-CR1 revision row, §10, Volume IV, Volume IX and
 [A.8](https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1/appendices/appendix-a-yaml-specification.md#a8--dataset).

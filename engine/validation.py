@@ -11,7 +11,7 @@ References:
 from typing import Callable, Dict, List, Optional, Set
 from engine.composition import compose_scenario_effective_contract
 from engine.models.contract import Contract
-from engine.models.dataset import Dataset
+from engine.models.dataset import Dataset, DatasetSource
 from engine.models.project import Project
 
 
@@ -184,6 +184,14 @@ def validate_project_configuration(
                     raise ConfigurationValidationError(
                         f"Scenario '{scenario.name}' references Dataset '{scenario.dataset}' which cannot be resolved"
                     )
+
+                if ds.source == DatasetSource.PRODUCTION_REPLAY:
+                    if scenario.prompt is not None:
+                        raise ConfigurationValidationError(
+                            f"Scenario '{scenario.name}' must omit prompt for a production_replay Dataset")
+                elif scenario.prompt is None:
+                    raise ConfigurationValidationError(
+                        f"Scenario '{scenario.name}' must supply prompt for a {ds.source.value} Dataset")
 
                 # Variable interpolation check for dataset rows
                 if scenario.prompt:

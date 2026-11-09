@@ -127,7 +127,7 @@ class Scenario(AQEFBaseModel):
 
         # Prompt presence:
         # A Scenario MUST carry prompt unless its dataset is production_replay or it carries evidence.
-        if self.evidence is None and self.prompt is None:
+        if self.evidence is None and self.prompt is None and self.dataset is None:
             raise ValueError("Scenario MUST carry 'prompt' unless it carries 'evidence'")
 
         # If fixed variables are given, all variables in prompt template must be present

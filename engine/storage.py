@@ -15,7 +15,7 @@ from functools import wraps
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from engine.models.contract import Contract
-from engine.models.dataset import Dataset, Row
+from engine.models.dataset import Dataset, DatasetSource, Row
 from engine.models.environment import Environment
 from engine.models.gate import QualityGate
 from engine.models.principal import (
@@ -245,6 +245,13 @@ class Storage:
                     created_at TEXT NOT NULL,
                     PRIMARY KEY (project_name, name, version),
                     FOREIGN KEY(project_name) REFERENCES projects(name) ON DELETE CASCADE
+                )
+            """)
+
+            # This privacy marker survives deletion with retained history.
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS replay_protected_projects (
+                    name TEXT PRIMARY KEY
                 )
             """)
 
@@ -966,7 +973,15 @@ class Storage:
                 "INSERT INTO datasets (project_name, name, version, data_json, created_at) VALUES (?, ?, ?, ?, ?)",
                 (project_name, dataset.name, dataset.version, dataset.model_dump_json(), now_iso),
             )
+            if dataset.source == DatasetSource.PRODUCTION_REPLAY:
+                conn.execute("INSERT OR IGNORE INTO replay_protected_projects VALUES (?)", (project_name,))
         return dataset
+
+    def replay_protected(self, project_name: str) -> bool:
+        with self._get_connection() as conn:
+            return conn.execute(
+                "SELECT 1 FROM replay_protected_projects WHERE name = ?", (project_name,),
+            ).fetchone() is not None
 
     def get_dataset(self, project_name: str, dataset_name: str, version: Optional[str] = None) -> Optional[Dataset]:
         with self._get_connection() as conn:

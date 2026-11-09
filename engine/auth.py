@@ -19,6 +19,7 @@ from engine.models.principal import (
 )
 from engine.storage import Storage
 from engine.audit import checked_permission
+from engine.dataset_sources import REPLAY_PERMISSION
 
 
 # C.4: even administrative authority consists of explicit atomic Permissions.
@@ -28,7 +29,7 @@ BOOTSTRAP_PERMISSIONS = (
     "suite_create", "scenario_create", "scenario_edit", "scenario_delete",
     "dataset_create", "contract_define", "execute", "review", "snapshot_create",
     "baseline_approve", "gate_override", "release_decide", "seeded_control_invalidate",
-    "team_read", "team_admin", "role_read", "role_admin", "audit_read",
+    "team_read", "team_admin", "role_read", "role_admin", "audit_read", REPLAY_PERMISSION,
 )
 
 def governed_values(resource):

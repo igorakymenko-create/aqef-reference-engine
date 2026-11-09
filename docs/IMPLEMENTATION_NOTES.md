@@ -1,5 +1,27 @@
 # Implementation Notes
 
+## Slice 14 — Generated and Production Replay Datasets
+
+- Read the 1.0-CR1.1 and 1.0-CR1.2 revision rows and the cited Volume IV, I,
+  XII and Appendix A/C sections. Both revision rows leave implementation
+  requirements unchanged. Only normative sources were retrieved.
+- Both Dataset write routes materialize full versions. Generated Rows are
+  validated as a set before writing, with generator config and UTC provenance.
+  Replay uses the configured adapter and rejects inadequate or unverifiable
+  capture. The existing storage immutability and audit machinery applies to
+  both routes.
+- Replay sends captured user prompts in order with fresh subject context.
+  The Dataset version stays pinned across retries, reruns and restarts.
+  The atomic replay Permission also covers derived and retained history.
+- The generator independence SHOULD is enforced for equal identifiers.
+  Family independence requires operator judgment because the engine has no
+  weights or model-family registry. Capture-side anonymization is a deployment
+  trust boundary. See ambiguities 39–41 and the Dataset provider documentation.
+- All 887 local tests passed, including 17 Dataset cases. The published OpenAPI
+  describes the separate registration input and materialized output. The CLI
+  and SDK operation inventory stays at 71 routes.
+
+
 ## Slice 13 — CLI and Python SDK (1.0-CR1)
 
 - Reviewed Volume XIV, Appendix C and §10 at 1.0-CR1. The 1.0-CR1.1

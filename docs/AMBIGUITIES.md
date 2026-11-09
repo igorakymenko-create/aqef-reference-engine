@@ -1,5 +1,48 @@
 # Ambiguities Log
 
+## 39. Production capture and anonymization (IV, XII Compliance, A.8)
+
+- A.8 says “Whether PII anonymization is applied.” Volume IV leaves production
+  data handling to the Project's policy. The engine could implement a built-in
+  log store and text redactor or delegate to a configured adapter with an
+  explicit trust boundary. It uses the adapter. The adapter applies date range,
+  sampling and sample size. The engine requires the exact requested number
+  of valid Conversations. Anonymized capture requires an affirmative per-record
+  attestation. Missing, mixed or contradictory attestations reject the full
+  capture. Raw capture requires a deployment allowlist for the named source.
+  This preserves the distinction between an asserted policy and text the
+  engine has independently verified.
+
+## 40. Replay access and turn boundaries (XII, A.4)
+
+- Volume XII says “Permissions restrict who can access sensitive data”. A
+  row-only check would leave the same prompts visible through Execution or
+  Report routes. A Project with a replay version therefore requires
+  `production_replay_read` across scoped routes. The persistent marker also
+  protects history after Project deletion.
+- A.4 says a captured Conversation “supplies its own Prompts”. The engine
+  reads this as using exactly the captured user turns, with responses from
+  the current subject. A Scenario on a Replay Dataset omits `prompt`.
+  The capture's original replies stay in the stored Conversation and never
+  become subject context.
+
+## 41. Generation wire format, independence and registration (IV, A.8, C.3)
+
+- Volume IV says “a Dataset version holds exactly what was generated, or does
+  not exist.” It does not give a provider envelope. The engine accepts a
+  bare Row array or an object containing only that array as `rows`. It
+  rejects malformed, duplicate or non-JSON input as a whole.
+- A.8 says the model “SHOULD be independent of the subject”. Exact matching
+  identifiers are rejected at registration. The operator establishes
+  independence of weights and families beyond what identifiers reveal.
+- A.8 makes `rows` mandatory for Static and identifies separate source
+  configurations for generation and capture. Project writes could implicitly
+  invoke a source or refer to an already materialized version. The engine
+  requires explicit Dataset registration through C.3 before a Project
+  definition pins the version. Inline Project datasets remain Static.
+  Registration rejects non-static request rows and provenance fields so that
+  Project writes and direct registrations cannot forge the version's origin.
+
 ## 38. Synchronous waiting and the command inventory (1.0-CR1)
 
 - Appendix C §C.3 says “An implementation MAY run the batch to completion before

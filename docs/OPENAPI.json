@@ -2393,7 +2393,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dataset"
+                "$ref": "#/components/schemas/DatasetInput"
               }
             }
           }
@@ -2663,7 +2663,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dataset"
+                "$ref": "#/components/schemas/DatasetInput"
               }
             }
           }
@@ -5952,6 +5952,55 @@
         ],
         "title": "BoundaryEntryKind"
       },
+      "CaptureConfig": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source"
+          },
+          "date_range": {
+            "prefixItems": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "string",
+                "format": "date"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Date Range"
+          },
+          "sampling": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Sampling"
+          },
+          "sample_size": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Sample Size"
+          },
+          "anonymization": {
+            "type": "boolean",
+            "title": "Anonymization"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "date_range",
+          "sampling",
+          "sample_size",
+          "anonymization"
+        ],
+        "title": "CaptureConfig"
+      },
       "ConfidenceSource": {
         "type": "string",
         "enum": [
@@ -6169,6 +6218,72 @@
             "type": "array",
             "title": "Rows"
           },
+          "generator": {
+            "$ref": "#/components/schemas/GeneratorConfig"
+          },
+          "capture": {
+            "$ref": "#/components/schemas/CaptureConfig"
+          },
+          "base_dataset": {
+            "type": "string",
+            "pattern": "^.+@.+$",
+            "title": "Base Dataset"
+          },
+          "mechanisms": {
+            "items": {
+              "$ref": "#/components/schemas/MechanismConfig"
+            },
+            "type": "array",
+            "title": "Mechanisms"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "captured_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Captured At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "version",
+          "source"
+        ],
+        "title": "Dataset"
+      },
+      "DatasetInput": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Version"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DatasetSource"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Row"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "generator": {
+            "$ref": "#/components/schemas/GeneratorConfig"
+          },
+          "capture": {
+            "$ref": "#/components/schemas/CaptureConfig"
+          },
           "base_dataset": {
             "type": "string",
             "pattern": "^.+@.+$",
@@ -6189,7 +6304,7 @@
           "version",
           "source"
         ],
-        "title": "Dataset"
+        "title": "DatasetInput"
       },
       "DatasetSource": {
         "type": "string",
@@ -6449,6 +6564,31 @@
           "warn"
         ],
         "title": "GateFailureAction"
+      },
+      "GeneratorConfig": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Model"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "instruction": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Instruction"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model",
+          "instruction"
+        ],
+        "title": "GeneratorConfig"
       },
       "HTTPValidationError": {
         "properties": {

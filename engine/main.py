@@ -6,8 +6,9 @@ References:
 """
 
 import os
+import json
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from engine.api.contracts import get_contracts_router
 from engine.api.datasets import get_datasets_router
@@ -16,7 +17,8 @@ from engine.api.gates import get_gates_router
 from engine.api.governance import get_governance_router
 from engine.api.projects import get_projects_router
 from engine.api.suites_scenarios import get_suites_scenarios_router
-from engine.auth import BOOTSTRAP_PERMISSIONS, get_current_principal_dependency
+from engine.auth import BOOTSTRAP_PERMISSIONS, check_permission, get_current_principal_dependency
+from engine.dataset_sources import REPLAY_PERMISSION
 from engine.models.principal import Principal, PrincipalKind, Role, Team
 from engine.storage import Storage, StorageConflictError
 from engine.providers import HTTPProvider, load_provider_urls
@@ -30,6 +32,12 @@ from engine.validation import ConfigurationValidationError
 
 def create_app(db_path: str = ":memory:") -> FastAPI:
     provider = HTTPProvider(load_provider_urls())
+    capture_provider = HTTPProvider(load_provider_urls("AQEF_CAPTURE_URLS"))
+    raw_sources = json.loads(os.environ.get("AQEF_CAPTURE_ALLOW_RAW", "[]"))
+    if not isinstance(raw_sources, list) or any(
+        not isinstance(source, str) or source not in capture_provider.urls for source in raw_sources
+    ):
+        raise ValueError("AQEF_CAPTURE_ALLOW_RAW must list configured capture sources")
     storage = Storage(db_path=db_path)
 
     # Bootstrap default admin team, role, and principal if not already present
@@ -54,7 +62,14 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         )
         storage.create_principal(admin_principal, token=admin_token)
 
-    principal_dep = get_current_principal_dependency(lambda: storage)
+    authenticate = get_current_principal_dependency(lambda: storage)
+
+    def principal_dep(request: Request, principal=Depends(authenticate)):
+        request.state.principal = principal
+        project = request.path_params.get("project")
+        if project is not None and storage.replay_protected(project):
+            check_permission(principal, REPLAY_PERMISSION, storage)
+        return principal
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -76,6 +91,13 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         try:
             response = await call_next(request)
             if 200 <= response.status_code < 300:
+                project = request.path_params.get("project")
+                # A replay version may have been registered during a read.
+                if request.method == "GET" and project is not None and storage.replay_protected(project):
+                    try:
+                        check_permission(request.state.principal, REPLAY_PERMISSION, storage)
+                    except HTTPException as exc:
+                        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
                 commit_audit(session)
             return response
         finally:
@@ -86,7 +108,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         # C.4 says all API operations; framework documentation/health are no exception.
         if request.url.path in ("/healthz", "/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"):
             try:
-                principal_dep(request.headers.get("authorization"))
+                authenticate(request.headers.get("authorization"))
             except HTTPException as exc:
                 return JSONResponse(status_code=exc.status_code, content={"detail":exc.detail}, headers=exc.headers)
         return await call_next(request)
@@ -105,7 +127,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     app.include_router(get_environments_router(storage, principal_dep))
     app.include_router(get_suites_scenarios_router(storage, principal_dep))
     app.include_router(get_contracts_router(storage, principal_dep))
-    app.include_router(get_datasets_router(storage, principal_dep))
+    app.include_router(get_datasets_router(storage, principal_dep, provider, capture_provider, raw_sources))
     app.include_router(get_gates_router(storage, principal_dep))
     app.include_router(get_executions_router(storage, principal_dep, provider))
     app.include_router(get_assessment_router(storage, principal_dep))
