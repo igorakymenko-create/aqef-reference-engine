@@ -19,8 +19,8 @@ aqef_conformance:
     - human_review
     - multi_judge
     - seeded_controls
-    - cli  # Implemented in slice 13, external confirmation pending.
-    - sdk:python  # Implemented in slice 13, external confirmation pending.
+    - cli  # Slice 13. CTS 1.0-CR1.2: CT-SDK-001 PASS (harness run r261109125722).
+    - sdk:python  # Slice 13. CTS 1.0-CR1.2: CT-SDK-002 PASS (harness run r261109125722).
   not_offered:
     # Reserved by 1.0-CR1; cannot be claimed, not an implementation opt-out.
     - dataset_mechanism:data_mutation
@@ -154,8 +154,8 @@ verified full regression matrix. This includes configuration property/required-f
 matrices, runtime response fields, denied-workflow/permission branches, stored-Evidence
 repeatability diagnostics, author-criteria semantics and conditional KPI traceability.
 No test can establish the semantic adequacy of arbitrary author Requirements; that
-does not by itself identify an unmet engine MUST. CLI is not offered; the old CLI
-UNTESTED row is corrected to out of scope. The defect-class reference recommendation
+does not by itself identify an unmet engine MUST. The CLI is offered from slice 13 (see
+below). The defect-class reference recommendation
 is SHOULD-only and is recorded as a deliberate deviation, not an unmet MUST.
 
 G3's optional-null/unknown-key components are repaired. G2, G4/G8 and G1/G5/G6/G7
@@ -205,8 +205,15 @@ test material was accessed. The local whole suite passes **870 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
 The owner-reported 1.0-CR1 evidence applies to the existing engine capabilities.
-Slice 13 implements `cli` and `sdk:python` against the same REST API. The claim
-for these two capabilities is to be confirmed by the owner's external run.
+Slice 13 implements `cli` and `sdk:python` against the same REST API. The owner's
+external run confirmed both against Conformance Tests 1.0-CR1.2:
+- CT-SDK-002 (automated) PASS;
+- CT-SDK-001 (harness and Inspection) PASS, decided by an independent AI reviewer after
+  CTS 1.0-CR1.2 clarified the test.
+
+Run, review records and attestation:
+[aqef-cts-harness](https://github.com/igorakymenko-create/aqef-cts-harness/tree/main/runs/r261109125722),
+[`reviews/ATTESTATION-CLI-SDK.md`](https://github.com/igorakymenko-create/aqef-cts-harness/blob/main/reviews/ATTESTATION-CLI-SDK.md).
 See [the client review](CONFORMANCE-REVIEW.md#slice-13--cli-and-python-sdk)
 for the local evidence.
 
