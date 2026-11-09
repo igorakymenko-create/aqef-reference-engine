@@ -1,6 +1,6 @@
 # AQEF Conformance Statement
 
-Issued 2026-10-24 for **AQEF Reference Engine, slice-12**, Python 3.12 / FastAPI /
+Updated 2026-11-09 for **AQEF Reference Engine, slice-13**, Python 3.12 / FastAPI /
 SQLite, one self-hosted application process. Specification target:
 **AQEF Candidate Recommendation 1.0-CR1**. Release source ref is `1.0-CR1` in the upstream AQEF
 repository. The exact current normative sources were read directly from that tag. Exact
@@ -14,11 +14,13 @@ full B.2/B.3 validation on every configuration change, implemented in slice 11.
 ```yaml
 aqef_conformance:
   specification_version: "1.0-CR1"
-  implementation: "AQEF Reference Engine slice-12"
+  implementation: "AQEF Reference Engine slice-13"
   capabilities:
     - human_review
     - multi_judge
     - seeded_controls
+    - cli  # Implemented in slice 13, external confirmation pending.
+    - sdk:python  # Implemented in slice 13, external confirmation pending.
   not_offered:
     # Reserved by 1.0-CR1; cannot be claimed, not an implementation opt-out.
     - dataset_mechanism:data_mutation
@@ -30,7 +32,11 @@ aqef_conformance:
     - dataset:generated
     - dataset:production_replay
     - action_boundary
-    - cli
+    - sdk:java
+    - sdk:csharp
+    - sdk:javascript
+    - sdk:typescript
+    - sdk:go
     - reference_ui
     - plugins:validator
     - plugins:judge
@@ -39,8 +45,7 @@ aqef_conformance:
 ```
 
 Test Types name Suite purposes built from the core, and are not conformance
-capabilities (§10; Volume IX). No `ci_cd:<platform>` or `sdk:<language>` capability
-is claimed for any platform/language. Custom
+capabilities (§10; Volume IX). No `ci_cd:<platform>` capability is claimed. Custom
 Validators use the documented pure declarative registration interface (Volume V),
 not executable Validator Plugins (Volume XVI) or a language SDK (Volume XIV).
 
@@ -49,7 +54,7 @@ Datasets are part of that core. Definition, Execution, Evidence, Assessment and
 Decision are implemented; ordinary Results pass through Confidence handling before
 aggregation. Topology is a deployment choice and removes no normative obligations.
 
-**Conformance claim:** AQEF Reference Engine, tag **slice-12**, claims **AQEF
+**Conformance claim:** AQEF Reference Engine claims **AQEF
 Conformance to Candidate Recommendation 1.0-CR1** for `human_review`, `multi_judge` and
 `seeded_controls`, with the non-negotiable core implicit. The prior classification-(a)
 findings are closed by the implementation and the 0.41.5 clarifications documented
@@ -196,11 +201,14 @@ Only supplied summaries were used; no CTS material was requested or inspected.
 
 This statement cannot provide independent certification, verifiable external model
 ancestry, a complete MUST-coverage proof, or assurance about undisclosed provider behavior. None is invented. No AQEF conformance
-test material was accessed. The local whole suite passes **769 tests**, with one
+test material was accessed. The local whole suite passes **870 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
-The statement applies to the source published under tag `slice-12`; it does not assert
-that arbitrary deployment settings or later changes preserve these properties.
+The owner-reported 1.0-CR1 evidence applies to the existing engine capabilities.
+Slice 13 implements `cli` and `sdk:python` against the same REST API. The claim
+for these two capabilities is to be confirmed by the owner's external run.
+See [the client review](CONFORMANCE-REVIEW.md#slice-13--cli-and-python-sdk)
+for the local evidence.
 
 ## 1.0-CR1 claim review
 

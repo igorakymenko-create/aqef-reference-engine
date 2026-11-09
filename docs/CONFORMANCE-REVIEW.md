@@ -1,6 +1,6 @@
-# Specification review — through slice 12
+# Specification review — through slice 13
 
-Review date: 2026-10-24. Current target: `slice-12`, with unchanged slice-11 engine code, based on
+Review date: 2026-10-24. Current target: `slice-13`, with unchanged slice-11 engine code, based on
 AQEF Candidate Recommendation **1.0-CR1**. The baseline ledger below was recorded in slice 6
 against 0.41.1; the following current-release rows supersede affected source units.
 Baseline source links are pinned to that historical version, not shifted line numbers
@@ -8,6 +8,20 @@ in the refreshed local kit. Intended scope remains the implicit
 core plus `human_review`, `multi_judge`, `seeded_controls`. This is a specification
 review with the implementation's own tests, not the AQEF Conformance Test
 Specification, a certification, or evidence that every normative check passes.
+
+## Slice 13 — CLI and Python SDK
+
+| Source | Implementation | Local verification |
+|---|---|---|
+| XIV REST API and Appendix C introduction/C.1. The REST API is canonical and clients MUST NOT reimplement AQEF logic. | `client/aqef_client/_operations.py` forwards path, query, body and headers through `_transport.py`. `cli.py` parses files and presents the response fields. | `test_xiv_openapi_inventory_and_client_engine_boundary` and live request parity. |
+| XIV CLI. Every command MUST correspond to a REST API call made on the caller's behalf. | Each CLI operation calls one named SDK method from the generated inventory. [CLI table](CLI.md) maps all 71 commands. C.3 allows the engine's synchronous Execution response. | `test_xiv_cli_live_loop_and_blocking_exit` and `test_xiv_cli_propagates_api_error_per_resource`. |
+| XIV Python SDK. Methods expose the REST operations and behavior. | Typed named methods and an API-relative request method return HTTP responses. HTTP errors retain status and original bytes in APIError. | `test_xiv_sdk_matches_raw_live_api` checks every published verb/path against a raw call to a live engine. |
+| C.4/C.5 authorization and governed actions. | The transport sends the caller's bearer token and named methods forward the Person and external-review headers. Permission checks and Approval records remain in the engine. | `test_c4_c5_governed_headers_reach_engine_through_sdk_and_cli` checks persisted Approvals and rejection of absent headers. |
+
+The 1.0-CR1.1 revision-history row declares editorial changes only. The
+1.0-CR1 Volume XIV rules and Appendix C introduction govern this review.
+External confirmation of the new capabilities is pending.
+The slice-13 suite passed all 870 tests with the installed CLI entry point.
 
 ## Slice 12 — 1.0-CR1 applicable rules
 
@@ -27,7 +41,7 @@ remain the unchanged engine build's 0.41.5 metadata, not this claim's specificat
 
 ## Current release review — through 1.0-CR1
 
-Current whole suite: **769 passed**, one existing Starlette/httpx deprecation warning.
+Slice-12 whole suite: **769 passed**, one existing Starlette/httpx deprecation warning.
 The 318-test result later in this file is the historical slice 6 baseline.
 
 Current upstream ref is `1.0-CR1`. Document Status, the revision-history row, §10,

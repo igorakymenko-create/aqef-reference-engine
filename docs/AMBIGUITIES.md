@@ -1,5 +1,23 @@
 # Ambiguities Log
 
+## 38. Synchronous waiting and the command inventory (1.0-CR1)
+
+- Appendix C §C.3 says “An implementation MAY run the batch to completion before
+  it responds”. A `--wait` command could always poll after submission or could
+  rely on a terminal response. The engine returns finished Executions on the
+  original POST. The client waits for that response with a finite timeout and
+  makes no follow-up calls or retries. It has no documented batch status endpoint
+  to poll.
+- Volume XIV says “A CLI command MUST correspond to a REST API call it makes on
+  the caller's behalf”. Read narrowly, REST API could mean only Appendix C's
+  enumerated operations. Read as the actual API, it also covers routes the
+  engine already publishes. Slice 13 covers the engine OpenAPI and labels its
+  seven extra routes explicitly in the CLI table. It introduces no API routes.
+- Slice 13 asks for verbatim CLI output and forbids printing the bearer token.
+  If an API response echoes that token in user-supplied data, these conflict.
+  The CLI redacts the configured token on stdout and stderr in that case.
+  The SDK retains the exact bytes in its response or exception body.
+
 ## 37. Requirements/Risk justification — closed by 0.41.5
 - **Section:** VIII Test Maintainability; §10 Conformance / non-person conformance.
 - **Quotation:** “a Contract loosened to stop a Suite from failing MUST be treated as

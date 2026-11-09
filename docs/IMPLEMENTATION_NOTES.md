@@ -1,5 +1,29 @@
 # Implementation Notes
 
+## Slice 13 — CLI and Python SDK (1.0-CR1)
+
+- Reviewed Volume XIV, Appendix C and §10 at 1.0-CR1. The 1.0-CR1.1
+  revision-history entry confirms no implementation requirement changed.
+- Added the installable `aqef-client` distribution, `aqef_client.Client` and
+  the `aqef` console script. The generated SDK surface and CLI table cover
+  the 71 OpenAPI operations, including seven already-offered extensions.
+- The CLI sends parsed YAML/JSON without AQEF validation or normalization.
+  It displays the API's own response and derives its blocking exit code from
+  the recorded GateResult status, blocking and override fields. The engine
+  trigger is synchronous, so bounded waiting consists of the initial POST.
+- SDK errors retain the HTTP status and response bytes. The CLI sends errors
+  to stderr and gives authentication-token suppression priority over verbatim
+  output if the server echoes the credential. See ambiguity 38.
+- Live Uvicorn checks compare each SDK operation with raw HTTP on separately
+  seeded databases. CLI subprocess checks cover the loop, error forwarding,
+  overrides, exit codes and byte-for-byte JSON output. The source boundary
+  check keeps engine imports outside the client package.
+- The full suite passed with the installed `aqef` entry point. All 870 tests
+  passed, including 101 client checks, with the existing Starlette/httpx
+  deprecation warning. The fixture restores the process environment as soon
+  as the live engines are initialized.
+
+
 ## Slice 12 — Candidate Recommendation 1.0-CR1
 
 - Read the 1.0-CR1 revision row and full §0 Document Status, §10, Volume IV,

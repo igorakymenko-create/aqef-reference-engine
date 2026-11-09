@@ -96,6 +96,17 @@ not as an AQEF JSON Schema artifact.
   - Confirm reserved Dataset source/mechanism rejection; no engine change
   - Refresh Conformance scope, Test Types terminology and external evidence
 
+- [x] **Slice 13: CLI and Python SDK**
+  - Thin REST clients covering all published engine operations
+  - Shell exit codes, raw response output and governed-header forwarding
+
+## CLI and Python SDK
+
+Install with `python -m pip install ./client`. Set `AQEF_URL` and `AQEF_TOKEN`,
+then try `aqef project list --json`. Python callers can use
+`from aqef_client import Client`. See the [CLI operation table](docs/CLI.md)
+and the [Python SDK guide](docs/SDK.md) for the load, run, Results and Gates workflow.
+
 ## Installation and Usage
 
 The engine is built on Python 3.12, FastAPI, SQLite, and pytest.
