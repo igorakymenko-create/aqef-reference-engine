@@ -137,10 +137,9 @@ def test_iv_failed_generation_leaves_no_version(sources, reply):
     assert recorded_versions(api) == set()
 
 
-def test_iv_independence_and_reserved_or_forged_configs_fail_before_call(sources):
+def test_iv_reserved_or_forged_configs_fail_before_call(sources):
     api, calls, _, _ = sources
     options = [
-        GEN | {"generator": GEN["generator"] | {"model": " SUBJECT-v1 "}},
         GEN | {"source": "synthetic"},
         GEN | {"mechanisms": [{"type": "fuzzing"}]},
         GEN | {"rows": ROWS},

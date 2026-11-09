@@ -1,9 +1,16 @@
 # Generated and Production Replay Datasets
 
-Register versions through the [Dataset API](API.md#slice-14--dataset-versions).
-Use a fresh version identifier for each generation or capture. Bind a Scenario
+Declare versions in the Project's `datasets` or register them through the
+[Dataset API](API.md#slice-14--dataset-versions). An inline non-static
+declaration omits `rows` or uses `rows: []`. Use a fresh version identifier
+for each generation or capture. Bind a Scenario
 to the stored rows by `name@version`. Deployments configure source URLs at engine
 startup. Scenario Executions use the stored rows even if the source is unavailable.
+
+An identical inline declaration reuses the stored version. A change to its
+generator or capture configuration requires a new version. For a Project
+load, replies are staged until the whole configuration can be validated and
+written atomically. See [Project load and warning details](API.md#inline-dataset-declarations-and-generator-warnings).
 
 ## Generation
 
@@ -23,11 +30,12 @@ with just a `rows` array. Each Row has a unique nonempty string `id` and
 a `variables` object. The engine preserves every row and its order.
 The version records the generator configuration and UTC `generated_at`.
 
-Volume IV recommends an independent model. The engine rejects a generator
-identifier equal to any current Project subject identifier after case and
-whitespace normalization. Operators must select models from independent
-families. Identifiers and provider URLs cannot establish weight or family
-independence.
+Volume IV recommends an independent model. The engine accepts a generator
+identifier equal to a Project subject identifier after case and whitespace
+normalization. It records `independence: "same_identifier_as_subject"` with
+the version and includes the finding in the creating response's
+`X-AQEF-Warnings` header. Operators judge weight and family independence.
+Identifiers and URLs alone do not establish it.
 
 ## Capture
 

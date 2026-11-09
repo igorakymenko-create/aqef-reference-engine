@@ -9,7 +9,7 @@ References:
 from datetime import date, datetime
 from enum import Enum
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import Field, StrictBool, field_validator, model_validator
 from engine.models.base import ConfigurationModel as AQEFBaseModel, JSONInteger
 from engine.models.evidence import Conversation
@@ -115,18 +115,29 @@ class DatasetInput(DatasetDefinition):
         return self
 
 
+class InlineDatasetInput(DatasetDefinition):
+    @model_validator(mode="after")
+    def reject_supplied_rows(self):
+        if self.source != DatasetSource.STATIC and self.rows:
+            raise ValueError("Non-static Dataset rows come only from generation or capture")
+        return self
+
+
 class Dataset(DatasetDefinition):
     generated_at: datetime | None = None
     captured_at: datetime | None = None
+    independence: Literal["same_identifier_as_subject"] | None = None
 
     @model_validator(mode="after")
     def require_materialized_version(self):
         if self.rows is None:
-            raise ValueError("Register non-static Dataset versions through the Dataset API")
+            raise ValueError("A stored Dataset version must have materialized rows")
         for field, source in (("generated_at", DatasetSource.GENERATED),
                               ("captured_at", DatasetSource.PRODUCTION_REPLAY)):
             if (getattr(self, field) is not None) != (self.source == source):
-                raise ValueError(f"'{field}' must be recorded by the Dataset API for source '{source.value}'")
+                raise ValueError(f"'{field}' must be recorded during materialization for source '{source.value}'")
+        if self.independence is not None and self.source != DatasetSource.GENERATED:
+            raise ValueError("independence is only recorded for generated Datasets")
         if self.source == DatasetSource.PRODUCTION_REPLAY:
             for row in self.rows:
                 if set(row.variables) != {"conversation"}:

@@ -25,6 +25,14 @@ def bind_project(name):
         session.project = name
 
 
+def record_dataset_creation(storage, project, dataset, principal):
+    storage.create_audit_entry(AuditLogEntry(
+        id=str(uuid.uuid4()), project=project, action="dataset_create",
+        principal_id=principal.id, principal_kind=principal.kind,
+        details={"dataset": dataset.name, "version": dataset.version, "source": dataset.source.value},
+    ))
+
+
 def checked_permission(principal, permission, storage):
     session = active_audit.get()
     if session is not None:

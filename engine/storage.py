@@ -640,10 +640,7 @@ class Storage:
                         (project.name, suite.name, sc.name, sc.model_dump_json()),
                     )
             for ds in project.datasets:
-                conn.execute(
-                    "INSERT INTO datasets (project_name, name, version, data_json, created_at) VALUES (?, ?, ?, ?, ?)",
-                    (project.name, ds.name, ds.version, ds.model_dump_json(), now_iso),
-                )
+                self._insert_dataset(conn, project.name, ds)
             for c in project.contracts:
                 if isinstance(c, Contract) and c.name:
                     conn.execute(
@@ -719,9 +716,7 @@ class Storage:
                 if previous and Dataset.model_validate_json(previous[0]) != dataset:
                     raise StorageConflictError(f"Dataset '{dataset.name}@{dataset.version}' is immutable")
                 if not previous:
-                    conn.execute("INSERT INTO datasets VALUES (?, ?, ?, ?, ?)",
-                                 (project.name, dataset.name, dataset.version, dataset.model_dump_json(),
-                                  datetime.now(timezone.utc).isoformat()))
+                    self._insert_dataset(conn, project.name, dataset)
         return project
 
     @synchronized
@@ -949,6 +944,14 @@ class Storage:
 
     # ---------------- Datasets (Versioned) ----------------
 
+    @staticmethod
+    def _insert_dataset(conn, project_name, dataset):
+        conn.execute("INSERT INTO datasets VALUES (?, ?, ?, ?, ?)",
+                     (project_name, dataset.name, dataset.version, dataset.model_dump_json(),
+                      datetime.now(timezone.utc).isoformat()))
+        if dataset.source == DatasetSource.PRODUCTION_REPLAY:
+            conn.execute("INSERT OR IGNORE INTO replay_protected_projects VALUES (?)", (project_name,))
+
     @synchronized
     def create_dataset(self, project_name: str, dataset: Dataset) -> Dataset:
         # Appendix B §B.3:
@@ -968,13 +971,7 @@ class Storage:
                     f"Dataset '{dataset.name}@{dataset.version}' already exists and is immutable (Volume IV — Versioning)"
                 )
 
-            now_iso = datetime.now(timezone.utc).isoformat()
-            conn.execute(
-                "INSERT INTO datasets (project_name, name, version, data_json, created_at) VALUES (?, ?, ?, ?, ?)",
-                (project_name, dataset.name, dataset.version, dataset.model_dump_json(), now_iso),
-            )
-            if dataset.source == DatasetSource.PRODUCTION_REPLAY:
-                conn.execute("INSERT OR IGNORE INTO replay_protected_projects VALUES (?)", (project_name,))
+            self._insert_dataset(conn, project_name, dataset)
         return dataset
 
     def replay_protected(self, project_name: str) -> bool:

@@ -10,7 +10,7 @@ from typing import List, Optional, Union
 from pydantic import Field, model_validator
 from engine.models.base import ConfigurationModel as AQEFBaseModel, JSONNumber, JSONInteger
 from engine.models.contract import Contract, JudgeConfig
-from engine.models.dataset import Dataset, DatasetSource
+from engine.models.dataset import Dataset, InlineDatasetInput
 from engine.models.environment import Environment
 from engine.models.execution_config import ExecutionConfig
 from engine.models.gate import QualityGate
@@ -56,8 +56,9 @@ class Project(AQEFBaseModel):
 
     @model_validator(mode="after")
     def validate_project(self) -> "Project":
-        if any(dataset.source != DatasetSource.STATIC for dataset in self.datasets):
-            raise ValueError("Register non-static Dataset versions through the Dataset API")
+        versions = {(dataset.name, dataset.version) for dataset in self.datasets}
+        if len(versions) != len(self.datasets):
+            raise ValueError("Duplicate Dataset name and version in Project")
         # Appendix A §A.1, Appendix B §B.2:
         # At least one Environment MUST be defined.
         if not self.environments:
@@ -94,3 +95,7 @@ class Project(AQEFBaseModel):
                 seen_gate_names.add(g.name)
 
         return self
+
+
+class ProjectInput(Project):
+    datasets: List[InlineDatasetInput] = Field(default_factory=list)

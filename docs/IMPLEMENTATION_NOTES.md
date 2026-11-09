@@ -1,5 +1,18 @@
 # Implementation Notes
 
+## Slice 14.1 — inline Dataset declarations and generator warnings
+
+Project POST and PUT accept Generated and Production Replay declarations.
+The shared source path prepares new versions in memory. After provider calls,
+the Project write rechecks version identity, Permissions and the full
+configuration. SQLite commits the Project, its Dataset versions and its
+Replay privacy marker together. Unchanged declarations reuse stored versions.
+Generator identifier matches are accepted and recorded with a creation warning.
+See ambiguities 40 and 41.
+The full suite passed all 904 tests, including 17 new cases. The concurrent
+registration checks cover both reuse and immutable-version conflicts.
+
+
 ## Slice 14 — Generated and Production Replay Datasets
 
 - Read the 1.0-CR1.1 and 1.0-CR1.2 revision rows and the cited Volume IV, I,

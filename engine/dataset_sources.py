@@ -28,12 +28,23 @@ class CaptureReply(AQEFBaseModel):
     conversations: list[CapturedConversation]
 
 
-def check_generator_independence(dataset, environments):
-    if dataset.source != DatasetSource.GENERATED:
-        return
-    if any(dataset.generator.model.strip().casefold() == env.model_version.strip().casefold()
-           for env in environments):
-        raise HTTPException(422, "generator.model must differ from the Project's subject model identifiers")
+def record_generator_independence(dataset, environments):
+    if dataset.source == DatasetSource.GENERATED and any(
+        dataset.generator.model.strip().casefold() == env.model_version.strip().casefold()
+        for env in environments
+    ):
+        return dataset.model_copy(update={"independence": "same_identifier_as_subject"})
+    return dataset
+
+
+def set_dataset_warnings(response, datasets):
+    warnings = [
+        {"dataset": dataset.name, "version": dataset.version, "code": dataset.independence,
+         "message": "The generator identifier matches a subject identifier"}
+        for dataset in datasets if dataset.independence
+    ]
+    if warnings:
+        response.headers["X-AQEF-Warnings"] = json.dumps(warnings)
 
 
 async def read_source(provider, identifier, payload, purpose):

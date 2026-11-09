@@ -102,7 +102,7 @@ def get_principal_permissions(principal: Principal, storage: Storage) -> Set[str
     return permissions
 
 
-def check_permission(principal: Principal, permission: str, storage: Storage) -> None:
+def check_permission(principal: Principal, permission: str, storage: Storage, *, record: bool = True) -> None:
     """Check that the principal holds the required atomic permission."""
     perms = get_principal_permissions(principal, storage)
     if permission not in perms:
@@ -110,7 +110,8 @@ def check_permission(principal: Principal, permission: str, storage: Storage) ->
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Principal '{principal.id}' lacks required permission: '{permission}'",
         )
-    checked_permission(principal, permission, storage)
+    if record:
+        checked_permission(principal, permission, storage)
 
 
 def enforce_governed_contract_define(
@@ -121,6 +122,8 @@ def enforce_governed_contract_define(
     external_review_reference: Optional[str] = None,
     approved_by: Optional[str] = None,
     details: Optional[dict] = None,
+    *,
+    record: bool = True,
 ) -> None:
     """Enforce Volume XII and Appendix C §C.5 rules for `contract_define` action.
 
@@ -130,7 +133,7 @@ def enforce_governed_contract_define(
     - If Principal is Service Account: MUST have approved_by naming a Person and external_review_reference.
     - Creates an ApprovalRecord and an AuditLogEntry.
     """
-    check_permission(principal, "contract_define", storage)
+    check_permission(principal, "contract_define", storage, record=record)
 
     actual_approved_by: Optional[str] = None
     if principal.kind == PrincipalKind.PERSON:
@@ -155,6 +158,9 @@ def enforce_governed_contract_define(
                 detail=f"Approved_by '{approved_by}' must resolve to an existing Person principal",
             )
         actual_approved_by = approved_by
+
+    if not record:
+        return
 
     # Create ApprovalRecord
     approval = ApprovalRecord(

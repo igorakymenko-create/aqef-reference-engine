@@ -123,7 +123,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     # Register Routers
     app.include_router(get_governance_router(storage, principal_dep))
-    app.include_router(get_projects_router(storage, principal_dep))
+    app.include_router(get_projects_router(storage, principal_dep, provider, capture_provider, raw_sources))
     app.include_router(get_environments_router(storage, principal_dep))
     app.include_router(get_suites_scenarios_router(storage, principal_dep))
     app.include_router(get_contracts_router(storage, principal_dep))

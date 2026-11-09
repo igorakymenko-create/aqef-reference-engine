@@ -26,22 +26,27 @@
   The capture's original replies stay in the stored Conversation and never
   become subject context.
 
+The meaning of an explicit `prompt` on a Replay Scenario remains open with the project owner.
+
 ## 41. Generation wire format, independence and registration (IV, A.8, C.3)
 
 - Volume IV says “a Dataset version holds exactly what was generated, or does
   not exist.” It does not give a provider envelope. The engine accepts a
   bare Row array or an object containing only that array as `rows`. It
   rejects malformed, duplicate or non-JSON input as a whole.
-- A.8 says the model “SHOULD be independent of the subject”. Exact matching
-  identifiers are rejected at registration. The operator establishes
-  independence of weights and families beyond what identifiers reveal.
-- A.8 makes `rows` mandatory for Static and identifies separate source
-  configurations for generation and capture. Project writes could implicitly
-  invoke a source or refer to an already materialized version. The engine
-  requires explicit Dataset registration through C.3 before a Project
-  definition pins the version. Inline Project datasets remain Static.
-  Registration rejects non-static request rows and provenance fields so that
-  Project writes and direct registrations cannot forge the version's origin.
+- A.8 says the model “SHOULD be independent of the subject”. Slice 14.1
+  accepts equal identifiers and records `same_identifier_as_subject` with the
+  version and in the creation response's warning header. The operator
+  establishes independence of weights and families beyond what identifiers reveal.
+- A.1 says “A Dataset MAY instead be registered through Appendix C §C.3”.
+  Slice 14.1 also materializes new versions declared in a Project, with one
+  atomic configuration write after source calls and validation.
+- A.8 requires `rows` for Static and H.8 uses `rows: []` as a generation
+  placeholder. An empty array could be read as supplied data or a placeholder.
+  Inline non-static declarations accept omitted or empty rows as the same
+  placeholder. Nonempty rows and client-supplied provenance are rejected to
+  preserve the version's origin. An existing declaration reuses its stored
+  version only if the source configuration matches.
 
 ## 38. Synchronous waiting and the command inventory (1.0-CR1)
 

@@ -669,7 +669,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Project"
+                "$ref": "#/components/schemas/ProjectInput"
               }
             }
           }
@@ -825,7 +825,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Project"
+                "$ref": "#/components/schemas/ProjectInput"
               }
             }
           }
@@ -6245,6 +6245,11 @@
             "type": "string",
             "format": "date-time",
             "title": "Captured At"
+          },
+          "independence": {
+            "type": "string",
+            "const": "same_identifier_as_subject",
+            "title": "Independence"
           }
         },
         "additionalProperties": false,
@@ -6622,6 +6627,56 @@
           "role"
         ],
         "title": "HumanReviewerConfig"
+      },
+      "InlineDatasetInput": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Version"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DatasetSource"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/Row"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "generator": {
+            "$ref": "#/components/schemas/GeneratorConfig"
+          },
+          "capture": {
+            "$ref": "#/components/schemas/CaptureConfig"
+          },
+          "base_dataset": {
+            "type": "string",
+            "pattern": "^.+@.+$",
+            "title": "Base Dataset"
+          },
+          "mechanisms": {
+            "items": {
+              "$ref": "#/components/schemas/MechanismConfig"
+            },
+            "type": "array",
+            "title": "Mechanisms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "version",
+          "source"
+        ],
+        "title": "InlineDatasetInput"
       },
       "InvalidateRequest": {
         "properties": {
@@ -7021,6 +7076,75 @@
           "environments"
         ],
         "title": "Project"
+      },
+      "ProjectInput": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "environments": {
+            "items": {
+              "$ref": "#/components/schemas/Environment"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Environments"
+          },
+          "suites": {
+            "items": {
+              "$ref": "#/components/schemas/Suite"
+            },
+            "type": "array",
+            "title": "Suites"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/ExecutionConfig"
+          },
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/InlineDatasetInput"
+            },
+            "type": "array",
+            "title": "Datasets"
+          },
+          "defect_classes": {
+            "items": {
+              "$ref": "#/components/schemas/DefectClassConfig"
+            },
+            "type": "array",
+            "title": "Defect Classes"
+          },
+          "contracts": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Contract"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Contracts"
+          },
+          "quality_gates": {
+            "items": {
+              "$ref": "#/components/schemas/QualityGate"
+            },
+            "type": "array",
+            "title": "Quality Gates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "environments"
+        ],
+        "title": "ProjectInput"
       },
       "PromptDef": {
         "properties": {

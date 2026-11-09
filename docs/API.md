@@ -15,8 +15,8 @@ and on changes, regardless of capability claims; empty mechanisms names no type.
 `POST /projects/{project}/datasets/{dataset}/versions` accept a DatasetInput
 and return HTTP 201 with the stored Dataset. The version route requires the
 body's `name` to match the path. Static request and response fields retain their
-existing behavior. Use these routes to register non-static versions before
-binding them in Project, Suite or Scenario configuration.
+existing behavior. Register a version here or declare it in a Project's
+`datasets` on POST or PUT. Either form supports a Scenario's `name@version` pin.
 
 Generated example:
 
@@ -56,6 +56,34 @@ an existing immutable version. HTTP 422 covers invalid configuration,
 unconfigured sources and policy rejection. HTTP 502 reports transport,
 provider, malformed data or anonymization-attestation failure. A failed
 generation or capture creates no version or successful registration entry.
+
+### Inline Dataset declarations and generator warnings
+
+`POST /projects` and `PUT /projects/{project}` take a ProjectInput. Declare a
+Generated or Production Replay Dataset in `datasets` with its source
+configuration. Omit `rows` or supply `rows: []`. A declaration with nonempty
+rows or engine-recorded provenance is rejected with HTTP 422. The Project
+response includes the stored rows and provenance. For a full PUT, send the
+declaration form for these versions.
+
+A missing version is materialized during the write and requires
+`dataset_create`. Production Replay also requires `production_replay_read`.
+The provider replies are staged in memory. After the calls, the engine
+rechecks the registry and validates the complete Project using the staged or
+previously stored rows. A single SQLite transaction writes the Project and its
+new versions. If the source fails or the resulting configuration is invalid,
+the Project and Dataset registry retain their previous state.
+
+An identical `name@version` declaration reuses its rows and provenance without
+a source call. Different source configuration for an existing version returns
+HTTP 409. A repeated POST for an existing Project returns the usual HTTP 409
+without a source call. Use PUT to replace a Project.
+
+When a newly created Generated Dataset matches a subject model identifier,
+the version includes `independence: "same_identifier_as_subject"`. The creating
+response also includes `X-AQEF-Warnings`, a JSON array whose entries have
+`dataset`, `version`, `code` and `message`. This applies to Dataset registration
+and Project writes. Existing versions retain their original provenance.
 
 ## Slice 11 — complete resulting configuration validation (0.41.5)
 
@@ -1041,9 +1069,9 @@ Create status is listed per operation; all GET/PUT actions below return 200 unle
 | GET | `/projects/{project}/audit` | 200 | no body → list of AuditLogEntry |
 | GET | `/projects/{project}/approvals` | 200 | no body → list of ApprovalRecord |
 | GET | `/projects` | 200 | no body → list of Project |
-| POST | `/projects` | 201 | Project → Project |
+| POST | `/projects` | 201 | ProjectInput → Project |
 | GET | `/projects/{project}` | 200 | no body → Project |
-| PUT | `/projects/{project}` | 200 | Project → Project |
+| PUT | `/projects/{project}` | 200 | ProjectInput → Project |
 | DELETE | `/projects/{project}` | 204 | no body → no body |
 | GET | `/projects/{project}/environments` | 200 | no body → list of Environment |
 | POST | `/projects/{project}/environments` | 201 | Environment → Environment |

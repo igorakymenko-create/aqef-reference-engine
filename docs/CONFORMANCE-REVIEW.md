@@ -1,6 +1,6 @@
-# Specification review — through slice 14
+# Specification review — through slice 14.1
 
-Current target: `slice-14`, AQEF Candidate Recommendation **1.0-CR1.2**. The baseline ledger below was recorded in slice 6
+Current target: `slice-14.1`, AQEF Candidate Recommendation **1.0-CR1.2**. The baseline ledger below was recorded in slice 6
 against 0.41.1; the following current-release rows supersede affected source units.
 Baseline source links are pinned to that historical version, not shifted line numbers
 in the refreshed local kit. Intended scope remains the implicit
@@ -13,14 +13,15 @@ Specification, a certification, or evidence that every normative check passes.
 | Source | Implementation | Local verification |
 |---|---|---|
 | IV Generated Datasets and A.8 GeneratorConfig/Row. Failed or malformed generation MUST produce no version. | `dataset_sources.materialize` sends model, instruction and optional seed through the configured HTTP provider. It validates the entire array and preserves its content and order. Registration stores the config and generation time only after validation. | `test_iv_generated_versions_provenance_and_pinned_reruns` and `test_iv_failed_generation_leaves_no_version`. |
-| IV and I Ch.3 generator independence SHOULD. | `check_generator_independence` rejects equal model identifiers against the Project's Environments. Deployments choose independent families. | `test_iv_independence_and_reserved_or_forged_configs_fail_before_call`. |
+| A.1 `datasets` and Appendix A introduction. Projects can declare Datasets of an offered source. | ProjectInput accepts inline Generated and Replay definitions. `load_project` stages missing versions, rechecks declarations after source calls, validates the complete Project and commits all rows together. | `test_a1_inline_materializes_with_api_provenance_and_reuses_pinned_version`, `test_a1_late_validation_and_capture_failure_roll_back_all_staged_versions` and `test_b3_rechecks_registry_after_waiting_for_provider`. |
+| A.8 GeneratorConfig `model`, IV and I Ch.3. Independence is a SHOULD for a generator. | `record_generator_independence` accepts equal identifiers and records the finding in the immutable provenance. Creating responses include `X-AQEF-Warnings`. | `test_a8_same_identifier_is_accepted_with_finding_and_warning` covers the Project and Dataset routes. |
 | IV Production Replay and A.8 CaptureConfig. | `dataset_sources.materialize` sends the capture policy to a configured adapter. It accepts only the requested number of valid Conversations with matching anonymization attestations. Each becomes a stored Row. | Capture success, source failure, malformed transcripts and failed attestations in `test_slice_14.py`. |
 | A.4 and IV Versioning. | `validation.validate_project_configuration` resolves the pinned Dataset and validates prompt presence by source. `ExecutionEngine` reads the stored rows and sends the captured prompts in order. `Storage.create_dataset` prohibits replacing versions. | Pinned reruns after restart, exact prompt/context checks and version conflict tests in `test_slice_14.py`. |
 | XII Compliance, Permissions and Audit. | `production_replay_read` protects capture and scoped routes. A persisted Project marker protects derived and retained records. Raw capture is opt-in by trusted source. Dataset creation audits the version and source. | `test_iv_xii_replay_uses_frozen_prompts_and_protects_derived_history` and `test_xii_raw_capture_requires_deployment_allowlist`. |
-| A.8 reserved features. | The Dataset definition rejects synthetic and any named mechanism before a source call. | `test_iv_independence_and_reserved_or_forged_configs_fail_before_call` and prior mechanism tests. |
+| A.8 reserved features. | The Dataset definition rejects synthetic and any named mechanism before a source call. | `test_iv_reserved_or_forged_configs_fail_before_call` and prior mechanism tests. |
 
 See [DATASETS.md](DATASETS.md) and [ambiguities 39–41](AMBIGUITIES.md).
-All 887 local tests passed. External confirmation for the two Dataset capabilities is pending.
+All 904 local tests passed through slice 14.1. External confirmation for the two Dataset capabilities is pending.
 
 ## Slice 13 — CLI and Python SDK
 
