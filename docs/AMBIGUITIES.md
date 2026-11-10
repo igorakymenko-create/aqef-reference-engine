@@ -1,5 +1,41 @@
 # Ambiguities Log
 
+## 42. Tool targets and matching (III Action Boundary, A.2)
+
+- A.2 permits an “Identifier or pattern of the system, endpoint, or tool”.
+  A match on the tool name alone could permit an unlisted destination.
+  Declared tools and URL candidates are checked independently. Explicit tool
+  entries also constrain destination calls. Literal identifiers and narrow
+  HTTP(S) path prefixes are documented. Unknown or mixed external targets
+  fail closed. The executor is trusted to honor the approved targets and
+  the deployment's isolation policy.
+
+## 43. Deployment control, stub response and aborts (III)
+
+- Volume III says access is controlled “only where every route” passes
+  through the harness. Provider URLs do not establish that fact. The
+  deployment lists controlled model identifiers, and Project or Environment
+  writes with an unsupported enforced claim are rejected.
+- The text describes a stub as a “stand-in that only records” and leaves the
+  response open. Stubs return a fixed acknowledgement and never dispatch.
+- Retry is limited to failures before “a genuine Response”. A tool request
+  is genuine subject output at that step. The engine retains partial
+  Evidence and does not retry after it. It records a boundary failure from
+  observed attempts even if infrastructure failure prevents a complete
+  Conversation.
+
+## 44. Validator forms and agent comparison (V, I Chapter 7, X)
+
+- A.2 calls each ToolDef parameter value a “JSON Schema (draft 2020-12)”.
+  H.3 uses shorthand ToolDefs. The engine requires the normative schema map,
+  treats listed arguments as required, and disallows extras.
+- H.11 illustrates zero attempts and zero Tripwire touches. These are the
+  supported Boundary expectation. Its Result reads the whole recorded list.
+- Volume X compares “the trajectory as a whole rather than step-for-step”.
+  The existing Oracle verdict comparison applies with the richer tool
+  Evidence. Exact ordering is available through an explicit Functional
+  Constraint.
+
 ## 39. Production capture and anonymization (IV, XII Compliance, A.8)
 
 - A.8 says “Whether PII anonymization is applied.” Volume IV leaves production

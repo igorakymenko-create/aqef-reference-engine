@@ -11,7 +11,7 @@ from engine.auth import check_permission
 from engine.composition import compose_scenario_effective_contract, effective_contract_data
 from engine.models.contract import Contract
 from engine.models.principal import ApprovalRecord, ApprovalStatus, AuditLogEntry, PrincipalKind
-from engine.validators import canonical, number
+from engine.validators import boundary_attempts, canonical, number
 
 
 def now():
@@ -456,12 +456,9 @@ class DecisionEngine:
             boundary = record["configuration"]["environment"].get("action_boundary")
             if boundary and not boundary["enforced"] and record["environment"] not in signals["unenforced_boundaries"]:
                 signals["unenforced_boundaries"].append(record["environment"])
-            for artifact in record["artifacts"]:
-                attempts = artifact["data"] if artifact["name"] == "boundary_attempts" else [artifact["data"]] if artifact["name"] == "boundary_attempt" else []
-                if isinstance(attempts, list):
-                    for attempt in attempts:
-                        if isinstance(attempt, dict) and "target" in attempt:
-                            signals["boundary_attempts"].append({**deepcopy(attempt), "execution":record["id"]})
+            for attempt in boundary_attempts(record["artifacts"]):
+                if "target" in attempt:
+                    signals["boundary_attempts"].append({**deepcopy(attempt), "execution": record["id"]})
         signals["retries"] = [{"scenario":k, "retries":v} for k,v in retries.items() if v]
         signals["low_confidence"] = [{"scenario":k[0], "oracle":k[1], "inconclusive":v[0], "results":v[1]} for k,v in lows.items()]
         signals["unadmitted_judges"] = sorted(unadmitted)

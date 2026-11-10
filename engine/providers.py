@@ -16,6 +16,18 @@ class SubjectReply(AQEFBaseModel):
     usage: dict = Field(default_factory=dict)
 
 
+class SubjectToolCall(AQEFBaseModel):
+    name: StrictStr = Field(min_length=1)
+    arguments: dict
+    id: StrictStr | None = None
+
+
+class SubjectToolReply(AQEFBaseModel):
+    tool_calls: list[SubjectToolCall] = Field(min_length=1)
+    artifacts: dict = Field(default_factory=dict)
+    usage: dict = Field(default_factory=dict)
+
+
 def load_provider_urls(variable="AQEF_PROVIDER_URLS"):
     try:
         value = json.loads(os.environ.get(variable, "{}"))

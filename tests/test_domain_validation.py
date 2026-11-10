@@ -51,9 +51,7 @@ def test_project_requires_environments():
     assert "at least 1 item" in str(exc.value) or "at least one Environment" in str(exc.value)
 
 
-def test_environment_acting_subject_rejected_per_brief_scope():
-    # Implementer's Brief §3 Scope; Appendix A §A.2:
-    # "action_boundary: acting subjects with tools; reject a configuration that needs it"
+def test_environment_acting_subject_requires_action_boundary():
     tool_conf = ToolConfig(tools=[ToolDef(name="calculator", parameters={})])
     with pytest.raises(ValidationError) as exc:
         Environment(
@@ -63,7 +61,7 @@ def test_environment_acting_subject_rejected_per_brief_scope():
             tool_configuration=tool_conf,
             infra_target="us-east-1",
         )
-    assert "Acting subjects with tools" in str(exc.value)
+    assert "action_boundary is REQUIRED" in str(exc.value)
 
 
 def test_boundary_tripwire_stub_only():

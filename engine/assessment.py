@@ -9,7 +9,7 @@ from pydantic import Field, StrictInt, StrictStr
 from typing import Literal
 
 from engine.models.base import AQEFBaseModel
-from engine.validators import COST_ORDER, BUILTINS, canonical, number, select_target, check_builtin, custom_check
+from engine.validators import COST_ORDER, BUILTINS, boundary_attempts, canonical, number, select_target, check_builtin, custom_check
 
 
 def timestamp():
@@ -59,9 +59,16 @@ class AssessmentEngine:
         supporting = {"configuration": deepcopy(clause)}
         result = result_base(record, reference, "validator", oracle, supporting)
         try:
-            target = select_target(record, clause["target"])
+            if name == "boundary" and clause["target"] not in ("artifacts.boundary_attempts", "artifacts.*"):
+                raise ValueError("Boundary target must be artifacts.boundary_attempts or artifacts.*")
+            target = (deepcopy(boundary_attempts(record["artifacts"])) if name == "boundary"
+                      else select_target(record, clause["target"]))
             supporting["target_evidence"] = target
-            if name in BUILTINS:
+            if name == "tool-call":
+                tool_config = record["configuration"]["environment"].get("tool_configuration") or {}
+                tools = {tool["name"]: tool["parameters"] for tool in tool_config.get("tools", [])}
+                passed, details = check_builtin(name, target, clause["expected"], tools=tools)
+            elif name in BUILTINS:
                 passed, details = check_builtin(name, target, clause["expected"])
             elif custom is not None:
                 if clause["expected"] is not None and clause["expected"] != {}:
@@ -112,9 +119,13 @@ class AssessmentEngine:
         return self.storage.append_result(record["project"], result) if persist else result
 
     async def assess(self, record):
-        if record["status"] != "completed":
-            return
         contract = record["configuration"]["contract"]
+        if record["status"] != "completed":
+            if boundary_attempts(record["artifacts"]):
+                for index, clause in enumerate(contract["constraints"]):
+                    if clause["validator"] == "boundary":
+                        self.validate(record, clause, clause_reference(contract, "constraints", index))
+            return
         constraints = list(enumerate(contract["constraints"]))
         constraints.sort(key=lambda item: COST_ORDER.get(item[1]["validator"], 4))
         outcomes = []

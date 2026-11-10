@@ -1,6 +1,6 @@
 # AQEF Conformance Statement
 
-Updated 2026-11-09 for **AQEF Reference Engine, slice-14.1**, Python 3.12 / FastAPI /
+Updated 2026-11-10 for **AQEF Reference Engine, slice-15**, Python 3.12 / FastAPI /
 SQLite, one self-hosted application process. Specification target:
 **AQEF Candidate Recommendation 1.0-CR1.2**. The upstream revision history records no
 new implementation requirements in 1.0-CR1.1 or 1.0-CR1.2. Exact
@@ -14,7 +14,7 @@ full B.2/B.3 validation on every configuration change, implemented in slice 11.
 ```yaml
 aqef_conformance:
   specification_version: "1.0-CR1.2"
-  implementation: "AQEF Reference Engine slice-14.1"
+  implementation: "AQEF Reference Engine slice-15"
   capabilities:
     - human_review
     - multi_judge
@@ -23,6 +23,7 @@ aqef_conformance:
     - sdk:python  # Slice 13. CTS 1.0-CR1.2: CT-SDK-002 PASS (harness run r261109125722).
     - dataset:generated  # Implemented in slice 14, external confirmation pending.
     - dataset:production_replay  # Implemented in slice 14, external confirmation pending.
+    - action_boundary  # Implemented in slice 15, external confirmation pending.
   not_offered:
     # Reserved by 1.0-CR1; cannot be claimed, not an implementation opt-out.
     - dataset_mechanism:data_mutation
@@ -31,7 +32,6 @@ aqef_conformance:
     - dataset_mechanism:adversarial
     - dataset:synthetic
     # Specified capabilities deliberately not offered.
-    - action_boundary
     - sdk:java
     - sdk:csharp
     - sdk:javascript
@@ -116,7 +116,7 @@ Cheapest-first built-in Validation, pure Custom Validator inputs without clock/r
 network, controls before ordinary assessments, fail-fast affected Oracle suppression,
 zero-reference-prior Human confirmation, and finite Human routing timeouts are
 implemented. These are not claimed as skipped SHOULDs. SHOULDs conditional on an
-unoffered capability (such as Action Boundary hard vetoes) do not describe an offered implementation feature.
+unoffered capability (such as Plugin Architecture) do not describe an offered implementation feature.
 
 ## Clarified rules met in slices 8–9
 
@@ -201,7 +201,7 @@ Only supplied summaries were used; no CTS material was requested or inspected.
 
 This statement cannot provide independent certification, verifiable external model
 ancestry, a complete MUST-coverage proof, or assurance about undisclosed provider behavior. None is invented. No AQEF conformance
-test material was accessed. The local whole suite passes **904 tests**, with one
+test material was accessed. The local whole suite passes **939 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
 The owner-reported 1.0-CR1 evidence applies to the existing engine capabilities.
@@ -219,6 +219,19 @@ for the local evidence.
 
 Slice 14 implements `dataset:generated` and `dataset:production_replay`. The
 claim for these capabilities is to be confirmed by the owner's external run.
+
+## Subject access control (Volume III)
+
+| Subject kind | Harness control |
+|---|---|
+| HTTP text-only subject | Text protocol. A URL conveys no assurance about the provider's independent access. |
+| HTTP tool-capable subject without a deployment assertion | Every mediated request is checked before dispatch. Independent routes are outside harness visibility. The Environment declares `enforced: false`. |
+| HTTP subject listed in `AQEF_CONTROLLED_SUBJECTS` | The deployment asserts that every route passes through the harness and configured executor controls. The engine applies deny-by-default to mediated tool calls and accepts `enforced: true`. |
+
+The engine rejects `enforced: true` for any other model identifier. The
+operator is responsible for the provider and executor isolation behind the
+assertion. The [protocol](ACTION-BOUNDARY.md) documents the boundary of the
+claim. External confirmation of `action_boundary` is pending.
 
 ## Historical 1.0-CR1 claim review (slice 12)
 

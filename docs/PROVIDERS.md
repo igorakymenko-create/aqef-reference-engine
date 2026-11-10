@@ -110,6 +110,18 @@ Positive ISO day/time durations are also accepted. This is the subject collectio
 deadline; each Judge call gets a fresh configured timeout, and synchronous Validators
 have no preemptive bound. Volume III Execution ends when conversation collection completes; Validation and Evaluation follow under Volumes V/VI. The fresh per-Judge budget (default 30s, from execution.timeout) is an implementation-defined choice, not a gap in the Execution deadline.
 
+## Acting subjects and tool executors
+
+A tool-capable subject can return a tool-call reply in place of a text reply.
+
+```json
+{"tool_calls":[{"id":"lookup-1","name":"lookup","arguments":{"key":"sample"}}]}
+```
+
+The next subject request carries the tool results or refusals in
+`context.turns`. See [Action Boundary](ACTION-BOUNDARY.md#subject-protocol)
+for the complete subject and executor formats.
+
 ## Trigger and Evidence resources
 
 POST `/projects/demo/executions`, bearer authentication, JSON:

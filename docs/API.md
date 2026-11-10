@@ -9,6 +9,27 @@ published OpenAPI snapshot retain the unchanged engine build version 0.41.5.
 A.8 reserves synthetic Datasets and all Dataset mechanisms: they are rejected at load
 and on changes, regardless of capability claims; empty mechanisms names no type.
 
+## Slice 15 — Action Boundary
+
+Project and Environment writes accept ToolDefs and an Action Boundary as
+described in [ACTION-BOUNDARY.md](ACTION-BOUNDARY.md). A missing required
+field, invalid parameter schema, non-stub Tripwire or uncontrolled
+`enforced: true` is rejected with HTTP 422.
+
+`GET /projects/{project}/executions/{execution}/conversation` returns a
+completed Conversation. A turn contains `prompt` and either `response` or
+`tool_calls`. A recorded tool call contains `name`, `arguments`, `targets`,
+`kind`, `status` and `result` after handling. It retains the subject's optional
+`id`. On infrastructure failure the Execution metadata exposes observed
+turns under `partial_turns` and the Conversation route remains unavailable.
+
+`GET /projects/{project}/executions/{execution}/artifacts` retains its existing
+pagination and envelope. The harness records `tool_call`, `tool_result` and
+`boundary_attempt` entries during Execution. A boundary entry's data contains
+`target`, `blocked` and `tripwire`. Reports list these with the `execution`
+ID in `signals.boundary_attempts`. Their `signals.unenforced_boundaries` lists
+the names of all scoped Environments declaring `enforced: false`.
+
 ## Slice 14 — Dataset versions
 
 `POST /projects/{project}/datasets` and

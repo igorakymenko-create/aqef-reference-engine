@@ -8,9 +8,9 @@ from engine.execution import ExecutionEngine, ExecutionRequest
 from engine.scoped import decorate_execution, decorate_result
 
 
-def get_executions_router(storage, principal_dep, provider):
+def get_executions_router(storage, principal_dep, provider, executor):
     router = APIRouter(prefix="/projects/{project}/executions", tags=["Executions"])
-    engine = ExecutionEngine(storage, provider)
+    engine = ExecutionEngine(storage, provider, executor)
 
     def get_record(project, execution):
         record = storage.get_execution(project, execution)

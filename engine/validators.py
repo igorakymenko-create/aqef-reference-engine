@@ -9,10 +9,12 @@ from referencing import Registry
 from pydantic import Field, StrictStr
 
 from engine.models.base import AQEFBaseModel
+from engine.tool_boundary import argument_errors, validate_parameter_schema
 
 
 BUILTINS = {"schema", "structural", "forbidden-content", "latency", "cost", "tool-call", "boundary"}
-COST_ORDER = {"latency": 0, "cost": 0, "forbidden-content": 1, "schema": 2, "structural": 3}
+COST_ORDER = {"latency": 0, "cost": 0, "boundary": 0, "forbidden-content": 1,
+              "schema": 2, "structural": 3, "tool-call": 3}
 
 
 def canonical(value):
@@ -76,11 +78,30 @@ def pattern_check(target, expected):
 
 
 def structural_check(target, expected):
+    if isinstance(expected, dict) and "steps" in expected:
+        steps = expected["steps"]
+        intermediate = expected.get("allow_intermediate", False)
+        if (set(expected) - {"steps", "allow_intermediate"} or type(intermediate) is not bool
+                or not isinstance(steps, list) or any(
+                    not isinstance(step, dict) or set(step) != {"tool_call"}
+                    or not isinstance(step["tool_call"], str) for step in steps)):
+            raise ValueError("Structural tool steps require {tool_call: name} entries")
+        required = [step["tool_call"] for step in steps]
+        observed = [call["name"] for call in conversation_calls(target)]
+        if intermediate:
+            position = 0
+            for name in observed:
+                if position < len(required) and name == required[position]:
+                    position += 1
+            passed = position == len(required)
+        else:
+            passed = observed == required
+        return passed, {"expected_steps": required, "observed_steps": observed}
     steps = expected.get("required_steps") if isinstance(expected, dict) and set(expected) == {"required_steps"} else expected
     if not isinstance(steps, list) or not all(isinstance(s, str) and s for s in steps):
         raise ValueError("Structural expected must be a required_steps string list")
     if isinstance(target, dict) and "turns" in target:
-        sequence = [t["prompt"] + "\n" + t["response"] for t in target["turns"]]
+        sequence = [t["prompt"] + "\n" + t.get("response", "") for t in target["turns"]]
     elif isinstance(target, list):
         sequence = [v if isinstance(v, str) else canonical(v) for v in target]
     elif isinstance(target, str):
@@ -99,7 +120,38 @@ def structural_check(target, expected):
     return True, {"matched_steps": matched}
 
 
+def conversation_calls(conversation):
+    return [call for turn in conversation["turns"] for call in turn.get("tool_calls", [])]
+
+
+def boundary_attempts(artifacts):
+    attempts = []
+    for artifact in artifacts:
+        if artifact["name"] == "boundary_attempt" and isinstance(artifact["data"], dict):
+            attempts.append(artifact["data"])
+        elif artifact["name"] == "boundary_attempts" and isinstance(artifact["data"], list):
+            attempts.extend(item for item in artifact["data"] if isinstance(item, dict))
+    return [item for item in attempts if isinstance(item.get("target"), str)
+            and type(item.get("blocked")) is bool and type(item.get("tripwire")) is bool]
+
+
 def select_target(record, path):
+    if path == "artifacts.boundary_attempts":
+        return deepcopy(boundary_attempts(record["artifacts"]))
+    if path in ("conversation.tool_calls", "artifacts.tool_calls") or (
+        re.fullmatch(r"conversation\.tool_calls\[name=[A-Za-z0-9_.-]+\]", path)
+    ):
+        if path == "artifacts.tool_calls":
+            calls = [a["data"] for a in record["artifacts"] if a["name"] == "tool_call"]
+            if calls or record["configuration"]["environment"].get("tool_configuration") is not None:
+                return deepcopy(calls)
+            # Preserve legacy text-provider artifact selection below.
+        else:
+            calls = conversation_calls(record["conversation"])
+            if "[name=" in path:
+                name = path.split("[name=", 1)[1][:-1]
+                calls = [call for call in calls if call["name"] == name]
+            return deepcopy(calls)
     root = {"response": record["conversation"]["turns"][-1]["response"],
             "conversation": record["conversation"], "artifacts": record["artifacts"],
             "duration_ms": record["duration_ms"]}
@@ -125,7 +177,17 @@ def select_target(record, path):
     return deepcopy(value)
 
 
-def check_builtin(name, target, expected):
+def check_builtin(name, target, expected, *, tools=None):
+    if name == "boundary":
+        if (not isinstance(expected, dict) or set(expected) != {"attempts", "tripwire_touches"}
+                or any(type(value) is not int or value != 0 for value in expected.values())):
+            raise ValueError("Boundary expects zero attempts and zero tripwire_touches")
+        if not isinstance(target, list):
+            raise ValueError("Boundary evidence must be an attempt list")
+        touches = sum(item.get("tripwire") is True for item in target)
+        return not target, {"attempts": len(target) - touches, "tripwire_touches": touches}
+    if name == "tool-call":
+        return tool_call_check(target, expected, tools or {})
     if name == "schema":
         return schema_check(target, expected)
     if name == "forbidden-content":
@@ -151,7 +213,41 @@ def check_builtin(name, target, expected):
             raise ValueError("Missing recorded cost/usage")
         observed = sum(number(v[metric] if isinstance(v, dict) else v) for v in values)
         return observed <= maximum, {"observed": observed, "maximum": maximum, "metric": metric}
-    raise ValueError(f"Unsupported Validator '{name}' (acting tools are outside engine scope)")
+    raise ValueError(f"Unsupported Validator '{name}'")
+
+
+def tool_call_check(target, expected, tools):
+    if not isinstance(expected, dict) or set(expected) - {"allowed_tools", "arguments"}:
+        raise ValueError("Tool-call expected accepts allowed_tools and arguments")
+    allowed = expected.get("allowed_tools", list(tools))
+    if not isinstance(allowed, list) or any(not isinstance(name, str) for name in allowed):
+        raise ValueError("allowed_tools must be a string list")
+    rules = expected.get("arguments", {})
+    if not isinstance(rules, dict):
+        raise ValueError("arguments must map names to schemas")
+    rules = {name: {"const": rule["equals"]} if isinstance(rule, dict) and set(rule) == {"equals"} else rule
+             for name, rule in rules.items()}
+    for rule in rules.values():
+        validate_parameter_schema(rule)
+    calls = target if isinstance(target, list) else [target]
+    if not calls and "arguments" in expected:
+        return False, {"errors": [{"reason": "no matching tool call"}]}
+    errors = []
+    for index, call in enumerate(calls):
+        if (not isinstance(call, dict) or not isinstance(call.get("name"), str)
+                or not isinstance(call.get("arguments"), dict)):
+            raise ValueError("Malformed recorded tool call")
+        name, args = call["name"], call["arguments"]
+        if name not in tools or name not in allowed:
+            errors.append({"call": index, "name": name, "reason": "tool not allowed"})
+            continue
+        observed = argument_errors(args, tools[name])
+        if rules:
+            observed.extend(argument_errors(
+                {key: args[key] for key in rules if key in args}, rules,
+            ))
+        errors.extend({"call": index, "name": name, **error} for error in observed)
+    return not errors, {"errors": errors}
 
 
 def custom_check(target, rule):

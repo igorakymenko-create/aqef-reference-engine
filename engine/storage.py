@@ -114,13 +114,21 @@ class Storage:
             if operation in ("delete_scenario", "delete_environment") or "Duplicate" in str(exc) or "collides" in str(exc):
                 raise StorageConflictError(str(exc)) from exc
             raise ConfigurationValidationError(str(exc)) from exc
+        for environment in candidate.environments:
+            if (environment.action_boundary and environment.action_boundary.enforced
+                    and environment.model_version not in self.controlled_subjects):
+                raise ConfigurationValidationError(
+                    f"Environment '{environment.name}' must declare enforced: false "
+                    "unless its subject is configured as controlled"
+                )
         validate_dataset_references(datasets.values(), lookup_dataset)
         validate_reusable_composition(registry.values(), registry.get)
         validate_project_configuration(candidate, registry.get, lookup_dataset)
 
-    def __init__(self, db_path: str = ":memory:"):
+    def __init__(self, db_path: str = ":memory:", *, controlled_subjects=()):
         self.db_path = db_path
         self.config_lock = RLock()
+        self.controlled_subjects = frozenset(controlled_subjects)
         self._shared_conn: Optional[sqlite3.Connection] = None
         if self.db_path == ":memory:":
             mem_name = f"aqef_mem_{uuid.uuid4().hex}"

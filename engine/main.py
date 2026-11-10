@@ -38,7 +38,15 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         not isinstance(source, str) or source not in capture_provider.urls for source in raw_sources
     ):
         raise ValueError("AQEF_CAPTURE_ALLOW_RAW must list configured capture sources")
-    storage = Storage(db_path=db_path)
+    executor = HTTPProvider(load_provider_urls("AQEF_TOOL_EXECUTOR_URLS"))
+    if set(executor.urls) - {"sandbox", "real"}:
+        raise ValueError("AQEF_TOOL_EXECUTOR_URLS keys must be sandbox or real")
+    controlled = json.loads(os.environ.get("AQEF_CONTROLLED_SUBJECTS", "[]"))
+    if not isinstance(controlled, list) or any(
+        not isinstance(model, str) or model not in provider.urls for model in controlled
+    ):
+        raise ValueError("AQEF_CONTROLLED_SUBJECTS must list configured subject model identifiers")
+    storage = Storage(db_path=db_path, controlled_subjects=controlled)
 
     # Bootstrap default admin team, role, and principal if not already present
     existing_teams = {t.id for t in storage.list_teams()}
@@ -129,7 +137,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
     app.include_router(get_contracts_router(storage, principal_dep))
     app.include_router(get_datasets_router(storage, principal_dep, provider, capture_provider, raw_sources))
     app.include_router(get_gates_router(storage, principal_dep))
-    app.include_router(get_executions_router(storage, principal_dep, provider))
+    app.include_router(get_executions_router(storage, principal_dep, provider, executor))
     app.include_router(get_assessment_router(storage, principal_dep))
     app.include_router(get_decision_router(storage, principal_dep, provider))
     app.include_router(get_scoped_router(storage, principal_dep))

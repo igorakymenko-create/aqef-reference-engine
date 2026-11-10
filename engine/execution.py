@@ -16,7 +16,11 @@ from engine.dataset_sources import REPLAY_PERMISSION
 from engine.models.base import AQEFBaseModel
 from engine.models.dataset import DatasetSource
 from engine.models.evidence import Conversation, Turn
-from engine.providers import SubjectReply
+from engine.providers import SubjectReply, SubjectToolReply
+from engine.tool_runtime import ToolRuntime
+
+
+SUBJECT_STEP_LIMIT = 32
 
 
 class ExecutionRequest(AQEFBaseModel):
@@ -70,9 +74,10 @@ def settings(project, suite):
 
 
 class ExecutionEngine:
-    def __init__(self, storage, provider):
+    def __init__(self, storage, provider, executor):
         self.storage = storage
         self.provider = provider
+        self.executor = executor
 
     def prepare(self, project_name, request, principal):
         store = self.storage
@@ -195,6 +200,8 @@ class ExecutionEngine:
         retries = config["retry"]["max_attempts"] if config["retry"] else 0
         received = False
         turns = []
+        replay_index = 0
+        tools = ToolRuntime(self.storage, self.executor, record)
         if fixed:
             record["conversation"] = deepcopy(fixed["conversation"])
             record["artifacts"] = [{"name": key, "data": deepcopy(value), "turn": None}
@@ -207,11 +214,16 @@ class ExecutionEngine:
                 record["attempts"].append(attempt)
                 try:
                     while True:
+                        acting = env["tool_configuration"] is not None
+                        if acting and len(turns) >= SUBJECT_STEP_LIMIT:
+                            raise RuntimeError("Subject step limit exceeded")
                         remaining = deadline - time.monotonic()
                         if remaining <= 0:
                             raise TimeoutError("Execution deadline exceeded")
-                        if replay_prompts is not None:
-                            prompt = replay_prompts[len(turns)]
+                        if turns and "tool_calls" in turns[-1]:
+                            prompt = "Continue."
+                        elif replay_prompts is not None:
+                            prompt = replay_prompts[replay_index]
                         else:
                             prompt = record["opening_prompt"] if not turns else "Continue."
                         payload = {"model": env["model_version"], "prompt": prompt,
@@ -219,26 +231,55 @@ class ExecutionEngine:
                                    "context": {"turns": deepcopy(turns)}}
                         call_start = time.monotonic()
                         try:
-                            raw = await asyncio.wait_for(self.provider.call(env["model_version"], payload, remaining), remaining)
+                            options = {"strict_json": True} if acting else {}
+                            raw = await asyncio.wait_for(
+                                self.provider.call(env["model_version"], payload, remaining, **options), remaining,
+                            )
                         finally:
                             record["artifacts"].append({"name": "latency_ms",
                                 "data": (time.monotonic() - call_start) * 1000,
                                 "turn": len(turns) + 1, "attempt": attempt["number"]})
-                        # Recognize genuine text before validating the envelope, preventing do-overs.
-                        if isinstance(raw, dict) and isinstance(raw.get("response"), str):
+                        tool_turn = isinstance(raw, dict) and "tool_calls" in raw
+                        # Never replay a subject turn that requested a tool.
+                        if tool_turn:
+                            received = True
+                        elif isinstance(raw, dict) and isinstance(raw.get("response"), str):
                             received = True
                             turns.append({"prompt": prompt, "response": raw["response"]})
-                        if time.monotonic() >= deadline:
+                        if time.monotonic() >= deadline and not tool_turn:
                             raise TimeoutError("Execution deadline exceeded")
-                        reply = SubjectReply.model_validate(raw)
+                        if tool_turn:
+                            if not acting:
+                                raise ValueError("Tool calls require an Environment with tool_configuration")
+                            json.dumps(raw, allow_nan=False, ensure_ascii=False).encode("utf-8")
+                            reply = SubjectToolReply.model_validate(raw)
+                            calls = [call.model_dump(exclude_none=True) for call in reply.tool_calls]
+                            turns.append({"prompt": prompt, "tool_calls": calls})
+                            if time.monotonic() >= deadline:
+                                for call in calls:
+                                    tools.refuse_after_failure(call, turns)
+                                raise TimeoutError("Execution deadline exceeded")
+                        else:
+                            reply = SubjectReply.model_validate(raw)
                         for name, data in reply.artifacts.items():
+                            if (env.get("action_boundary") or {}).get("enforced") and name in (
+                                "boundary_attempt", "boundary_attempts",
+                            ):
+                                continue  # Boundary observations are owned by the harness.
+                            if acting and name in ("tool_call", "tool_calls", "tool_result"):
+                                continue
                             record["artifacts"].append({"name": name, "data": deepcopy(data), "turn": len(turns)})
                         if reply.usage:
                             record["artifacts"].append({"name": "usage", "data": reply.usage, "turn": len(turns)})
-                        complete = (len(turns) == len(replay_prompts)
+                        if tool_turn:
+                            await tools.handle(calls, turns, deadline)
+                            continue
+                        replay_index += 1
+                        complete = (replay_index == len(replay_prompts)
                                     if replay_prompts is not None else reply.complete)
                         if complete:
                             record["conversation"] = {"turns": turns}
+                            record["partial_turns"] = []
                             record["status"] = "completed"
                             break
                     attempt["completed_at"] = now()

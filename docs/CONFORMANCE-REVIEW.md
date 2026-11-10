@@ -1,12 +1,30 @@
-# Specification review — through slice 14.1
+# Specification review — through slice 15
 
-Current target: `slice-14.1`, AQEF Candidate Recommendation **1.0-CR1.2**. The baseline ledger below was recorded in slice 6
+Current target: `slice-15`, AQEF Candidate Recommendation **1.0-CR1.2**. The baseline ledger below was recorded in slice 6
 against 0.41.1; the following current-release rows supersede affected source units.
 Baseline source links are pinned to that historical version, not shifted line numbers
 in the refreshed local kit. Intended scope remains the implicit
 core plus `human_review`, `multi_judge`, `seeded_controls`. This is a specification
 review with the implementation's own tests, not the AQEF Conformance Test
 Specification, a certification, or evidence that every normative check passes.
+
+## Slice 15 — Action Boundary
+
+| Source | Implementation | Local verification |
+|---|---|---|
+| A.2 and B.2/B.3. Required Boundary, ToolConfig, ToolDef and BoundaryEntry fields. | `models/environment.py` requires the configuration and enforces draft 2020-12 TypeDefs and stub-only Tripwires. | `test_a2_required_fields`, `test_a2_requires_pure_draft_2020_12_parameter_schema`, `test_a2_tripwire_and_deployment_control`. |
+| A.2 matching syntax and III default denial. | `tool_boundary.py` matches literal identifiers and documented origin/path patterns, checks all destinations and denies unmatched or ambiguous dispatch. | `test_documented_boundary_patterns`, `test_iii_v_xi_tool_dispatch_evidence_veto_and_report`. |
+| III boundary kinds and VIII Blocked-Path Testing. | `tool_runtime.py` supplies local stub acknowledgements, captures Tripwires and dispatches allowed external kinds only to startup-configured executors. | Local HTTP assertions cover denied, stub, Tripwire, sandbox and real requests. |
+| III controlled access and XI disclosure. | `main.py` loads the per-model deployment assertion. `Storage` checks it across configuration writes and startup. `decision.py` exposes unenforced scope. | `test_a2_tripwire_and_deployment_control`, Report checks. |
+| III Context, Conversation, Artifact Collection, Retry/Timeouts and C.7 Evidence. | `execution.py` passes captured tool turns to the subject as Context. `tool_runtime.py` persists calls before dispatch and records results as they arrive. Timeout and step limits retain partial Evidence and prevent repeated side effects. | `test_iii_v_xi_tool_dispatch_evidence_veto_and_report`, `test_iii_tool_limit_and_executor_failure_do_not_retry`. |
+| V and A.5 Boundary Validator, IX Unauthorized Action, B.3. | `validators.py` evaluates all attempts and touches regardless of blocked flag. `assessment.py` records Confidence inapplicable and honors the existing veto flow. | Boundary fail/pass, Tripwire, safety dimension and absent Judge call assertions. |
+| V Tool-Call/Structural Validators and I Chapter 7. | Frozen tool declarations supply schema checks. Selectors and ordered tool steps cover the H.3 pattern. | `test_v_tool_argument_and_structural_checks`. |
+| XI Reports and C.10. | Existing Report signals read the harness's boundary Artifacts and frozen Environment declarations. | `test_iii_v_xi_tool_dispatch_evidence_veto_and_report`. |
+| I Chapter 7, IX Agent and X. | Judge Evidence includes the full trajectory. The existing Baseline comparator uses the Oracle's verdict on that Evidence and does not compare paths literally. | `test_i_ch7_and_x_baseline_compares_whole_trajectory`. |
+
+The full slice-15 suite passed all 939 tests. Slice 15 supersedes historical
+ledger classifications that excluded Action Boundary. See [protocol and matching choices](ACTION-BOUNDARY.md)
+and [ambiguities 42–44](AMBIGUITIES.md).
 
 ## Slice 14 — Generated and Production Replay Datasets
 

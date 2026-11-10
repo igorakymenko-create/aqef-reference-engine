@@ -1,5 +1,19 @@
 # Implementation Notes
 
+## Slice 15 — Action Boundary
+
+Reviewed 1.0-CR1.2 Volume III, V, VIII, IX, I Chapter 7, X, XI and Appendices
+A, B, C and H. Acting subjects now use deterministic boundary checks and a
+bounded tool protocol with live Evidence. Only permitted sandbox and real
+calls reach configured executors. Local stubs and refusals produce tool
+observations. The existing frozen Report and verdict-based Baseline paths
+consume the new Evidence. See ambiguities 42–44.
+
+The full suite passed all 939 tests, including 35 new cases, with the
+existing Starlette/httpx deprecation warning. The compatibility check for
+unenforced provider observations prompted an additive telemetry path.
+
+
 ## Slice 14.1 — inline Dataset declarations and generator warnings
 
 Project POST and PUT accept Generated and Production Replay declarations.
