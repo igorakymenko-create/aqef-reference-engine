@@ -1,5 +1,6 @@
 """Volume XIII Action checks against the live engine and SDK."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 import os
 import subprocess
@@ -172,19 +173,27 @@ def test_xiii_awaiting_review_is_bounded_and_resolved_evidence_is_refreshed(
         started = time.monotonic()
         run = start(ci_engine, tmp_path, name, batch=batch, wait="5" if resolve else "1.2")
         if resolve:
-            evaluation(admin, name, batch=batch)
+            initial = evaluation(admin, name, batch=batch)
+            assert initial["gates"]["functional"]["status"] == "fail"
             for execution in triggered["executions"]:
                 row = admin.list_results(name, execution["id"]).json()[0]
                 assert row["disposition"] == "awaiting_review"
                 admin.review_result(name, execution["id"], row["id"], {
                     "verdict": "pass", "supporting_evidence": "Reviewed",
                 })
-        _, summary = collect(run, "pass" if resolve else "fail")
+        actual_batch, summary = collect(run, "pass" if resolve else "fail")
+        finished_at = datetime.now(timezone.utc)
         if not resolve:
             assert 1.0 <= time.monotonic() - started < 5
             assert "timeout" in summary
         else:
-            assert len(admin.list_snapshots(name).json()) == 2
+            snapshots = admin.list_snapshots(name).json()
+            assert all(datetime.fromisoformat(row["captured_at"]) <= finished_at for row in snapshots)
+            final = admin.get_gate_evaluation(name, snapshots[-1]["id"]).json()
+            assert final["id"] != initial["id"]
+            assert final["execution_batch_id"] == actual_batch == batch
+            assert final["gates"]["functional"]["status"] == "pass"
+            assert "| functional | blocking | pass |" in summary
 
 
 def test_xii_ci_records_release_using_service_policy(ci_engine, tmp_path):
