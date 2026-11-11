@@ -21,9 +21,9 @@ aqef_conformance:
     - seeded_controls
     - cli  # Slice 13. CTS 1.0-CR1.2: CT-SDK-001 PASS (harness run r261109125722).
     - sdk:python  # Slice 13. CTS 1.0-CR1.2: CT-SDK-002 PASS (harness run r261109125722).
-    - dataset:generated  # Implemented in slice 14, external confirmation pending.
-    - dataset:production_replay  # Implemented in slice 14, external confirmation pending.
-    - action_boundary  # Implemented in slice 15, external confirmation pending.
+    - dataset:generated  # Slice 14.1. CTS 1.0-CR1.2: CT-DSR-001, 003, 005 PASS (harness run r261110122627).
+    - dataset:production_replay  # Slice 14.1. CTS 1.0-CR1.2: CT-DSR-002, 004 PASS (harness run r261110122627).
+    - action_boundary  # Slice 15. CTS 1.0-CR1.2: CT-ABD-001 to 008 and CT-TTP-002 PASS (harness run r261110222356).
   not_offered:
     # Reserved by 1.0-CR1; cannot be claimed, not an implementation opt-out.
     - dataset_mechanism:data_mutation
@@ -217,8 +217,12 @@ Run, review records and attestation:
 See [the client review](CONFORMANCE-REVIEW.md#slice-13--cli-and-python-sdk)
 for the local evidence.
 
-Slice 14 implements `dataset:generated` and `dataset:production_replay`. The
-claim for these capabilities is to be confirmed by the owner's external run.
+Slices 14 and 14.1 implement `dataset:generated` and `dataset:production_replay`. The
+owner's external run confirmed both against Conformance Tests 1.0-CR1.2: CT-DSR-001 to 005
+PASS
+([run r261110122627](https://github.com/igorakymenko-create/aqef-cts-harness/tree/main/runs/r261110122627)).
+Slice 14 alone did not pass: it rejected generated and replay Datasets declared in a
+Project's configuration, which Appendix A §A.1 allows, and slice 14.1 corrected it.
 
 ## Subject access control (Volume III)
 
@@ -231,7 +235,15 @@ claim for these capabilities is to be confirmed by the owner's external run.
 The engine rejects `enforced: true` for any other model identifier. The
 operator is responsible for the provider and executor isolation behind the
 assertion. The [protocol](ACTION-BOUNDARY.md) documents the boundary of the
-claim. External confirmation of `action_boundary` is pending.
+claim. The owner's external run confirmed `action_boundary` against Conformance Tests
+1.0-CR1.2:
+- CT-ABD-001 to 006 (automated) PASS;
+- CT-ABD-007, CT-ABD-008 and CT-TTP-002 PASS, with their Declaration and Inspection
+  parts decided by an independent AI reviewer.
+
+Run, review records and attestation:
+[run r261110222356](https://github.com/igorakymenko-create/aqef-cts-harness/tree/main/runs/r261110222356),
+[`reviews/ATTESTATION-ABD.md`](https://github.com/igorakymenko-create/aqef-cts-harness/blob/main/reviews/ATTESTATION-ABD.md).
 
 ## Historical 1.0-CR1 claim review (slice 12)
 
