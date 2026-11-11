@@ -1,0 +1,50 @@
+name: AQEF example
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install demo engine and client
+        run: python -m pip install -r requirements.txt ./client
+      - name: Start demo and load Project
+        shell: bash
+        env:
+          AQEF_URL: http://127.0.0.1:8000
+          AQEF_PROVIDER_URLS: '{"demo-subject":"http://127.0.0.1:9100/subject","demo-judge":"http://127.0.0.1:9100/judge"}'
+        run: |
+          AQEF_ADMIN_TOKEN="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+          AQEF_CI_TOKEN="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+          export AQEF_ADMIN_TOKEN AQEF_CI_TOKEN
+          export AQEF_TOKEN="$AQEF_ADMIN_TOKEN"
+          export AQEF_DB_PATH="$RUNNER_TEMP/aqef-example.db"
+          python -m uvicorn providers:app --app-dir examples/ci-github --host 127.0.0.1 --port 9100 > "$RUNNER_TEMP/providers.log" 2>&1 &
+          python -m uvicorn engine.main:app --host 127.0.0.1 --port 8000 > "$RUNNER_TEMP/aqef.log" 2>&1 &
+          for attempt in {1..30}; do
+            if aqef system health --timeout 1 --json > /dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          aqef system health --timeout 1 --json > /dev/null
+          aqef project load examples/ci-github/project.yml > /dev/null
+          python examples/ci-github/provision.py
+          printf 'AQEF_CI_TOKEN=%s\n' "$AQEF_CI_TOKEN" >> "$GITHUB_ENV"
+      - name: AQEF quality check
+        uses: ./
+        with:
+          engine-url: http://127.0.0.1:8000
+          token: ${{ env.AQEF_CI_TOKEN }}
+          project: example
+          suite: smoke
+          environment: local

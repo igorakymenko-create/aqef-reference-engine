@@ -1,5 +1,20 @@
 # Ambiguities Log
 
+## 45. Pipeline evaluation identity and waiting (XIII, XII, Appendix C)
+
+- Volume XIII says “The override that counts is the one recorded against this
+  Pipeline's own Gate Result”. Appendix C's check creates a fresh evaluation
+  and its Reports can refresh the evaluation. Slice 16 adds an evaluation
+  read keyed by the original ID with its current overrides. A conditional
+  refresh can pick up changed Evidence without losing an override recorded
+  during a poll. It refuses stale scope and changed Evidence with an override.
+- Volume XIII says a Pipeline “SHOULD NOT wait indefinitely”. A failure
+  without an override might still receive one. The Action waits on every
+  failed blocking Gate without an override, including pending Human Review,
+  until its finite deadline. A running batch is also pending. Advisory
+  failures do not trigger a wait. Only the engine derives whether Evidence
+  changed and whether refresh or release is allowed.
+
 ## 42. Tool targets and matching (III Action Boundary, A.2)
 
 - A.2 permits an “Identifier or pattern of the system, endpoint, or tool”.

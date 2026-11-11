@@ -68,6 +68,7 @@ The human-readable display additionally labels it overridden.
 | `aqef gate list --project PROJECT [--offset VALUE] [--limit VALUE]` | `list_quality_gates` | `GET /projects/{project}/gates` | C.3 |
 | `aqef gate override --project PROJECT --gate GATE FILE` | `override_gate` | `POST /projects/{project}/gates/{gate}/override` | C.3 |
 | `aqef gate update --project PROJECT --gate GATE [--x-approved-by VALUE] [--x-external-review-ref VALUE] FILE` | `update_quality_gate` | `PUT /projects/{project}/gates/{gate}` | C.3 |
+| `aqef gate-evaluation get --project PROJECT --evaluation EVALUATION` | `get_gate_evaluation` | `GET /projects/{project}/gates/evaluations/{evaluation}` | Not in Appendix C |
 | `aqef gates check --project PROJECT FILE` | `check_gates` | `POST /projects/{project}/gates/check` | C.3 |
 | `aqef principal create FILE` | `create_principal` | `POST /principals` | Not in Appendix C |
 | `aqef project delete --project PROJECT [--retain-history VALUE]` | `delete_project` | `DELETE /projects/{project}` | C.3, C.8 |
@@ -110,11 +111,12 @@ The human-readable display additionally labels it overridden.
 | `aqef validator list --project PROJECT [--offset VALUE] [--limit VALUE]` | `list_validators` | `GET /projects/{project}/validators` | Not in Appendix C |
 | `aqef validator register --project PROJECT [--x-approved-by VALUE] [--x-external-review-ref VALUE] FILE` | `register_validator` | `POST /projects/{project}/validators` | Not in Appendix C |
 
-71 commands.
+72 commands.
 
 ## Not in Appendix C
 
 - `aqef execution list` wraps `GET /projects/{project}/executions`. Execution history and filters extend C.6.
+- `aqef gate-evaluation get` wraps `GET /projects/{project}/gates/evaluations/{evaluation}`. Read a specific stored Gate evaluation and its current overrides for Volume XIII.
 - `aqef principal create` wraps `POST /principals`. Principal provisioning is implementation-defined in C.4.
 - `aqef release get` wraps `GET /projects/{project}/releases/{key}`. Direct lookup of an immutable C.3 Release Decision.
 - `aqef report generate` wraps `POST /projects/{project}/reports`. Explicit freeze operation for the C.10 Report shape.

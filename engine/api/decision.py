@@ -3,10 +3,11 @@ from copy import deepcopy
 from functools import wraps
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import Field, StrictStr
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import Field, StrictBool, StrictStr
 
 from engine.assessment import AssessmentEngine, result_base
+from engine.audit import mark_read_only
 from engine.auth import check_permission
 from engine.decision import DecisionEngine, effective, find_clause, govern, identifier, now, result_state
 from engine.models.base import AQEFBaseModel
@@ -19,6 +20,17 @@ import json
 
 class BatchRequest(AQEFBaseModel):
     execution_batch_id: StrictStr = Field(min_length=1)
+
+
+class GateCheckRequest(BatchRequest):
+    previous_evaluation_id: StrictStr | None = None
+    suite: StrictStr | None = None
+    environment: StrictStr | None = None
+    wait_for_batch: StrictBool = False
+
+
+class ReportRequest(BatchRequest):
+    evaluation_id: StrictStr | None = None
 
 
 class SnapshotRequest(AQEFBaseModel):
@@ -74,11 +86,41 @@ def get_decision_router(storage, principal_dep, provider):
                 return function(*args, **kwargs)
         return execute
 
-    @router.post("/gates/check")
+    @router.post("/gates/check", responses={202: {"description": "Batch still executing"}})
     @serialized
-    def evaluate(project: str, request: BatchRequest, principal=Depends(principal_dep)):
+    def evaluate(project: str, request: GateCheckRequest, response: Response, principal=Depends(principal_dep)):
         check_permission(principal, "execute", storage)
+        batch = request.execution_batch_id
+        if request.suite is not None or request.environment is not None:
+            info = service.batch_info(project, batch)
+            if ((request.suite is not None and request.suite != info["suite"])
+                    or (request.environment is not None and request.environment != info["environment"])):
+                raise HTTPException(409, "Batch does not match the requested Suite and Environment")
+        if request.wait_for_batch:
+            try:
+                service.batch(project, batch)
+            except HTTPException as exc:
+                if exc.status_code != 409:
+                    raise
+                response.status_code = 202
+                mark_read_only()
+                return {"status": "pending", "execution_batch_id": batch}
+        if request.previous_evaluation_id is not None:
+            view = service.evaluation_view(project, request.previous_evaluation_id)
+            if view["execution_batch_id"] != batch or not view["scope_current"]:
+                raise HTTPException(409, "Previous Gate evaluation has a different batch or stale scope")
+            if not view["refresh_required"]:
+                mark_read_only()
+                return view
+            if any("override" in gate for gate in view["gates"].values()):
+                raise HTTPException(409, "Gate evaluation has an override and changed evidence")
         return service.evaluate(project, request.execution_batch_id)
+
+    @router.get("/gates/evaluations/{evaluation}")
+    @serialized
+    def get_gate_evaluation(project: str, evaluation: str, principal=Depends(principal_dep)):
+        check_permission(principal, "read", storage)
+        return service.evaluation_view(project, evaluation)
 
     @router.post("/snapshots", status_code=201)
     @serialized
@@ -88,9 +130,9 @@ def get_decision_router(storage, principal_dep, provider):
 
     @router.post("/reports", status_code=201)
     @serialized
-    def report(project: str, request: BatchRequest, principal=Depends(principal_dep)):
+    def report(project: str, request: ReportRequest, principal=Depends(principal_dep)):
         check_permission(principal, "execute", storage)
-        return service.report(project, request.execution_batch_id)
+        return service.report(project, request.execution_batch_id, request.evaluation_id)
 
     @router.post("/gates/{gate}/override", status_code=201)
     @serialized

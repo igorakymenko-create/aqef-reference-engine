@@ -1,5 +1,19 @@
 # Implementation Notes
 
+## Slice 16 — GitHub Actions
+
+The composite Action uses the Python SDK to trigger an Execution and check
+Gates. Polling reads the pipeline's exact evaluation with overrides and
+requests an engine refresh only after evidence changes. The engine's
+release endpoint checks the standing policy and pinned Report. The
+adapter exposes native step status, batch and outcome outputs, and a Gate
+summary. See ambiguity 45 for the evaluation read and waiting decisions.
+Pending and unchanged Gate checks do not append audit entries. The example
+workflow's engine, providers, project load and Action entry point passed a
+local smoke run. The whole suite passed 952 tests with one deprecation warning.
+Both YAML files parsed in the suite. `actionlint` was unavailable.
+
+
 ## Slice 15 — Action Boundary
 
 Reviewed 1.0-CR1.2 Volume III, V, VIII, IX, I Chapter 7, X, XI and Appendices

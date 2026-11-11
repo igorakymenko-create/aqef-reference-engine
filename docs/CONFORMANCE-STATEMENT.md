@@ -1,6 +1,6 @@
 # AQEF Conformance Statement
 
-Updated 2026-11-10 for **AQEF Reference Engine, slice-15**, Python 3.12 / FastAPI /
+Updated 2026-11-10 for **AQEF Reference Engine, slice-16**, Python 3.12 / FastAPI /
 SQLite, one self-hosted application process. Specification target:
 **AQEF Candidate Recommendation 1.0-CR1.2**. The upstream revision history records no
 new implementation requirements in 1.0-CR1.1 or 1.0-CR1.2. Exact
@@ -14,7 +14,7 @@ full B.2/B.3 validation on every configuration change, implemented in slice 11.
 ```yaml
 aqef_conformance:
   specification_version: "1.0-CR1.2"
-  implementation: "AQEF Reference Engine slice-15"
+  implementation: "AQEF Reference Engine slice-16"
   capabilities:
     - human_review
     - multi_judge
@@ -24,7 +24,11 @@ aqef_conformance:
     - dataset:generated  # Slice 14.1. CTS 1.0-CR1.2: CT-DSR-001, 003, 005 PASS (harness run r261110122627).
     - dataset:production_replay  # Slice 14.1. CTS 1.0-CR1.2: CT-DSR-002, 004 PASS (harness run r261110122627).
     - action_boundary  # Slice 15. CTS 1.0-CR1.2: CT-ABD-001 to 008 and CT-TTP-002 PASS (harness run r261110222356).
+    - ci_cd:github_actions  # Implemented in slice 16, external confirmation pending.
   not_offered:
+    - ci_cd:gitlab
+    - ci_cd:azure_devops
+    - ci_cd:jenkins
     # Reserved by 1.0-CR1; cannot be claimed, not an implementation opt-out.
     - dataset_mechanism:data_mutation
     - dataset_mechanism:fuzzing
@@ -45,7 +49,7 @@ aqef_conformance:
 ```
 
 Test Types name Suite purposes built from the core, and are not conformance
-capabilities (§10; Volume IX). No `ci_cd:<platform>` capability is claimed. Custom
+capabilities (§10; Volume IX). GitHub Actions is the offered CI/CD integration. Custom
 Validators use the documented pure declarative registration interface (Volume V),
 not executable Validator Plugins (Volume XVI) or a language SDK (Volume XIV).
 
@@ -55,8 +59,9 @@ Decision are implemented; ordinary Results pass through Confidence handling befo
 aggregation. Topology is a deployment choice and removes no normative obligations.
 
 **Conformance claim:** AQEF Reference Engine claims **AQEF
-Conformance to Candidate Recommendation 1.0-CR1** for `human_review`, `multi_judge` and
-`seeded_controls`, with the non-negotiable core implicit. The prior classification-(a)
+Conformance to Candidate Recommendation 1.0-CR1.2** for the capabilities listed
+above, with the non-negotiable core implicit. The GitHub Actions claim awaits the
+owner's external Conformance Test run. The prior classification-(a)
 findings are closed by the implementation and the 0.41.5 clarifications documented
 below. Known verification work (b) is not an assertion of an unmet MUST; deliberate
 SHOULD deviations are declared separately. This claim is based on the specification
@@ -201,7 +206,7 @@ Only supplied summaries were used; no CTS material was requested or inspected.
 
 This statement cannot provide independent certification, verifiable external model
 ancestry, a complete MUST-coverage proof, or assurance about undisclosed provider behavior. None is invented. No AQEF conformance
-test material was accessed. The local whole suite passes **939 tests**, with one
+test material was accessed. The local whole suite passes **952 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
 The owner-reported 1.0-CR1 evidence applies to the existing engine capabilities.
@@ -223,6 +228,9 @@ PASS
 ([run r261110122627](https://github.com/igorakymenko-create/aqef-cts-harness/tree/main/runs/r261110122627)).
 Slice 14 alone did not pass: it rejected generated and replay Datasets declared in a
 Project's configuration, which Appendix A §A.1 allows, and slice 14.1 corrected it.
+
+Slice 16 implements `ci_cd:github_actions`. The owner’s external confirmation
+is pending. See [CI-GITHUB.md](CI-GITHUB.md).
 
 ## Subject access control (Volume III)
 

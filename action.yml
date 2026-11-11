@@ -1,0 +1,62 @@
+name: AQEF Quality Gates
+description: Publish AQEF Gate outcomes as a GitHub Actions step result
+inputs:
+  engine-url:
+    description: AQEF engine base URL
+    required: true
+  token:
+    description: AQEF Service Account bearer token from a GitHub secret
+    required: true
+  project:
+    description: AQEF Project
+    required: true
+  suite:
+    description: AQEF Suite
+    required: true
+  environment:
+    description: AQEF Environment
+    required: true
+  execution-batch:
+    description: Existing batch ID to evaluate
+    required: false
+  wait-timeout:
+    description: Maximum wait in seconds
+    required: false
+    default: '60'
+  poll-interval:
+    description: Poll interval in seconds
+    required: false
+    default: '2'
+  release-policy:
+    description: Standing release policy ID for optional approved Release Decision
+    required: false
+outputs:
+  execution-batch:
+    description: Evaluated Execution batch ID
+    value: ${{ steps.evaluate.outputs.execution_batch }}
+  outcome:
+    description: pass, pass_with_override or fail
+    value: ${{ steps.evaluate.outputs.outcome }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install AQEF client
+      shell: bash
+      run: python -m pip install "$GITHUB_ACTION_PATH/client"
+    - name: Translate AQEF Gates
+      id: evaluate
+      shell: bash
+      env:
+        AQEF_URL: ${{ inputs.engine-url }}
+        AQEF_TOKEN: ${{ inputs.token }}
+        AQEF_PROJECT: ${{ inputs.project }}
+        AQEF_SUITE: ${{ inputs.suite }}
+        AQEF_ENVIRONMENT: ${{ inputs.environment }}
+        AQEF_BATCH: ${{ inputs.execution-batch }}
+        AQEF_WAIT_TIMEOUT: ${{ inputs.wait-timeout }}
+        AQEF_POLL_INTERVAL: ${{ inputs.poll-interval }}
+        AQEF_RELEASE_POLICY: ${{ inputs.release-policy }}
+      run: python -m aqef_client.ci.github

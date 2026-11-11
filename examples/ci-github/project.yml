@@ -1,0 +1,27 @@
+name: example
+environments:
+  - name: local
+    model_version: demo-subject
+    prompt_version: '1'
+    tool_configuration: null
+    infra_target: local
+contracts:
+  - name: greeting
+    expectations:
+      - id: greeting
+        criteria: The response gives a greeting.
+        confidence_threshold: 0.8
+        judge:
+          model: demo-judge
+          confidence_source: self_rating
+suites:
+  - name: smoke
+    scenarios:
+      - name: greeting
+        prompt:
+          template: Greet me.
+quality_gates:
+  - name: semantic
+    aggregate: semantic
+    threshold: 1
+    on_failure: block_release

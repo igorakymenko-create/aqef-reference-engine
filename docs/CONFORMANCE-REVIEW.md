@@ -1,12 +1,24 @@
-# Specification review — through slice 15
+# Specification review — through slice 16
 
-Current target: `slice-15`, AQEF Candidate Recommendation **1.0-CR1.2**. The baseline ledger below was recorded in slice 6
+Current target: `slice-16`, AQEF Candidate Recommendation **1.0-CR1.2**. The baseline ledger below was recorded in slice 6
 against 0.41.1; the following current-release rows supersede affected source units.
 Baseline source links are pinned to that historical version, not shifted line numbers
 in the refreshed local kit. Intended scope remains the implicit
 core plus `human_review`, `multi_judge`, `seeded_controls`. This is a specification
 review with the implementation's own tests, not the AQEF Conformance Test
 Specification, a certification, or evidence that every normative check passes.
+
+## Slice 16 — GitHub Actions
+
+| Source | Implementation and verification |
+|---|---|
+| XIII GitHub Actions/Pipelines, III Scheduling and XIV thin clients. | Root composite `action.yml` installs `aqef-client` and runs the SDK-only adapter. The native step status reflects the engine response. The example workflow covers pull requests and manual dispatch. |
+| XIII Quality Gates and I Chapter 6. | The adapter uses only `blocking`, `status` and `override` from GateResults. Live checks cover passing, blocking and advisory outcomes and job-summary evidence. |
+| XIII override scope and XII Approval Workflow. | A read returns the original GateResults with their exact overrides. Live tests cover a later Person override, another batch's override and multiple failures. |
+| XIII unattended waiting, VI Human Review and A.5. | The adapter bounds polling with a deadline and requests conditional engine refresh only on changed evidence. Live tests verify timeout for an unset review timeout and success after resolution. |
+| XII Service Accounts and XIII automatic release. | The adapter submits a Report pinned to the evaluation and an approved decision referencing a standing policy only on a plain pass. Live tests exercise the actual Service Account and verify overridden passes leave no release. |
+
+See [CI-GITHUB.md](CI-GITHUB.md) and [ambiguity 45](AMBIGUITIES.md).
 
 ## Slice 15 — Action Boundary
 

@@ -177,6 +177,7 @@ def test_xiv_sdk_matches_raw_live_api(live, operation):
         "project": data["name"], "env": "spare" if name == "delete_environment" else "test",
         "suite": "s", "scenario": "b", "contract": "c", "dataset": "d", "gate": "functional",
         "execution": "missing", "result": "missing", "policy": "missing", "key": "missing",
+        "evaluation": "missing",
     }
     values = {"offset": 0, "limit": 5, "version": "v1", "retain_history": False,
               "x_approved_by": "admin", "x_external_review_ref": "slice13-review",

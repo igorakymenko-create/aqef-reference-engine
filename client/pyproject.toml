@@ -13,4 +13,4 @@ dependencies = ["httpx>=0.28,<0.29", "PyYAML>=6,<7"]
 aqef = "aqef_client.cli:main"
 
 [tool.setuptools]
-packages = ["aqef_client"]
+packages = ["aqef_client", "aqef_client.ci"]

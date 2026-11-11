@@ -418,12 +418,47 @@ class DecisionEngine:
                 result["override"] = override["approval_id"]
         return gates
 
-    def report(self, project, batch):
+    def evaluation_view(self, project, evaluation_id):
+        evaluation = self.get("evaluation", project, evaluation_id)
+        batch = evaluation["execution_batch_id"]
+        info = self.batch_info(project, batch)
+        snapshot = self.get("snapshot", project, evaluation["snapshot_id"])
+        try:
+            current = self.current(snapshot)
+        except HTTPException as exc:
+            if exc.status_code != 404:
+                raise
+            current = False
+        return evaluation | {
+            "gates": self.overridden(project, evaluation["gates"]),
+            "suite": info["suite"], "environment": info["environment"],
+            "scope_current": current,
+            "refresh_required": current and self.evaluation_changed(project, batch, snapshot, evaluation),
+        }
+
+    def evaluation_changed(self, project, batch, snapshot, evaluation):
+        entries = self.entries(self.batch(project, batch), snapshot)
+        admissions = {e["result"]["oracle"]: self.store.is_admitted(project, e["result"]["oracle"])
+                      for e in entries if e["result"]["oracle_type"] == "judge"}
+        from engine.scoped import controls
+        return (result_state(entries) != evaluation["result_state"]
+                or admissions != evaluation["admissions"]
+                or digest(controls(self.store, project, batch)) != evaluation.get("control_state", digest([])))
+
+    def report(self, project, batch, evaluation_id=None):
         records = self.batch(project, batch)
         evaluations = [e for e in self.store.decision_records("evaluation", project) if e["execution_batch_id"] == batch]
+        if evaluation_id is not None:
+            if not evaluations or evaluations[-1]["id"] != evaluation_id:
+                raise HTTPException(409, "Requested Gate evaluation is not latest for this batch")
+            view = self.evaluation_view(project, evaluation_id)
+            if not view["scope_current"] or view["refresh_required"]:
+                raise HTTPException(409, "Requested Gate evaluation is stale")
         evaluation = evaluations[-1] if evaluations else self.evaluate(project, batch)
         snapshot = self.get("snapshot", project, evaluation["snapshot_id"])
         if not self.current(snapshot):
+            if evaluation_id is not None:
+                raise HTTPException(409, "Requested Gate evaluation has stale scope")
             evaluation = self.evaluate(project, batch)
             snapshot = self.get("snapshot", project, evaluation["snapshot_id"])
         entries = self.entries(records, snapshot)
@@ -431,6 +466,8 @@ class DecisionEngine:
                       for e in entries if e["result"]["oracle_type"] == "judge"}
         from engine.scoped import controls
         if result_state(entries) != evaluation["result_state"] or admissions != evaluation["admissions"] or digest(controls(self.store,project,batch))!=evaluation.get("control_state",digest([])):
+            if evaluation_id is not None:
+                raise HTTPException(409, "Requested Gate evaluation has changed evidence")
             evaluation = self.evaluate(project, batch)
         signals = {key:[] for key in ("retries", "low_confidence", "multi_judge", "unenforced_boundaries", "boundary_attempts", "unadmitted_judges")}
         signals["unenforced_boundaries"] = sorted(name for name,env in snapshot["environments"].items()

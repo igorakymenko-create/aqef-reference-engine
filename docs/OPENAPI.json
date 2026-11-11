@@ -3920,11 +3920,79 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BatchRequest"
+                "$ref": "#/components/schemas/GateCheckRequest"
               }
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "202": {
+            "description": "Batch still executing"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project}/gates/evaluations/{evaluation}": {
+      "get": {
+        "tags": [
+          "Decision and Release"
+        ],
+        "summary": "Get Gate Evaluation",
+        "operationId": "get_gate_evaluation_projects__project__gates_evaluations__evaluation__get",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project"
+            }
+          },
+          {
+            "name": "evaluation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evaluation"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4129,7 +4197,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BatchRequest"
+                "$ref": "#/components/schemas/ReportRequest"
               }
             }
           }
@@ -5904,21 +5972,6 @@
         ],
         "title": "BaselineRequest"
       },
-      "BatchRequest": {
-        "properties": {
-          "execution_batch_id": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Execution Batch Id"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "execution_batch_id"
-        ],
-        "title": "BatchRequest"
-      },
       "BoundaryEntry": {
         "properties": {
           "target": {
@@ -6561,6 +6614,59 @@
           "conversation"
         ],
         "title": "FixedEvidence"
+      },
+      "GateCheckRequest": {
+        "properties": {
+          "execution_batch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Execution Batch Id"
+          },
+          "previous_evaluation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Evaluation Id"
+          },
+          "suite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suite"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          },
+          "wait_for_batch": {
+            "type": "boolean",
+            "title": "Wait For Batch",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "execution_batch_id"
+        ],
+        "title": "GateCheckRequest"
       },
       "GateFailureAction": {
         "type": "string",
@@ -7295,6 +7401,32 @@
           "decision"
         ],
         "title": "ReleaseRequest"
+      },
+      "ReportRequest": {
+        "properties": {
+          "execution_batch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Execution Batch Id"
+          },
+          "evaluation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluation Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "execution_batch_id"
+        ],
+        "title": "ReportRequest"
       },
       "RequalificationRequest": {
         "properties": {

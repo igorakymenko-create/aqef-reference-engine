@@ -48,6 +48,7 @@ COMMANDS = (
     ('validator register', 'register_validator', 'POST', '/projects/{project}/validators', ['project'], [], [('X-Approved-By', 'x_approved_by'), ('X-External-Review-Ref', 'x_external_review_ref')], True),
     ('validator list', 'list_validators', 'GET', '/projects/{project}/validators', ['project'], [('offset', 'offset'), ('limit', 'limit')], [], False),
     ('gates check', 'check_gates', 'POST', '/projects/{project}/gates/check', ['project'], [], [], True),
+    ('gate-evaluation get', 'get_gate_evaluation', 'GET', '/projects/{project}/gates/evaluations/{evaluation}', ['project', 'evaluation'], [], [], False),
     ('snapshot capture', 'capture_snapshot', 'POST', '/projects/{project}/snapshots', ['project'], [], [], True),
     ('snapshot list', 'list_snapshots', 'GET', '/projects/{project}/snapshots', ['project'], [('offset', 'offset'), ('limit', 'limit')], [], False),
     ('report generate', 'generate_report', 'POST', '/projects/{project}/reports', ['project'], [], [], True),

@@ -753,6 +753,17 @@ class Operations(Transport):
             body=body,
         )
 
+    def get_gate_evaluation(
+        self,
+        project: str,
+        evaluation: str,
+    ) -> httpx.Response:
+        """GET /projects/{project}/gates/evaluations/{evaluation}."""
+        return self.request(
+            "GET",
+            f"/projects/{segment(project)}/gates/evaluations/{segment(evaluation)}",
+        )
+
     def capture_snapshot(
         self,
         project: str,

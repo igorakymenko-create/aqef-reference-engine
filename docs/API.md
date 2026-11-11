@@ -9,6 +9,32 @@ published OpenAPI snapshot retain the unchanged engine build version 0.41.5.
 A.8 reserves synthetic Datasets and all Dataset mechanisms: they are rejected at load
 and on changes, regardless of capability claims; empty mechanisms names no type.
 
+## Slice 16 — Read back a pipeline evaluation
+
+`GET /projects/{project}/gates/evaluations/{evaluation}` requires `read`.
+It returns the stored Gate evaluation identified by its `id` (also its
+`snapshot_id`), or HTTP 404. Each Gate retains its recorded status and
+receives the `override` approval ID for that exact GateResult if present.
+The view also returns `suite`, `environment`, `scope_current` and
+`refresh_required`. The latter signals changed effective Results,
+Judge Admissions or Seeded Control state under current scope.
+This read performs no evaluation and preserves the frozen record.
+
+`POST /projects/{project}/gates/check` accepts optional `suite` and
+`environment` to check the batch scope before evaluating. With
+`wait_for_batch: true`, a running batch returns HTTP 202 and
+`{"status":"pending","execution_batch_id":"..."}`. A request with
+`previous_evaluation_id` returns the same view if evidence is unchanged,
+or evaluates new evidence if that evaluation has no override.
+Wrong batch, stale scope or changed evidence on an overridden
+evaluation returns HTTP 409. Requests omitting these fields retain the
+ordinary check behavior.
+
+`POST /projects/{project}/reports` accepts optional `evaluation_id`. It
+requires the latest current evaluation for that batch and returns HTTP 409
+if the pin is stale or mismatched. This pins the Report used for optional
+Service Account release recording. See [CI-GITHUB.md](CI-GITHUB.md).
+
 ## Slice 15 — Action Boundary
 
 Project and Environment writes accept ToolDefs and an Action Boundary as

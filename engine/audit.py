@@ -14,9 +14,16 @@ class AuditRequest:
     entries: list = field(default_factory=list)
     approvals: list = field(default_factory=list)
     flushing: bool = False
+    read_only: bool = False
 
 
 active_audit = ContextVar("aqef_audit", default=None)
+
+
+def mark_read_only():
+    session = active_audit.get()
+    if session is not None:
+        session.read_only = True
 
 
 def bind_project(name):
@@ -58,7 +65,7 @@ def buffer_approval(storage, approval):
 def commit_audit(session):
     request = session.request
     # D-8: reading a collection (especially this log) cannot append to that collection.
-    if request.method in ("GET", "HEAD", "OPTIONS"):
+    if session.read_only or request.method in ("GET", "HEAD", "OPTIONS"):
         return
     project = session.project or request.path_params.get("project") or "__global__"
     target = request.url.path
