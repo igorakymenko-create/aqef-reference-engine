@@ -1,5 +1,15 @@
 # Implementation Notes
 
+## Slice 17 — Plugin Architecture
+
+Volume XVI and Appendix C §C.3 add an immutable external plugin registry and
+atomic registration and retirement permissions. Validator and Judge bindings
+reuse the assessment pipeline and §C.7 Result storage. Dataset outputs go through
+versioned materialization, and Report Metrics store the IDs of their input Results.
+See ambiguities 46–47 for bindings, probe, isolation and retirement decisions.
+The live example services passed 15 plugin tests. The whole suite passed 975 tests
+with one Starlette deprecation warning.
+
 ## Slice 16 — GitHub Actions
 
 The composite Action uses the Python SDK to trigger an Execution and check

@@ -10,6 +10,7 @@ from pydantic import Field, StrictStr
 from engine.auth import check_permission
 from engine.decision import now
 from engine.models.base import AQEFBaseModel
+from engine.plugins import assessment_reply
 from engine.providers import HTTPProvider
 from engine.validators import canonical
 
@@ -81,7 +82,7 @@ def get_plugins_router(storage, principal_dep, urls):
 
 async def check_validator_repetition(provider, request, plugin):
     payload = {
-        "evidence": {"conversation": {"turns": []}},
+        "evidence": {"turns": []},
         "expected": None,
         "configuration": request.configuration,
         "execution": "repeatability-probe",
@@ -92,14 +93,8 @@ async def check_validator_repetition(provider, request, plugin):
         for _ in range(2):
             async with asyncio.timeout(5):
                 reply = await provider.call(request.endpoint, payload, 5, strict_json=True)
-            required = {"id", "execution", "clause", "oracle_type", "oracle", "verdict",
-                        "confidence", "disposition", "supporting_evidence", "recorded_at"}
-            if (not isinstance(reply, dict) or reply.keys() != required
-                    or reply["execution"] != payload["execution"] or reply["clause"] != payload["clause"]
-                    or reply["oracle_type"] != "validator" or reply["oracle"] != plugin
-                    or reply["confidence"] != "not_applicable"
-                    or reply["verdict"] not in ("pass", "fail") or reply["disposition"] != "actionable"):
-                raise ValueError("Invalid Validator Result")
+            assessment_reply(reply, execution=payload["execution"], clause=payload["clause"],
+                             oracle=plugin, kind="validator")
             replies.append(canonical(reply))
     except (httpx.HTTPError, TimeoutError, ValueError) as exc:
         raise HTTPException(422, "Validator Plugin repeatability probe did not return a valid Result") from exc

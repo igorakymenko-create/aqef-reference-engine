@@ -4538,6 +4538,137 @@
         }
       }
     },
+    "/projects/{project}/reports/metrics": {
+      "post": {
+        "tags": [
+          "Decision and Release"
+        ],
+        "summary": "Generate Metric",
+        "operationId": "generate_metric_projects__project__reports_metrics_post",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetricRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project}/reports/metrics/{metric}": {
+      "get": {
+        "tags": [
+          "Decision and Release"
+        ],
+        "summary": "Get Metric",
+        "operationId": "get_metric_projects__project__reports_metrics__metric__get",
+        "parameters": [
+          {
+            "name": "project",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project"
+            }
+          },
+          {
+            "name": "metric",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects/{project}/gates/{gate}/override": {
       "post": {
         "tags": [
@@ -6514,6 +6645,11 @@
           "capture": {
             "$ref": "#/components/schemas/CaptureConfig"
           },
+          "plugin": {
+            "type": "string",
+            "pattern": "^[^@]+@[^@]+$",
+            "title": "Plugin"
+          },
           "base_dataset": {
             "type": "string",
             "pattern": "^.+@.+$",
@@ -6579,6 +6715,11 @@
           "capture": {
             "$ref": "#/components/schemas/CaptureConfig"
           },
+          "plugin": {
+            "type": "string",
+            "pattern": "^[^@]+@[^@]+$",
+            "title": "Plugin"
+          },
           "base_dataset": {
             "type": "string",
             "pattern": "^.+@.+$",
@@ -6607,7 +6748,8 @@
           "static",
           "synthetic",
           "generated",
-          "production_replay"
+          "production_replay",
+          "plugin"
         ],
         "title": "DatasetSource"
       },
@@ -6999,6 +7141,11 @@
           "capture": {
             "$ref": "#/components/schemas/CaptureConfig"
           },
+          "plugin": {
+            "type": "string",
+            "pattern": "^[^@]+@[^@]+$",
+            "title": "Plugin"
+          },
           "base_dataset": {
             "type": "string",
             "pattern": "^.+@.+$",
@@ -7045,6 +7192,11 @@
           },
           "confidence_source": {
             "$ref": "#/components/schemas/ConfidenceSource"
+          },
+          "plugin": {
+            "type": "string",
+            "pattern": "^[^@]+@[^@]+$",
+            "title": "Plugin"
           }
         },
         "additionalProperties": false,
@@ -7093,6 +7245,27 @@
           "adversarial"
         ],
         "title": "MechanismType"
+      },
+      "MetricRequest": {
+        "properties": {
+          "execution_batch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Execution Batch Id"
+          },
+          "plugin": {
+            "type": "string",
+            "pattern": "^[^@]+@[^@]+$",
+            "title": "Plugin"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "execution_batch_id",
+          "plugin"
+        ],
+        "title": "MetricRequest"
       },
       "MinBasis": {
         "properties": {

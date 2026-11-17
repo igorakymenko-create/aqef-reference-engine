@@ -60,10 +60,28 @@ async def read_source(provider, identifier, payload, purpose):
         raise HTTPException(502, f"Dataset {purpose} source failed or returned invalid JSON") from None
 
 
-async def materialize(definition, generator_provider, capture_provider, raw_sources):
+async def materialize(definition, generator_provider, capture_provider, raw_sources, *, storage=None):
     data = definition.model_dump(mode="json")
     if definition.source == DatasetSource.STATIC:
         return Dataset.model_validate(data)
+
+    if definition.source == DatasetSource.PLUGIN:
+        from engine.plugins import active_plugin, invoke
+
+        try:
+            active_plugin(storage, definition.plugin, "dataset")
+        except ValueError as exc:
+            raise HTTPException(422, f"Dataset '{definition.name}': {exc}") from None
+        try:
+            content = {key: data[key] for key in ("name", "version", "base_dataset") if key in data}
+            reply = await invoke(storage, definition.plugin, "dataset", content, 5)
+            if not isinstance(reply, dict) or set(reply) != {"rows"}:
+                raise ValueError("Expected rows")
+            ROW_LIST.validate_python(reply["rows"])
+            json.dumps(reply["rows"], allow_nan=False)
+            return Dataset.model_validate(data | {"rows": reply["rows"]})
+        except Exception:
+            raise HTTPException(502, "Dataset Plugin failed or returned invalid Rows") from None
 
     if definition.source == DatasetSource.GENERATED:
         payload = data["generator"]

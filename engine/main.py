@@ -47,7 +47,8 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
         not isinstance(model, str) or model not in provider.urls for model in controlled
     ):
         raise ValueError("AQEF_CONTROLLED_SUBJECTS must list configured subject model identifiers")
-    storage = Storage(db_path=db_path, controlled_subjects=controlled)
+    plugin_urls = load_provider_urls("AQEF_PLUGIN_URLS")
+    storage = Storage(db_path=db_path, controlled_subjects=controlled, plugin_urls=plugin_urls.values())
 
     # Bootstrap default admin team, role, and principal if not already present
     existing_teams = {t.id for t in storage.list_teams()}
@@ -132,7 +133,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     # Register Routers
     app.include_router(get_governance_router(storage, principal_dep))
-    app.include_router(get_plugins_router(storage, principal_dep, load_provider_urls("AQEF_PLUGIN_URLS")))
+    app.include_router(get_plugins_router(storage, principal_dep, plugin_urls))
     app.include_router(get_projects_router(storage, principal_dep, provider, capture_provider, raw_sources))
     app.include_router(get_environments_router(storage, principal_dep))
     app.include_router(get_suites_scenarios_router(storage, principal_dep))

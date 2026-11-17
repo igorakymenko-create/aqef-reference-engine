@@ -9,6 +9,7 @@ from pydantic import Field, StrictInt, StrictStr
 from typing import Literal
 
 from engine.models.base import AQEFBaseModel
+from engine.plugins import assessment_reply, invoke
 from engine.validators import COST_ORDER, BUILTINS, boundary_attempts, canonical, number, select_target, check_builtin, custom_check
 
 
@@ -24,10 +25,15 @@ class JudgeReply(AQEFBaseModel):
 
 
 def judge_identity(clause):
-    return canonical({"type": "judge", "version": "http-judge-v1", **clause["judge"], "criteria": clause["criteria"]})
+    if clause["judge"].get("plugin"):
+        return clause["judge"]["plugin"]
+    configuration = {key: value for key, value in clause["judge"].items() if key != "plugin"}
+    return canonical({"type": "judge", "version": "http-judge-v1", **configuration, "criteria": clause["criteria"]})
 
 
 def validator_identity(record, clause):
+    if clause["validator"].startswith("plugin:"):
+        return clause["validator"].removeprefix("plugin:")
     return canonical({"type":"validator", "name":clause["validator"], "version":"1", "target":clause["target"],
                       "expected":clause["expected"], "custom":record["configuration"]["validators"].get(clause["validator"])})
 
@@ -51,6 +57,41 @@ class AssessmentEngine:
     def __init__(self, storage, provider):
         self.storage = storage
         self.provider = provider
+
+    async def plugin_result(self, record, clause, reference, kind, oracle, resolves, persist):
+        from engine.execution import duration
+
+        content_key = "expected" if kind == "validator" else "criteria"
+        supporting = {"configuration": deepcopy(clause)}
+        result = result_base(record, reference, kind, oracle, supporting)
+        try:
+            target = clause.get("target")
+            evidence = select_target(record, target) if target else {
+                "conversation": deepcopy(record["conversation"]), "artifacts": deepcopy(record["artifacts"]),
+            }
+            raw = await invoke(self.storage, oracle, kind, {
+                "evidence": evidence, content_key: clause[content_key],
+                "execution": record["id"], "clause": reference,
+            }, duration(record["configuration"]["execution"]["timeout"]))
+            if kind == "judge" and isinstance(raw, dict) and raw.get("verdict") in ("pass", "fail"):
+                supporting["provider_response"] = {"verdict": raw["verdict"]}
+            reply = assessment_reply(raw, execution=record["id"], clause=reference, oracle=oracle,
+                                     kind=kind, criteria=clause.get("criteria"))
+            supporting.update(reply.pop("supporting_evidence"))
+            result.update(reply)
+            result["disposition"] = ("inconclusive" if kind == "judge"
+                                     and result["confidence"] < clause["confidence_threshold"] else "actionable")
+        except Exception as exc:
+            supporting["error"] = f"Plugin invocation failed ({type(exc).__name__})"
+        if resolves:
+            result["resolves"] = resolves
+        return self.storage.append_result(record["project"], result) if persist else result
+
+    async def assess_validator(self, record, clause, reference, resolves=None, persist=True):
+        if clause["validator"].startswith("plugin:"):
+            return await self.plugin_result(record, clause, reference, "validator",
+                                            validator_identity(record, clause), resolves, persist)
+        return self.validate(record, clause, reference, resolves, persist)
 
     def validate(self, record, clause, reference, resolves=None, persist=True):
         name = clause["validator"]
@@ -88,6 +129,9 @@ class AssessmentEngine:
 
     async def judge(self, record, clause, reference, resolves=None, persist=True):
         from engine.execution import duration
+        if clause["judge"].get("plugin"):
+            return await self.plugin_result(record, clause, reference, "judge",
+                                            judge_identity(clause), resolves, persist)
         evidence = {"conversation": deepcopy(record["conversation"]), "artifacts": deepcopy(record["artifacts"])}
         supporting = {"evidence": evidence, "criteria": clause["criteria"], "attempts": []}
         result = result_base(record, reference, "judge", judge_identity(clause), supporting)
@@ -132,7 +176,9 @@ class AssessmentEngine:
         for index, clause in constraints:
             from engine.scoped import blocked_result
             reference = clause_reference(contract, "constraints", index)
-            result = blocked_result(self.storage, record, clause, reference, "validator", validator_identity(record,clause)) or self.validate(record, clause, reference)
+            result = blocked_result(self.storage, record, clause, reference, "validator", validator_identity(record,clause))
+            if result is None:
+                result = await self.assess_validator(record, clause, reference)
             outcomes.append((clause, result))
         if any(r["disposition"] != "actionable" or (c["veto"] and r["verdict"] == "fail") for c, r in outcomes):
             return

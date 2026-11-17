@@ -31,7 +31,7 @@ def get_datasets_router(storage: Storage, get_principal_dep, provider, capture_p
             if storage.get_dataset(project, definition.name, definition.version) is not None:
                 raise HTTPException(409, f"Dataset '{definition.name}@{definition.version}' is immutable")
 
-        dataset = await materialize(definition, provider, capture_provider, raw_sources)
+        dataset = await materialize(definition, provider, capture_provider, raw_sources, storage=storage)
         try:
             with storage.config_lock:
                 current = storage.get_project(project)

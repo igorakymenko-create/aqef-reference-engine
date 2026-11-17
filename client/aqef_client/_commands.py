@@ -57,6 +57,8 @@ COMMANDS = (
     ('snapshot list', 'list_snapshots', 'GET', '/projects/{project}/snapshots', ['project'], [('offset', 'offset'), ('limit', 'limit')], [], False),
     ('report generate', 'generate_report', 'POST', '/projects/{project}/reports', ['project'], [], [], True),
     ('report list', 'list_reports', 'GET', '/projects/{project}/reports', ['project'], [('offset', 'offset'), ('limit', 'limit')], [], False),
+    ('metric generate', 'generate_metric', 'POST', '/projects/{project}/reports/metrics', ['project'], [], [], True),
+    ('metric get', 'get_metric', 'GET', '/projects/{project}/reports/metrics/{metric}', ['project', 'metric'], [], [], False),
     ('gate override', 'override_gate', 'POST', '/projects/{project}/gates/{gate}/override', ['project', 'gate'], [], [], True),
     ('baseline approve', 'approve_baseline', 'POST', '/projects/{project}/baselines', ['project'], [], [], True),
     ('baseline list', 'list_baselines', 'GET', '/projects/{project}/baselines', ['project'], [('offset', 'offset'), ('limit', 'limit')], [], False),

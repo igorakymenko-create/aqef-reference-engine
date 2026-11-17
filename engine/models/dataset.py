@@ -20,6 +20,7 @@ class DatasetSource(str, Enum):
     SYNTHETIC = "synthetic"
     GENERATED = "generated"
     PRODUCTION_REPLAY = "production_replay"
+    PLUGIN = "plugin"
 
 
 class MechanismType(str, Enum):
@@ -80,6 +81,7 @@ class DatasetDefinition(AQEFBaseModel):
     rows: Optional[List[Row]] = None
     generator: GeneratorConfig | None = None
     capture: CaptureConfig | None = None
+    plugin: str | None = Field(None, pattern=r"^[^@]+@[^@]+$")
     base_dataset: Optional[str] = Field(None, pattern=r"^.+@.+$")
     mechanisms: Optional[List[MechanismConfig]] = None
 
@@ -91,7 +93,8 @@ class DatasetDefinition(AQEFBaseModel):
         if self.source == DatasetSource.SYNTHETIC:
             raise ValueError("Dataset source 'synthetic' is reserved")
         for field, source in (("generator", DatasetSource.GENERATED),
-                              ("capture", DatasetSource.PRODUCTION_REPLAY)):
+                              ("capture", DatasetSource.PRODUCTION_REPLAY),
+                              ("plugin", DatasetSource.PLUGIN)):
             if (getattr(self, field) is not None) != (self.source == source):
                 raise ValueError(f"'{field}' is required for source '{source.value}' and forbidden otherwise")
         if self.source == DatasetSource.STATIC and self.rows is None:

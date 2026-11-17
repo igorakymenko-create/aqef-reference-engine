@@ -1,8 +1,8 @@
 # AQEF Conformance Statement
 
-Updated 2026-11-10 for **AQEF Reference Engine, slice-16**, Python 3.12 / FastAPI /
+Updated 2026-11-16 for **AQEF Reference Engine, slice-17**, Python 3.12 / FastAPI /
 SQLite, one self-hosted application process. Specification target:
-**AQEF Candidate Recommendation 1.0-CR1.2**. The upstream revision history records no
+**AQEF Candidate Recommendation 1.0-CR1.4**. The upstream revision history records no
 new implementation requirements in 1.0-CR1.1 or 1.0-CR1.2. Exact
 retrieved paths and source blob IDs are in [SPECIFICATION-SOURCES.json](SPECIFICATION-SOURCES.json).
 Published 0.41.2 adopted O-1/O-2; 0.41.3 added Gate reasons/coverage and pre-run SHOULDs.
@@ -13,8 +13,8 @@ full B.2/B.3 validation on every configuration change, implemented in slice 11.
 
 ```yaml
 aqef_conformance:
-  specification_version: "1.0-CR1.2"
-  implementation: "AQEF Reference Engine slice-16"
+  specification_version: "1.0-CR1.4"
+  implementation: "AQEF Reference Engine slice-17"
   capabilities:
     - human_review
     - multi_judge
@@ -25,6 +25,10 @@ aqef_conformance:
     - dataset:production_replay  # Slice 14.1. CTS 1.0-CR1.2: CT-DSR-002, 004 PASS (harness run r261110122627).
     - action_boundary  # Slice 15. CTS 1.0-CR1.2: CT-ABD-001 to 008 and CT-TTP-002 PASS (harness run r261110222356).
     - ci_cd:github_actions  # Implemented in slice 16, external confirmation pending.
+    - plugins:validator  # Implemented in slice 17, external confirmation pending.
+    - plugins:judge  # Implemented in slice 17, external confirmation pending.
+    - plugins:dataset  # Implemented in slice 17, external confirmation pending.
+    - plugins:report  # Implemented in slice 17, external confirmation pending.
   not_offered:
     - ci_cd:gitlab
     - ci_cd:azure_devops
@@ -42,16 +46,13 @@ aqef_conformance:
     - sdk:typescript
     - sdk:go
     - reference_ui
-    - plugins:validator
-    - plugins:judge
-    - plugins:dataset
-    - plugins:report
 ```
 
 Test Types name Suite purposes built from the core, and are not conformance
 capabilities (§10; Volume IX). GitHub Actions is the offered CI/CD integration. Custom
-Validators use the documented pure declarative registration interface (Volume V),
-not executable Validator Plugins (Volume XVI) or a language SDK (Volume XIV).
+Validators may use the pure declarative registration interface (Volume V) or the
+external HTTP interface (Volume XVI). Plugin hosting, bindings and retirement are
+documented in [PLUGINS.md](PLUGINS.md).
 
 The core is implicit, **not** a capability identifier in the list (§10). Static
 Datasets are part of that core. Definition, Execution, Evidence, Assessment and
@@ -59,9 +60,9 @@ Decision are implemented; ordinary Results pass through Confidence handling befo
 aggregation. Topology is a deployment choice and removes no normative obligations.
 
 **Conformance claim:** AQEF Reference Engine claims **AQEF
-Conformance to Candidate Recommendation 1.0-CR1.2** for the capabilities listed
-above, with the non-negotiable core implicit. The GitHub Actions claim awaits the
-owner's external Conformance Test run. The prior classification-(a)
+Conformance to Candidate Recommendation 1.0-CR1.4** for the capabilities listed
+above, with the non-negotiable core implicit. The GitHub Actions and plugin claims
+await the owner's external Conformance Test runs. The prior classification-(a)
 findings are closed by the implementation and the 0.41.5 clarifications documented
 below. Known verification work (b) is not an assertion of an unmet MUST; deliberate
 SHOULD deviations are declared separately. This claim is based on the specification
@@ -116,12 +117,13 @@ choice's completeness is disputed or unproven it appears in the review as a find
 | C.6 filtering | Execution and Result filters exist; audit lacks date/Team filters and Baselines lack scenario/environment filters. Small implementation keeps records available through paginated unfiltered reads. G2 pagination was fixed, not waived as a SHOULD. |
 | A/B/C generated artifacts | OpenAPI is generated from actual FastAPI models/operations and published as documentation; no independent complete schema generation from prose or generated SDK/CLI is supplied. No AQEF JSON Schema artifact is published or claimed. Its generation is a skipped SHOULD; runtime shapes remain documented and constrained as required. |
 | III Execution Pipeline (0.41.5), Judge reachability only | No availability-only provider operation exists; synthetic Evidence would obtain a real verdict and cannot guarantee later reachability. No reachability probe or proceed flag is offered. Suite/Gate warnings are implemented before subject invocation. |
+| V Validator SDK, XVI remote hosting | Invocation supplies only declared logical inputs. Arbitrary remote code can access its own clock, randomness and network. Registration checks two equal inputs, and operator deployment controls are required for isolation. |
+| IV/XVI Dataset Plugin independence | The registered service's underlying models are not observable from the protocol. Project authors and operators assess independence before using a generative plugin. |
 
 Cheapest-first built-in Validation, pure Custom Validator inputs without clock/random/
 network, controls before ordinary assessments, fail-fast affected Oracle suppression,
 zero-reference-prior Human confirmation, and finite Human routing timeouts are
-implemented. These are not claimed as skipped SHOULDs. SHOULDs conditional on an
-unoffered capability (such as Plugin Architecture) do not describe an offered implementation feature.
+implemented for the built-in and declarative paths as applicable.
 
 ## Clarified rules met in slices 8–9
 
@@ -206,7 +208,7 @@ Only supplied summaries were used; no CTS material was requested or inspected.
 
 This statement cannot provide independent certification, verifiable external model
 ancestry, a complete MUST-coverage proof, or assurance about undisclosed provider behavior. None is invented. No AQEF conformance
-test material was accessed. The local whole suite passes **952 tests**, with one
+test material was accessed. The local whole suite passes **975 tests**, with one
 Starlette/httpx deprecation warning; the suite is regression evidence only.
 
 The owner-reported 1.0-CR1 evidence applies to the existing engine capabilities.

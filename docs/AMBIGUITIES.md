@@ -16,11 +16,24 @@
 - “While assessing, a plugin changes nothing in AQEF other than the Result it
   returns.” The operator URL allowlist controls engine requests to plugins.
   An external service with independently provisioned credentials can still
-  initiate its own requests. How to enforce the assessment boundary for
-  those requests is open.
-- Appendix A does not define a plugin reference field. Dataset and Report
-  invocations also need specific logical inputs since they do not inherently
-  have an assessment clause. These bindings are open.
+  initiate its own requests. Invocation sends no engine credential. The engine
+  interprets allowed Result fields only and records ignored field names. Any
+  separately authenticated call uses its Principal's ordinary Permissions.
+- “A Dataset or Report Plugin follows the same pattern for its own output”.
+  Appendix A does not define the bindings. A Constraint selects
+  `validator: plugin:name@version`. A JudgeConfig adds `plugin: name@version`
+  alongside its inspectable model for independence checks. A Dataset uses
+  `source: plugin` and `plugin: name@version`, and supplies the requested
+  Dataset identity and optional base reference. A Metric request identifies
+  a plugin and a batch. The plugin receives that batch's recorded Results.
+- C.7 specifies Result identity, disposition and timestamps without assigning
+  ownership of those fields across the plugin boundary. The reply must match
+  the Execution, clause and Oracle. The engine supplies the stored Result ID
+  and timestamp, calculates disposition and controls resolution links.
+- Volume XVI requires deprecation to preserve historical evidence. A retired
+  version cannot be bound by a new or changed configuration or invoked again.
+  Historical Results, Baselines, materialized Dataset rows and Metrics remain
+  readable. Assessment on an existing retired binding returns unavailable.
 
 ## 45. Pipeline evaluation identity and waiting (XIII, XII, Appendix C)
 

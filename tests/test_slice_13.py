@@ -115,6 +115,7 @@ def route_bodies(data):
     return {
         "register_plugin": {"type": "judge", "name": "sample", "version": "1",
                             "endpoint": "http://127.0.0.1/plugin", "configuration": {}},
+        "generate_metric": {"execution_batch_id": "missing", "plugin": "missing@1"},
         "create_team": {"id": "team", "name": "Team"},
         "create_role": {"name": "triage", "permissions": ["read"]},
         "create_principal": {"id": "triager", "name": "Triager", "kind": "person"},
@@ -181,6 +182,7 @@ def test_xiv_sdk_matches_raw_live_api(live, operation):
         "execution": "missing", "result": "missing", "policy": "missing", "key": "missing",
         "evaluation": "missing",
         "plugin": "missing@1",
+        "metric": "missing",
     }
     values = {"offset": 0, "limit": 5, "version": "v1", "retain_history": False,
               "x_approved_by": "admin", "x_external_review_ref": "slice13-review",

@@ -52,6 +52,8 @@ for plural, singular in {
     )
 
 EXTENSIONS = {
+    ("POST", "/projects/{project}/reports/metrics"): "Compute and store a batch-scoped Volume XVI Plugin Metric.",
+    ("GET", "/projects/{project}/reports/metrics/{metric}"): "Read a stored Volume XVI Plugin Metric.",
     ("GET", "/projects/{project}/gates/evaluations/{evaluation}"): "Read a specific stored Gate evaluation and its current overrides for Volume XIII.",
     ("POST", "/principals"): "Principal provisioning is implementation-defined in C.4.",
     ("GET", "/projects/{project}/executions"): "Execution history and filters extend C.6.",

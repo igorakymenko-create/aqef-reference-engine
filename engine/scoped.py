@@ -291,7 +291,7 @@ class ControlManager:
     def halted(self, project, batch):
         return any(c["invalidation_scope"]=="full_run" and c["reason"]=="halt_run" for c in controls(self.store,project,batch))
 
-    def record(self, records):
+    async def record(self, records):
         record=records[0];config=record["configuration"]["scenario"]["seeded_control"]
         assessments=[];roots=[];confirmed=True;confirmation_details=[]
         for r in records:
@@ -306,7 +306,7 @@ class ControlManager:
             if config["confirmed_by"]=="human_reviewer":confirmed=False
             elif config["confirmed_by"]=="validator" and r["status"]=="completed":
                 from engine.assessment import AssessmentEngine
-                check=AssessmentEngine(self.store,None).validate(r,config["confirmation"],"confirmation",persist=False)
+                check=await AssessmentEngine(self.store,None).assess_validator(r,config["confirmation"],"confirmation",persist=False)
                 confirmed=confirmed and check["verdict"]=="pass"
                 confirmation_details.append(check)
         class_config=next((c for c in record["configuration"].get("defect_classes",[]) if c["name"]==config["defect_class"]),{})

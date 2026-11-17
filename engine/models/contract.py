@@ -10,7 +10,7 @@ References:
 
 from enum import Enum
 from typing import Any, List, Optional, Union
-from pydantic import Field, PrivateAttr, StrictBool, model_validator
+from pydantic import Field, PrivateAttr, StrictBool, model_serializer, model_validator
 from engine.models.base import ConfigurationModel as AQEFBaseModel, JSONNumber, JSONInteger
 
 
@@ -44,7 +44,8 @@ class Constraint(AQEFBaseModel):
 
     @model_validator(mode="after")
     def resolve_dimension(self) -> "Constraint":
-        if self.validator not in BUILTIN_VALIDATOR_DIMENSIONS and self.expected is not None and self.expected != {}:
+        if (self.validator not in BUILTIN_VALIDATOR_DIMENSIONS and not self.validator.startswith("plugin:")
+                and self.expected is not None and self.expected != {}):
             label = self.id or f"{self.validator} target={self.target}"
             raise ValueError(f"Clause '{label}': Custom Validator expected must be null or an empty object {{}}")
         # Appendix A §A.5, Appendix B §B.3:
@@ -70,6 +71,14 @@ class ConfidenceSource(str, Enum):
 class JudgeConfig(AQEFBaseModel):
     model: str = Field(..., min_length=1)
     confidence_source: ConfidenceSource
+    plugin: Optional[str] = Field(None, pattern=r"^[^@]+@[^@]+$")
+
+    @model_serializer(mode="wrap")
+    def serialize_judge(self, handler, info):
+        data = handler(self)
+        if info.mode == "json" and self.plugin is None:
+            data.pop("plugin", None)
+        return data
 
 
 class DisagreementAction(str, Enum):

@@ -105,6 +105,7 @@ def validate_project_configuration(
     project: Project,
     lookup_reusable_contract: Optional[Callable[[str], Optional[Contract]]] = None,
     lookup_dataset: Optional[Callable[[str, str], Optional[Dataset]]] = None,
+    validate_effective_contract: Optional[Callable[[Contract], None]] = None,
 ) -> None:
     """Validate a complete Project configuration against all Appendix B §B.3 rules."""
     registered_lookup = lookup_reusable_contract
@@ -160,6 +161,9 @@ def validate_project_configuration(
                 raise ConfigurationValidationError(
                     f"Invalid contract composition for Scenario '{scenario.name}' in Suite '{suite.name}': {e}"
                 ) from e
+
+            if validate_effective_contract:
+                validate_effective_contract(effective_contract)
 
             # Independent Oracle — identity (Volume I, Ch. 3; Appendix B §B.3):
             # A JudgeConfig's model MUST NOT be identical to the Environment's model_version

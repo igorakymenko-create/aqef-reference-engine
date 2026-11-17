@@ -1,12 +1,24 @@
-# Specification review — through slice 16
+# Specification review — through slice 17
 
-Current target: `slice-16`, AQEF Candidate Recommendation **1.0-CR1.2**. The baseline ledger below was recorded in slice 6
+Current target: `slice-17`, AQEF Candidate Recommendation **1.0-CR1.4**. The baseline ledger below was recorded in slice 6
 against 0.41.1; the following current-release rows supersede affected source units.
 Baseline source links are pinned to that historical version, not shifted line numbers
-in the refreshed local kit. Intended scope remains the implicit
-core plus `human_review`, `multi_judge`, `seeded_controls`. This is a specification
+in the refreshed local kit. The current scope is listed in the
+[Conformance Statement](CONFORMANCE-STATEMENT.md). This is a specification
 review with the implementation's own tests, not the AQEF Conformance Test
 Specification, a certification, or evidence that every normative check passes.
+
+## Slice 17 — Plugin Architecture (1.0-CR1.4)
+
+| Rule | Implementation and regression coverage |
+|---|---|
+| XVI Extension Lifecycle and C.3/C.4/C.8 | `engine/api/plugins.py` checks atomic grants, uses immutable registration records and appends retirement separately. Live tests cover permissions and historical Results and Baselines after deprecation. |
+| V and XVI Validator Plugins | Registration validates two identical probe requests and reports the observed match. `engine/plugins.py` rejects numeric Confidence and malformed Results. Live tests cover changing output, Confidence and failure modes. |
+| VI and XVI Judge Plugins, C.7 | `engine/assessment.py` uses the regular Judge path, including Confidence and scoped Oracle handling. Required Confidence and inspectable criteria are checked in `engine/plugins.py`. Live tests cover valid low Confidence and missing fields. |
+| XVI Plugin Invocation and Authentication | The HTTP call sends logical inputs without engine credentials. Reply fields outside the Result contract are ignored and noted. Live examples check the input keys and tests verify reply-field isolation. Separately authenticated API calls retain ordinary Permissions. |
+| IV and XVI Dataset Plugins | `engine/dataset_sources.py` validates and materializes rows through immutable Dataset storage. A live Scenario binds and runs against the resulting pinned version. |
+| XI and XVI Report Plugins | `engine/api/decision.py` validates Metric Result IDs against the input batch before saving. Live tests exercise successful retrieval and missing links. |
+| XVI configuration and §10 declarations | `engine/plugins.py` checks reference type, existence, allowlist and retirement. Bindings, hosting and limits are declared in [PLUGINS.md](PLUGINS.md). Owner verification is pending. |
 
 ## Slice 16 — GitHub Actions
 

@@ -16,7 +16,16 @@ and whether its outputs matched.
 plugin's history in `versions`. Both require `read`. `POST
 /plugins/{plugin}/deprecate` requires `plugin_admin` and returns the version
 with `deprecated_at` set. A missing version returns 404. The registry is
-deployment-wide. These operations currently manage registrations only.
+deployment-wide. See [PLUGINS.md](PLUGINS.md) for typed configuration bindings,
+invocation formats and failure handling.
+
+To compute a Report Plugin Metric, POST to `/projects/{project}/reports/metrics`
+with `{"execution_batch_id":"batch-id","plugin":"score@1"}` and `execute`.
+A successful 201 record includes `id`, `plugin`, `execution_batch_id`,
+`name`, `value`, `result_ids` and `recorded_at`. An invalid plugin binding
+returns 422. Invocation failure or invalid traceability returns 502.
+`GET /projects/{project}/reports/metrics/{metric}` reads the stored record
+with `read` and returns 404 if it is absent.
 
 This documents the implemented API, including known differences from the specification.
 See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level

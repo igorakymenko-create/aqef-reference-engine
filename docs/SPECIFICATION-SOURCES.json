@@ -1,4 +1,54 @@
 {
+  "slice_17": {
+    "ref": "1.0-CR1.4",
+    "files": [
+      {
+        "path": "front-matter/00-document-status.md",
+        "blob_sha": "84592070aaea93806a3ee7caa85b2e1761a71178",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/front-matter/00-document-status.md"
+      },
+      {
+        "path": "front-matter/10-conformance.md",
+        "blob_sha": "da7786d4bfa0c8cbe09038d838ec51d9bec861dc",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/front-matter/10-conformance.md"
+      },
+      {
+        "path": "part-ii-execution/volume-iv-dataset-engine.md",
+        "blob_sha": "bfcd755c5e99f00ac1203fd0cc93a26d3036c968",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/part-ii-execution/volume-iv-dataset-engine.md"
+      },
+      {
+        "path": "part-ii-execution/volume-v-validator-engine.md",
+        "blob_sha": "a86c8e9b54550e6d9b0cb51fe3ca8fe372454680",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/part-ii-execution/volume-v-validator-engine.md"
+      },
+      {
+        "path": "part-ii-execution/volume-vi-judge-engine.md",
+        "blob_sha": "2ec925dc4355bd4a394c4c76cfa9ead4b52771f6",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/part-ii-execution/volume-vi-judge-engine.md"
+      },
+      {
+        "path": "part-iv-enterprise-architecture/volume-xi-reporting-analytics.md",
+        "blob_sha": "bb40d998061892d5019c8ef00607556b54446cb1",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/part-iv-enterprise-architecture/volume-xi-reporting-analytics.md"
+      },
+      {
+        "path": "part-iv-enterprise-architecture/volume-xii-governance.md",
+        "blob_sha": "7f5501b54ff0c3395fe40fccf794fab15a2a00b8",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/part-iv-enterprise-architecture/volume-xii-governance.md"
+      },
+      {
+        "path": "part-v-extensibility/volume-xvi-plugin-architecture.md",
+        "blob_sha": "edfd850c434b09e24b321e55e550f044cb250ec5",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/part-v-extensibility/volume-xvi-plugin-architecture.md"
+      },
+      {
+        "path": "appendices/appendix-c-rest-api-specification.md",
+        "blob_sha": "7b14538dde76291c4883e730bbc281c4afa3d121",
+        "url": "https://github.com/igorakymenko-create/AQEF/blob/1.0-CR1.4/appendices/appendix-c-rest-api-specification.md"
+      }
+    ]
+  },
   "specification_version": "1.0-CR1",
   "repository": "https://github.com/igorakymenko-create/AQEF",
   "ref": "1.0-CR1",

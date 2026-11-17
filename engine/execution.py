@@ -317,7 +317,7 @@ class ExecutionEngine:
             for group in groups.values():
                 if manager.halted(project,batch):break
                 for record in group:await worker(record)
-                manager.record(group)
+                await manager.record(group)
             ordinary=[r for r in records if r["configuration"]["scenario"]["seeded_control"] is None]
             if not manager.halted(project,batch):await asyncio.gather(*(worker(record) for record in ordinary))
             for record in records:

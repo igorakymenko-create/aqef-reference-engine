@@ -70,6 +70,8 @@ The human-readable display additionally labels it overridden.
 | `aqef gate update --project PROJECT --gate GATE [--x-approved-by VALUE] [--x-external-review-ref VALUE] FILE` | `update_quality_gate` | `PUT /projects/{project}/gates/{gate}` | C.3 |
 | `aqef gate-evaluation get --project PROJECT --evaluation EVALUATION` | `get_gate_evaluation` | `GET /projects/{project}/gates/evaluations/{evaluation}` | Not in Appendix C |
 | `aqef gates check --project PROJECT FILE` | `check_gates` | `POST /projects/{project}/gates/check` | C.3 |
+| `aqef metric generate --project PROJECT FILE` | `generate_metric` | `POST /projects/{project}/reports/metrics` | Not in Appendix C |
+| `aqef metric get --project PROJECT --metric METRIC` | `get_metric` | `GET /projects/{project}/reports/metrics/{metric}` | Not in Appendix C |
 | `aqef plugin deprecate --plugin PLUGIN` | `deprecate_plugin` | `POST /plugins/{plugin}/deprecate` | C.3 |
 | `aqef plugin get --plugin PLUGIN` | `get_plugin` | `GET /plugins/{plugin}` | C.3 |
 | `aqef plugin list [--offset VALUE] [--limit VALUE]` | `list_plugins` | `GET /plugins` | C.3 |
@@ -115,12 +117,14 @@ The human-readable display additionally labels it overridden.
 | `aqef validator list --project PROJECT [--offset VALUE] [--limit VALUE]` | `list_validators` | `GET /projects/{project}/validators` | Not in Appendix C |
 | `aqef validator register --project PROJECT [--x-approved-by VALUE] [--x-external-review-ref VALUE] FILE` | `register_validator` | `POST /projects/{project}/validators` | Not in Appendix C |
 
-76 commands.
+78 commands.
 
 ## Not in Appendix C
 
 - `aqef execution list` wraps `GET /projects/{project}/executions`. Execution history and filters extend C.6.
 - `aqef gate-evaluation get` wraps `GET /projects/{project}/gates/evaluations/{evaluation}`. Read a specific stored Gate evaluation and its current overrides for Volume XIII.
+- `aqef metric generate` wraps `POST /projects/{project}/reports/metrics`. Compute and store a batch-scoped Volume XVI Plugin Metric.
+- `aqef metric get` wraps `GET /projects/{project}/reports/metrics/{metric}`. Read a stored Volume XVI Plugin Metric.
 - `aqef principal create` wraps `POST /principals`. Principal provisioning is implementation-defined in C.4.
 - `aqef release get` wraps `GET /projects/{project}/releases/{key}`. Direct lookup of an immutable C.3 Release Decision.
 - `aqef report generate` wraps `POST /projects/{project}/reports`. Explicit freeze operation for the C.10 Report shape.

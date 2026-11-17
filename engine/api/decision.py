@@ -14,6 +14,7 @@ from engine.models.base import AQEFBaseModel
 from engine.models.principal import PrincipalKind
 from engine.storage import StorageConflictError
 from engine.validators import canonical
+from engine.plugins import active_plugin, invoke
 from engine.scoped import invalidators, review_route, qualifications_for, assess_expectation
 import json
 
@@ -31,6 +32,10 @@ class GateCheckRequest(BatchRequest):
 
 class ReportRequest(BatchRequest):
     evaluation_id: StrictStr | None = None
+
+
+class MetricRequest(BatchRequest):
+    plugin: StrictStr = Field(pattern=r"^[^@]+@[^@]+$")
 
 
 class SnapshotRequest(AQEFBaseModel):
@@ -133,6 +138,45 @@ def get_decision_router(storage, principal_dep, provider):
     def report(project: str, request: ReportRequest, principal=Depends(principal_dep)):
         check_permission(principal, "execute", storage)
         return service.report(project, request.execution_batch_id, request.evaluation_id)
+
+    @router.post("/reports/metrics", status_code=201)
+    async def generate_metric(project: str, request: MetricRequest, principal=Depends(principal_dep)):
+        check_permission(principal, "execute", storage)
+        try:
+            active_plugin(storage, request.plugin, "report")
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+        batch = request.execution_batch_id
+        with storage.config_lock:
+            results = [result for execution in service.batch(project, batch)
+                       for result in storage.list_results(project, execution["id"])]
+        try:
+            reply = await invoke(storage, request.plugin, "report", {"results": results}, 5)
+            if not isinstance(reply, dict) or set(reply) != {"name", "value", "result_ids"}:
+                raise ValueError("Expected a Metric")
+            refs = reply["result_ids"]
+            scope = {result["id"] for result in results}
+            if (not isinstance(reply["name"], str) or not reply["name"].strip()
+                    or not isinstance(refs, list) or not refs
+                    or not all(isinstance(ref, str) and ref in scope for ref in refs)):
+                raise ValueError("Metric must reference Results in scope")
+            canonical(reply)
+        except Exception:
+            raise HTTPException(502, "Report Plugin failed or returned a Metric without valid Result links") from None
+        with storage.config_lock:
+            current_ids = {result["id"] for execution in service.batch(project, batch)
+                           for result in storage.list_results(project, execution["id"])}
+            if not set(refs) <= current_ids:
+                raise HTTPException(409, "Metric Result scope changed during invocation")
+            return storage.save_decision("plugin_metric", project, reply | {
+                "id": identifier(), "plugin": request.plugin, "execution_batch_id": batch,
+                "recorded_at": now(),
+            })
+
+    @router.get("/reports/metrics/{metric}")
+    def get_metric(project: str, metric: str, principal=Depends(principal_dep)):
+        check_permission(principal, "read", storage)
+        return service.get("plugin_metric", project, metric)
 
     @router.post("/gates/{gate}/override", status_code=201)
     @serialized
@@ -329,11 +373,23 @@ def get_decision_router(storage, principal_dep, provider):
              m["supporting_evidence"]["provider_response"].get("verdict") not in ("pass","fail")) for m in members):
             raise HTTPException(409,"No panel member can be re-attempted before a verdict; received verdicts stand")
         exemptions=previous["supporting_evidence"].get("requalified_controls",[]) if same else qualifications_for(storage,record,previous,request.oracle)
-        try:config=json.loads(request.oracle)
-        except ValueError as exc:raise HTTPException(422,"Oracle must be an inspectable canonical configuration") from exc
         corrected=deepcopy(clause)
         working=deepcopy(record)
-        if not same:
+        plugin = storage.decision_record("plugin", "__global__", request.oracle)
+        if not same and plugin:
+            try:
+                active_plugin(storage, request.oracle, previous["oracle_type"])
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from None
+            if previous["oracle_type"] == "validator":
+                corrected["validator"] = "plugin:" + request.oracle
+            elif corrected.get("judge"):
+                corrected["judge"]["plugin"] = request.oracle
+            else:
+                raise HTTPException(409, "Corrected Judge Plugin must preserve the Oracle architecture")
+        elif not same:
+            try:config=json.loads(request.oracle)
+            except ValueError as exc:raise HTTPException(422,"Oracle must be an inspectable canonical configuration") from exc
             if config.get("type")=="validator" and previous["oracle_type"]=="validator":
                 if (config["target"],config["expected"])!=(clause["target"],clause["expected"]):
                     raise HTTPException(409,"Reassessment cannot change the frozen clause's target or expected requirement")
@@ -355,7 +411,7 @@ def get_decision_router(storage, principal_dep, provider):
         assessment = AssessmentEngine(storage, provider)
         try:
             if previous["oracle_type"] == "validator":
-                new=assessment.validate(working,corrected,previous["clause"],persist=False)
+                new=await assessment.assess_validator(working,corrected,previous["clause"],persist=False)
                 if new["oracle"]!=request.oracle:raise HTTPException(409,"Corrected Validator identity/version mismatch")
                 new["resolves"]=previous["id"]
                 if exemptions:new["supporting_evidence"]["requalified_controls"]=exemptions

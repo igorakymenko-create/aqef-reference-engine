@@ -869,6 +869,29 @@ class Operations(Transport):
             },
         )
 
+    def generate_metric(
+        self,
+        project: str,
+        body: object,
+    ) -> httpx.Response:
+        """POST /projects/{project}/reports/metrics."""
+        return self.request(
+            "POST",
+            f"/projects/{segment(project)}/reports/metrics",
+            body=body,
+        )
+
+    def get_metric(
+        self,
+        project: str,
+        metric: str,
+    ) -> httpx.Response:
+        """GET /projects/{project}/reports/metrics/{metric}."""
+        return self.request(
+            "GET",
+            f"/projects/{segment(project)}/reports/metrics/{segment(metric)}",
+        )
+
     def override_gate(
         self,
         project: str,

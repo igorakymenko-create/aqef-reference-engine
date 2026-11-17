@@ -123,12 +123,20 @@ class Storage:
                 )
         validate_dataset_references(datasets.values(), lookup_dataset)
         validate_reusable_composition(registry.values(), registry.get)
-        validate_project_configuration(candidate, registry.get, lookup_dataset)
+        from engine.plugins import validate_bindings
+        validate_bindings(self, candidate)
+        if operation in ("create_contract", "update_contract"):
+            validate_bindings(self, parameters["contract"])
+        if operation == "create_dataset":
+            validate_bindings(self, parameters["dataset"])
+        validate_project_configuration(candidate, registry.get, lookup_dataset,
+                                       lambda contract: validate_bindings(self, contract))
 
-    def __init__(self, db_path: str = ":memory:", *, controlled_subjects=()):
+    def __init__(self, db_path: str = ":memory:", *, controlled_subjects=(), plugin_urls=()):
         self.db_path = db_path
         self.config_lock = RLock()
         self.controlled_subjects = frozenset(controlled_subjects)
+        self.plugin_urls = frozenset(plugin_urls)
         self._shared_conn: Optional[sqlite3.Connection] = None
         if self.db_path == ":memory:":
             mem_name = f"aqef_mem_{uuid.uuid4().hex}"

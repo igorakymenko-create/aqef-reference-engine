@@ -19,6 +19,7 @@ from engine.models.project import Project, ProjectInput
 from engine.storage import Storage, StorageConflictError, StorageNotFoundError
 from engine.validation import ConfigurationValidationError, validate_project_configuration
 from engine.audit import bind_project, record_dataset_creation
+from engine.plugins import validate_bindings
 
 
 def has_governed_definitions(project):
@@ -49,10 +50,12 @@ def get_projects_router(
             raise HTTPException(409, f"Project '{name}' already exists")
         if not create and current is None:
             raise HTTPException(404, f"Project '{name}' not found")
+        validate_bindings(storage, config)
         validate_project_configuration(
             config,
             lookup_reusable_contract=lambda key: storage.get_contract(name, key),
             lookup_dataset=lambda key, version: storage.get_dataset(name, key, version),
+            validate_effective_contract=lambda contract: validate_bindings(storage, contract),
         )
         governed = has_governed_definitions(config) if create else governed_values(config) != governed_values(current)
         if governed:
@@ -91,7 +94,7 @@ def get_projects_router(
             # configuration lock is held across an await.
             staged = {
                 (definition.name, definition.version): await materialize(
-                    definition, provider, capture_provider, raw_sources,
+                    definition, provider, capture_provider, raw_sources, storage=storage,
                 )
                 for definition in pending
             }
