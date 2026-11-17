@@ -16,6 +16,7 @@ from engine.api.environments import get_environments_router
 from engine.api.gates import get_gates_router
 from engine.api.governance import get_governance_router
 from engine.api.projects import get_projects_router
+from engine.api.plugins import get_plugins_router
 from engine.api.suites_scenarios import get_suites_scenarios_router
 from engine.auth import BOOTSTRAP_PERMISSIONS, check_permission, get_current_principal_dependency
 from engine.dataset_sources import REPLAY_PERMISSION
@@ -131,6 +132,7 @@ def create_app(db_path: str = ":memory:") -> FastAPI:
 
     # Register Routers
     app.include_router(get_governance_router(storage, principal_dep))
+    app.include_router(get_plugins_router(storage, principal_dep, load_provider_urls("AQEF_PLUGIN_URLS")))
     app.include_router(get_projects_router(storage, principal_dep, provider, capture_provider, raw_sources))
     app.include_router(get_environments_router(storage, principal_dep))
     app.include_router(get_suites_scenarios_router(storage, principal_dep))

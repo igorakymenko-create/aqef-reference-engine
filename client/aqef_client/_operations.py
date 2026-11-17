@@ -111,6 +111,53 @@ class Operations(Transport):
             },
         )
 
+    def list_plugins(
+        self,
+        *,
+        offset: int | None = None,
+        limit: int | None = None,
+    ) -> httpx.Response:
+        """GET /plugins."""
+        return self.request(
+            "GET",
+            "/plugins",
+            params={
+                "offset": offset,
+                "limit": limit,
+            },
+        )
+
+    def register_plugin(
+        self,
+        body: object,
+    ) -> httpx.Response:
+        """POST /plugins."""
+        return self.request(
+            "POST",
+            "/plugins",
+            body=body,
+        )
+
+    def get_plugin(
+        self,
+        plugin: str,
+    ) -> httpx.Response:
+        """GET /plugins/{plugin}."""
+        return self.request(
+            "GET",
+            f"/plugins/{segment(plugin)}",
+        )
+
+    def deprecate_plugin(
+        self,
+        plugin: str,
+    ) -> httpx.Response:
+        """POST /plugins/{plugin}/deprecate."""
+        return self.request(
+            "POST",
+            f"/plugins/{segment(plugin)}/deprecate",
+        )
+
     def list_projects(
         self,
         *,

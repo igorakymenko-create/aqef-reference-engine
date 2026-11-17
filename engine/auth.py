@@ -30,6 +30,7 @@ BOOTSTRAP_PERMISSIONS = (
     "dataset_create", "contract_define", "execute", "review", "snapshot_create",
     "baseline_approve", "gate_override", "release_decide", "seeded_control_invalidate",
     "team_read", "team_admin", "role_read", "role_admin", "audit_read", REPLAY_PERMISSION,
+    "plugin_register", "plugin_admin",
 )
 
 def governed_values(resource):

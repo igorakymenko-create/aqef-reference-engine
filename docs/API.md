@@ -1,5 +1,23 @@
 # AQEF Engine API Documentation — Candidate Recommendation 1.0-CR1.2
 
+## Plugin registry (Appendix C §C.3)
+
+`POST /plugins` requires `plugin_register`. Send `type` (`validator`, `judge`,
+`dataset` or `report`), `name`, `version`, `endpoint` and a `configuration`
+object. The endpoint must exactly match a URL in the operator's
+`AQEF_PLUGIN_URLS` JSON identifier-to-URL map. A successful registration
+returns 201 and the stored record with `id` (`name@version`), `registered_at`
+and `deprecated_at`. Invalid registrations return 422. An occupied version
+returns 409. Validator registrations also return the fixed probe's run count
+and whether its outputs matched.
+
+`GET /plugins` lists version records with `offset` and `limit`.
+`GET /plugins/{plugin}` retrieves the pinned version and includes the named
+plugin's history in `versions`. Both require `read`. `POST
+/plugins/{plugin}/deprecate` requires `plugin_admin` and returns the version
+with `deprecated_at` set. A missing version returns 404. The registry is
+deployment-wide. These operations currently manage registrations only.
+
 This documents the implemented API, including known differences from the specification.
 See [CONFORMANCE-STATEMENT.md](CONFORMANCE-STATEMENT.md) and the rule-level
 [review](CONFORMANCE-REVIEW.md). The engine documents its scoped claim at 1.0-CR1.2. The review lists pending verification and skipped SHOULDs.

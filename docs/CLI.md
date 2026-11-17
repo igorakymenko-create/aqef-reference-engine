@@ -70,6 +70,10 @@ The human-readable display additionally labels it overridden.
 | `aqef gate update --project PROJECT --gate GATE [--x-approved-by VALUE] [--x-external-review-ref VALUE] FILE` | `update_quality_gate` | `PUT /projects/{project}/gates/{gate}` | C.3 |
 | `aqef gate-evaluation get --project PROJECT --evaluation EVALUATION` | `get_gate_evaluation` | `GET /projects/{project}/gates/evaluations/{evaluation}` | Not in Appendix C |
 | `aqef gates check --project PROJECT FILE` | `check_gates` | `POST /projects/{project}/gates/check` | C.3 |
+| `aqef plugin deprecate --plugin PLUGIN` | `deprecate_plugin` | `POST /plugins/{plugin}/deprecate` | C.3 |
+| `aqef plugin get --plugin PLUGIN` | `get_plugin` | `GET /plugins/{plugin}` | C.3 |
+| `aqef plugin list [--offset VALUE] [--limit VALUE]` | `list_plugins` | `GET /plugins` | C.3 |
+| `aqef plugin register FILE` | `register_plugin` | `POST /plugins` | C.3 |
 | `aqef principal create FILE` | `create_principal` | `POST /principals` | Not in Appendix C |
 | `aqef project delete --project PROJECT [--retain-history VALUE]` | `delete_project` | `DELETE /projects/{project}` | C.3, C.8 |
 | `aqef project get --project PROJECT` | `get_project` | `GET /projects/{project}` | C.3 |
@@ -111,7 +115,7 @@ The human-readable display additionally labels it overridden.
 | `aqef validator list --project PROJECT [--offset VALUE] [--limit VALUE]` | `list_validators` | `GET /projects/{project}/validators` | Not in Appendix C |
 | `aqef validator register --project PROJECT [--x-approved-by VALUE] [--x-external-review-ref VALUE] FILE` | `register_validator` | `POST /projects/{project}/validators` | Not in Appendix C |
 
-72 commands.
+76 commands.
 
 ## Not in Appendix C
 

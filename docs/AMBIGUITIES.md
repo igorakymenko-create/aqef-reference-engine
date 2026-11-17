@@ -1,5 +1,27 @@
 # Ambiguities Log
 
+## 46. Plugin registry scope and repeatability (XVI, C.3)
+
+- Appendix C puts the registry at `/plugins`. Volume XII makes each Permission
+  independently checkable. Registry permissions are deployment-wide grants
+  through existing Roles. IDs use `name@version`; deprecation records the
+  retirement separately from the immutable registration.
+- Volume XVI requires a “fixed test input more than once”. Use two identical
+  requests with an empty Conversation, null `expected`, fixed identifiers and
+  the candidate configuration. Compare the complete JSON output with object
+  keys normalized. A successful check establishes only a match on this probe.
+
+## 47. External invocation boundaries (XVI, V, C.7)
+
+- “While assessing, a plugin changes nothing in AQEF other than the Result it
+  returns.” The operator URL allowlist controls engine requests to plugins.
+  An external service with independently provisioned credentials can still
+  initiate its own requests. How to enforce the assessment boundary for
+  those requests is open.
+- Appendix A does not define a plugin reference field. Dataset and Report
+  invocations also need specific logical inputs since they do not inherently
+  have an assessment clause. These bindings are open.
+
 ## 45. Pipeline evaluation identity and waiting (XIII, XII, Appendix C)
 
 - Volume XIII says “The override that counts is the one recorded against this
